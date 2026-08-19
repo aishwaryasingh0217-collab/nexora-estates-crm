@@ -1,0 +1,27 @@
+-- Migration 010: Create deals table
+CREATE TABLE IF NOT EXISTS deals (
+    id VARCHAR(36) PRIMARY KEY,
+    deal_number VARCHAR(50) NOT NULL UNIQUE,
+    customer_id VARCHAR(36) NOT NULL,
+    lead_id VARCHAR(36) NULL,
+    unit_id VARCHAR(36) NOT NULL,
+    base_price DECIMAL(14,2) NOT NULL,
+    plc_charges DECIMAL(14,2) DEFAULT 0.00,
+    parking_charges DECIMAL(14,2) DEFAULT 0.00,
+    taxes_amount DECIMAL(14,2) DEFAULT 0.00,
+    discount_amount DECIMAL(14,2) DEFAULT 0.00,
+    maintenance_deposit DECIMAL(14,2) DEFAULT 0.00,
+    agreed_total_amount DECIMAL(14,2) NOT NULL,
+    booking_token_amount DECIMAL(14,2) NOT NULL,
+    status ENUM('DRAFT', 'BOOKED', 'AGREEMENT_SIGNED', 'CLOSED_WON', 'CANCELLED') DEFAULT 'DRAFT',
+    created_by VARCHAR(36) NOT NULL,
+    closing_date DATE NULL,
+    cancellation_reason VARCHAR(255) NULL,
+    cancelled_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_deals_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_deals_lead FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL,
+    CONSTRAINT fk_deals_unit FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_deals_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

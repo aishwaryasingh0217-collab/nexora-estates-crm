@@ -1,0 +1,25 @@
+-- Migration 006: Create units table
+CREATE TABLE IF NOT EXISTS units (
+    id VARCHAR(36) PRIMARY KEY,
+    project_id VARCHAR(36) NOT NULL,
+    building_id VARCHAR(36) NULL,
+    unit_number VARCHAR(50) NOT NULL,
+    floor_number INT NULL,
+    asset_category ENUM('RESIDENTIAL', 'COMMERCIAL', 'PLOT') NOT NULL,
+    unit_type ENUM('1BHK', '2BHK', '3BHK', '4BHK', 'PENTHOUSE', 'RETAIL', 'OFFICE', 'PLOT') NOT NULL,
+    carpet_area_sqft DECIMAL(10,2) NULL,
+    super_area_sqft DECIMAL(10,2) NULL,
+    plot_area_sqft DECIMAL(10,2) NULL,
+    plot_dimensions VARCHAR(50) NULL,
+    facing ENUM('NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTH_EAST', 'NORTH_WEST', 'SOUTH_EAST', 'SOUTH_WEST') NULL,
+    is_corner BOOLEAN DEFAULT FALSE,
+    base_price DECIMAL(14,2) NOT NULL,
+    plc_charges DECIMAL(14,2) DEFAULT 0.00,
+    status ENUM('AVAILABLE', 'HOLD', 'BOOKED', 'SOLD', 'ARCHIVED') DEFAULT 'AVAILABLE',
+    hold_expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_units_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_units_building FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE RESTRICT,
+    CONSTRAINT uk_units_location UNIQUE (project_id, building_id, unit_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

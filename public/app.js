@@ -8996,155 +8996,105 @@ window.selectAuthRole = function(roleKey) {
 
 function renderLoginView(root) {
   root.innerHTML = `
-    <div class="nx-auth-page">
-      <!-- Left Editorial Architectural Panel (Matches Website Hero Visuals) -->
-      <div class="nx-auth-showcase">
-        <div class="nx-auth-showcase-logo">
-          <div style="background: linear-gradient(135deg, #0078db, #0052cc); color: #ffffff; font-weight: 900; font-size: 1.15rem; padding: 0.25rem 0.6rem; border-radius: 8px; letter-spacing: -0.02em; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 120, 219, 0.45);">
-            <span>NX</span>
-          </div>
-          <div style="display: flex; flex-direction: column;">
-            <span style="font-weight: 850; font-size: 1.35rem; color: #ffffff; letter-spacing: -0.02em; line-height: 1;">Nexora<span style="color: #38bdf8;">.</span></span>
-            <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Real Estate Platform</span>
+    <div style="width: 100vw; height: 100vh; display: flex; background-color: var(--bg-main); overflow: hidden;">
+      <!-- Left Editorial Architectural Panel (Normal View) -->
+      <div style="flex: 1.15; background: linear-gradient(135deg, rgba(23, 19, 17, 0.88), rgba(14, 12, 11, 0.95)), url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat; padding: 3.5rem; display: flex; flex-direction: column; justify-content: space-between; color: #F6F3EE;">
+        <div style="display: flex; align-items: center; gap: 0.8rem;">
+          <div class="sidebar-logo">NX</div>
+          <div>
+            <h2 style="font-size: 1.1rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #ffffff; margin: 0;">Nexora Estates</h2>
+            <p style="font-size: 0.65rem; color: #A3978E; text-transform: uppercase; letter-spacing: 1px; margin: 0.15rem 0 0 0;">Real Estate Management Platform</p>
           </div>
         </div>
 
-        <div style="max-width: 520px; margin: 2rem 0;">
-          <div class="nx-auth-showcase-badge">
-            ✦ ENTERPRISE DEVELOPER SUITE
-          </div>
-          <h1 class="nx-auth-showcase-title">
-            Operational Control for Premium Real Estate Developments
-          </h1>
-          <p class="nx-auth-showcase-desc">
-            Integrated inventory matrix, live project website publishing, RERA 60-day broker lead protection, and automated cost sheets.
-          </p>
-
-          <div class="nx-auth-feature-cards">
-            <div class="nx-auth-feature-item">
-              <span class="icon">🏢</span>
-              <span><b>Live Project Publishing:</b> One-click sync from CRM to public website</span>
-            </div>
-            <div class="nx-auth-feature-item">
-              <span class="icon">🛡️</span>
-              <span><b>Anti-Theft Broker Protection:</b> 60-day RERA lead attribution window</span>
-            </div>
-            <div class="nx-auth-feature-item">
-              <span class="icon">⚡</span>
-              <span><b>Multi-Tier RBAC:</b> Tailored consoles for Directors, Managers &amp; Site Teams</span>
-            </div>
-          </div>
+        <div style="max-width: 500px;">
+          <span style="color: var(--accent); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; display: inline-block; margin-bottom: 0.5rem;">Institutional Property Portfolio</span>
+          <h1 style="font-size: 2.2rem; font-weight: 800; line-height: 1.25; margin: 0 0 1rem 0; letter-spacing: -0.6px; color: #F6F3EE;">Operational Control for Premium Real Estate Developments</h1>
+          <p style="color: #A3978E; font-size: 0.9rem; line-height: 1.6; margin: 0;">Integrated inventory matrix, lead nurturing pipelines, cost sheet calculations, and multi-currency transaction tracking.</p>
         </div>
 
-        <div class="nx-auth-showcase-footer">
-          <span><span class="status-dot"></span>MySQL 9.6 Core Active</span>
-          <span>● Concurrency Locked</span>
-          <span>● High-Security SSL</span>
+        <div style="font-size: 0.75rem; color: #736962; display: flex; gap: 1.75rem;">
+          <span>● MySQL 9.6 Core</span>
+          <span>● Concurrency Locking</span>
+          <span>● RBAC Enforced</span>
         </div>
       </div>
 
-      <!-- Right Login Form Panel (Spacious, Uncluttered, Website Matched) -->
-      <div class="nx-auth-form-wrap">
-        <div class="nx-auth-card">
-          <div class="nx-auth-card-top-bar">
-            <button type="button" class="nx-auth-back-btn" onclick="setViewMode('website')">
-              <span>←</span>
-              <span>Back to Public Website</span>
+      <!-- Right Login Form Panel (Normal View, Non-Congested) -->
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem 2rem; background-color: var(--bg-main); overflow-y: auto;">
+        <div class="modal-card" style="width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); padding: 1.75rem 2rem; border-radius: 16px; margin: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setViewMode('website')" style="font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.7rem;">
+              ← Back to Public Website
             </button>
-            <button class="btn-icon" title="Toggle Theme" onclick="toggleTheme()" style="background: #f1f5f9; border-radius: 8px; width: 34px; height: 34px;">
-              ${state.theme === 'light' ? getIcon('moon') : getIcon('sun')}
-            </button>
+            <button class="btn-icon" title="Toggle Theme" onclick="toggleTheme()" style="width: 32px; height: 32px;">${state.theme === 'light' ? getIcon('moon') : getIcon('sun')}</button>
           </div>
 
-          <div class="nx-auth-card-header">
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(0, 120, 219, 0.1); color: #0078db; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; margin-bottom: 0.85rem;">
-              🔐
-            </div>
-            <h2 class="nx-auth-card-title">Sign In to Nexora Portal</h2>
-            <p class="nx-auth-card-sub">Select your operational role or enter your credentials</p>
+          <div style="margin-bottom: 1rem;">
+            <h2 style="font-size: 1.35rem; font-weight: 800; letter-spacing: -0.4px; margin: 0 0 0.25rem 0;">Sign In to Portal</h2>
+            <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0;">Select your operational role or enter credentials</p>
           </div>
 
-          <!-- Clean 5-Role Selection Pills (Uncongested Grid) -->
-          <div class="nx-auth-roles-label">
-            <span>Choose Your Operational Role</span>
-            <span style="color: #0078db; font-size: 0.7rem;">● 1-Click Fast Fill</span>
-          </div>
-
-          <div class="nx-auth-roles-grid">
-            <div class="nx-auth-role-pill active" id="auth-role-pill-SUPER_ADMIN" onclick="selectAuthRole('SUPER_ADMIN')">
-              <span class="role-icon">👑</span>
-              <span class="role-name">Super Admin</span>
-              <span class="role-sub">Director</span>
+          <!-- Instant 1-Click Role Selector for fast testing -->
+          <div style="margin-bottom: 1rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.65rem 0.75rem;">
+            <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.45rem;">
+              ⚡ Quick Demo Access (1-Click Test)
             </div>
-            <div class="nx-auth-role-pill" id="auth-role-pill-ADMIN" onclick="selectAuthRole('ADMIN')">
-              <span class="role-icon">💼</span>
-              <span class="role-name">Manager</span>
-              <span class="role-sub">Admin Ops</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('SUPER_ADMIN')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                👑 Super Admin (Director)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('ADMIN')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                💼 Sales Manager (Admin)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('INSIDE_SALES')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                📞 Inside Sales (Telecaller)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('OUTSIDE_SALES')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                📍 Outside Sales (Site)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('CHANNEL_PARTNER')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px; grid-column: span 2;">
+                🤝 Channel Partner (Broker Desk)
+              </button>
             </div>
-            <div class="nx-auth-role-pill" id="auth-role-pill-INSIDE_SALES" onclick="selectAuthRole('INSIDE_SALES')">
-              <span class="role-icon">📞</span>
-              <span class="role-name">Inside Sales</span>
-              <span class="role-sub">Telecaller</span>
-            </div>
-            <div class="nx-auth-role-pill" id="auth-role-pill-OUTSIDE_SALES" onclick="selectAuthRole('OUTSIDE_SALES')">
-              <span class="role-icon">📍</span>
-              <span class="role-name">Site Sales</span>
-              <span class="role-sub">Executive</span>
-            </div>
-            <div class="nx-auth-role-pill" id="auth-role-pill-CHANNEL_PARTNER" onclick="selectAuthRole('CHANNEL_PARTNER')" style="grid-column: span 2;">
-              <span class="role-icon">🤝</span>
-              <span class="role-name">Channel Partner</span>
-              <span class="role-sub">Broker Registration Desk</span>
-            </div>
-          </div>
-
-          <!-- Quick 1-Click Action Banner -->
-          <div class="nx-auth-quick-banner">
-            <div class="nx-auth-quick-banner-text">
-              ⚡ Test as <b id="nx-quick-role-name">Super Admin</b>
-            </div>
-            <button type="button" class="nx-auth-quick-btn" id="nx-quick-login-btn" onclick="quickLoginAs('SUPER_ADMIN')">
-              1-Click Sign In →
-            </button>
           </div>
 
           <form id="login-form">
-            <div class="nx-auth-form-group" style="display: none;">
-              <label class="nx-auth-label">Access Level</label>
-              <select id="login-role" class="nx-auth-input">
+            <div class="form-group" style="margin-bottom: 0.65rem;">
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem; display: block;">Access Level</label>
+              <select id="login-role" class="form-control" style="height: 38px; font-size: 0.85rem;">
                 <option value="Super Admin">Super Admin</option>
                 <option value="Admin">Admin</option>
-                <option value="Inside Sales">Inside Sales</option>
-                <option value="Outside Sales">Outside Sales</option>
-                <option value="Channel Partner">Channel Partner</option>
+                <option value="Inside Sales">Inside Sales (Telecaller)</option>
+                <option value="Outside Sales">Outside Sales (Site Agent)</option>
+                <option value="Channel Partner">Channel Partner (Broker)</option>
               </select>
             </div>
 
-            <div class="nx-auth-form-group">
-              <label class="nx-auth-label">Username or Corporate Email</label>
-              <input type="text" id="login-identifier" class="nx-auth-input" placeholder="e.g. admin or yourname@nexora.com" value="admin" required />
+            <div class="form-group" style="margin-bottom: 0.65rem;">
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem; display: block;">Username or Email</label>
+              <input type="text" id="login-identifier" class="form-control" placeholder="Enter username or email" value="admin" style="height: 38px; font-size: 0.85rem;" required />
             </div>
 
-            <div class="nx-auth-form-group">
-              <label class="nx-auth-label">Security Password</label>
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem; display: block;">Password</label>
               <div style="position: relative;">
-                <input type="${state.showPassword ? 'text' : 'password'}" id="login-password" class="nx-auth-input" placeholder="••••••••" value="AdminPassword123!" required />
-                <button type="button" onclick="toggleShowPassword()" style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; font-size: 1rem;">
+                <input type="${state.showPassword ? 'text' : 'password'}" id="login-password" class="form-control" placeholder="••••••••" value="AdminPassword123!" style="height: 38px; font-size: 0.85rem;" required />
+                <button type="button" onclick="toggleShowPassword()" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.85rem;">
                   ${state.showPassword ? '🙈' : '👁️'}
                 </button>
               </div>
             </div>
 
-            <div id="login-error" style="color: #dc2626; background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; margin-bottom: 1rem; display: none;"></div>
+            <div id="login-error" style="color: var(--danger); font-size: 0.82rem; margin-bottom: 0.65rem; display: none;"></div>
 
-            <button type="submit" id="btn-login-submit" class="nx-auth-btn-submit">
-              <span>Sign In to Command Center</span>
-              <span>→</span>
+            <button type="submit" id="btn-login-submit" class="btn btn-accent" style="width: 100%; justify-content: center; padding: 0.65rem; font-size: 0.9rem; font-weight: 700; height: 42px;">
+              Sign In to Command Center
             </button>
 
-            <div class="nx-auth-footer-link">
-              <span>Client or Partner Inquiry?</span>
-              <a onclick="event.preventDefault(); openSupportModal();" style="margin-left: 0.35rem;">
+            <div style="margin-top: 0.85rem; text-align: center; font-size: 0.78rem; border-top: 1px solid var(--border-muted); padding-top: 0.65rem;">
+              <span style="color: var(--text-muted);">Client or Prospect?</span>
+              <a href="#" onclick="event.preventDefault(); openSupportModal();" style="color: var(--accent); font-weight: 600; text-decoration: none; margin-left: 0.35rem;">
                 Submit Support Request
               </a>
             </div>
@@ -9176,7 +9126,7 @@ function renderLoginView(root) {
     } catch (err) {
       errDiv.innerText = err.message || 'Authentication failed.';
       errDiv.style.display = 'block';
-      submitBtn.innerText = 'Sign In to Command Center →';
+      submitBtn.innerText = 'Sign In to Command Center';
       submitBtn.disabled = false;
     }
   });

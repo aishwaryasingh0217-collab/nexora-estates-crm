@@ -5665,8 +5665,8 @@ window.loadNewlyLaunchedProjects = async function() {
     crmLaunches = [];
   }
 
-  // 2. Also check if user is logged in and can fetch live DB projects from CRM backend
-  if (typeof state !== 'undefined' && state && state.token) {
+  // 2. Fetch live DB projects from CRM backend for website
+  if (true) {
     try {
       const res = await apiFetch('/projects');
       if (res && res.data && Array.isArray(res.data)) {
@@ -6012,8 +6012,8 @@ window.loadUpcomingProjects = async function() {
     }
   } catch (e) {}
 
-  // 2. Also check if user is logged in and can fetch live DB projects from CRM backend
-  if (typeof state !== 'undefined' && state && state.token) {
+  // 2. Fetch live DB projects from CRM backend for website
+  if (true) {
     try {
       const res = await apiFetch('/projects');
       if (res && res.data && Array.isArray(res.data)) {
@@ -9326,6 +9326,134 @@ function openProjectProfile(projectId) {
 // 3. PROJECTS SECTION (UPDATED: CLICKABLE NAME, FILTERS, DETAIL PROFILE)
 // ----------------------------------------------------
 let allProjectsData = [];
+
+// Modal Utility for Admin Actions
+function showModal(title, contentHtml, extraClass) {
+  closeModal();
+  const modalDiv = document.createElement("div");
+  modalDiv.className = "modal-overlay";
+  modalDiv.id = "active-modal";
+  modalDiv.style.cssText = "position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1.5rem;";
+  modalDiv.innerHTML = `<div class="modal-card ` + (extraClass || "") + `" style="background: var(--bg-card); color: var(--text-main); border-radius: 16px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); padding: 1.75rem;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem;"><h3 style="font-size: 1.15rem; font-weight: 750; margin: 0;">` + title + `</h3><button type="button" onclick="closeModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-muted); line-height: 1;">✕</button></div><div>` + contentHtml + `</div></div>`;
+  modalDiv.onclick = (e) => { if (e.target === modalDiv) closeModal(); };
+  document.body.appendChild(modalDiv);
+}
+function closeModal() {
+  const modal = document.getElementById("active-modal");
+  if (modal) modal.remove();
+}
+window.closeModal = closeModal;
+
+function openCreateProjectModal() {
+  showModal("🏢 Add Real Estate Project (Live Website Sync)", `
+    <form id="create-project-form" style="display: flex; flex-direction: column; gap: 0.85rem;">
+      <div class="form-group">
+        <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Project Name *</label>
+        <input type="text" id="p-name" class="form-control" placeholder="e.g. Prestige Lakeside Habitat" required />
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Project Type *</label>
+          <select id="p-type" class="form-control" required>
+            <option value="Residential">Residential</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Villa">Villa</option>
+            <option value="Plotted">Plotted</option>
+            <option value="Independent">Independent</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Builder / Developer *</label>
+          <input type="text" id="p-builder" class="form-control" placeholder="e.g. Prestige Group" required />
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Location / Neighborhood *</label>
+          <input type="text" id="p-loc" class="form-control" placeholder="e.g. Whitefield Main Road" required />
+        </div>
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">City *</label>
+          <input type="text" id="p-city" class="form-control" placeholder="e.g. Bengaluru" required />
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Website Listing Status *</label>
+          <select id="p-status" class="form-control">
+            <option value="NEW_LAUNCH">New Launch (Shows in Newly Launched Carousel)</option>
+            <option value="UNDER_CONSTRUCTION">Under Construction (Shows in Newly Launched)</option>
+            <option value="PLANNING">Planning (Shows in Upcoming Projects)</option>
+            <option value="UPCOMING">Upcoming (Shows in Upcoming Projects)</option>
+            <option value="READY_TO_MOVE">Ready to Move</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Total Planned Units</label>
+          <input type="number" id="p-units" class="form-control" value="120" min="1" />
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Possession Timeline</label>
+          <input type="text" id="p-possession" class="form-control" placeholder="e.g. Q4 2028 or Dec 2028" />
+        </div>
+        <div class="form-group">
+          <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">RERA Registration No.</label>
+          <input type="text" id="p-rera" class="form-control" placeholder="e.g. PRM/KA/RERA/1251/446" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Project Brochure (PDF, max 10MB)</label>
+        <input type="file" id="p-brochure" class="form-control" accept=".pdf" />
+        <small style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.2rem; display: block;">Uploading a brochure makes it downloadable directly from the website project profile card.</small>
+      </div>
+      <div id="p-error" style="color: var(--danger); font-size: 0.82rem; display: none;"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 0.85rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" id="btn-save-project" class="btn btn-primary" style="font-weight: 700;">Publish &amp; Sync to Website →</button>
+      </div>
+    </form>
+  `);
+
+  document.getElementById("create-project-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById("btn-save-project");
+    const errDiv = document.getElementById("p-error");
+    errDiv.style.display = "none";
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Publishing Project...";
+    try {
+      const formData = new FormData();
+      formData.append("name", document.getElementById("p-name").value.trim());
+      formData.append("project_type", document.getElementById("p-type").value);
+      formData.append("builder_name", document.getElementById("p-builder").value.trim());
+      formData.append("location", document.getElementById("p-loc").value.trim());
+      formData.append("city", document.getElementById("p-city").value.trim());
+      formData.append("status", document.getElementById("p-status").value);
+      formData.append("total_units", parseInt(document.getElementById("p-units").value, 10) || 0);
+      formData.append("possession_date", document.getElementById("p-possession").value.trim());
+      formData.append("rera_number", document.getElementById("p-rera").value.trim());
+      const brochureFile = document.getElementById("p-brochure").files[0];
+      if (brochureFile) formData.append("brochure", brochureFile);
+      const headers = {};
+      if (state.token) headers["Authorization"] = "Bearer " + state.token;
+      const res = await fetch(API_BASE + "/projects", { method: "POST", headers, body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to create project");
+      closeModal();
+      const contentArea = document.getElementById("content-area");
+      if (contentArea) await loadProjectsView(contentArea);
+      alert("Project published successfully!");
+    } catch (err) {
+      errDiv.innerText = err.message;
+      errDiv.style.display = "block";
+      saveBtn.disabled = false;
+      saveBtn.innerText = "Publish & Sync to Website →";
+    }
+  });
+}
+window.openCreateProjectModal = openCreateProjectModal;
 
 async function loadProjectsView(container) {
   try {

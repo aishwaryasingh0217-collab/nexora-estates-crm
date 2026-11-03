@@ -7592,6 +7592,7 @@ window.submitDvigaConsultationForm = function() {
 };
 
 
+
 window.showEhDropdown = function(key) {
   const d = document.getElementById(`eh-dropdown-${key}`);
   if (d) d.style.display = 'block';
@@ -7628,59 +7629,65 @@ window.openPublicHome = function() {
 
 function renderPublicWebsite(root) {
   root.innerHTML = `
-    <div class="eh-page-wrapper" style="background: #ffffff; min-height: 100vh; overflow-x: hidden;">
-      <!-- 1. STICKY GLASSMORPHIC HEADER (SCREENSHOT 1) -->
+    <div class="pub-container" style="background: #ffffff; min-height: 100vh; overflow-x: hidden;">
+      <!-- 1. STICKY GLASSMORPHIC HEADER -->
       <header class="eh-header">
-        <div class="eh-logo-group">
+        <div class="eh-logo-group" style="display: flex; align-items: center; gap: 0.85rem;">
           <div class="eh-logo" onclick="openPublicHome()">
-            <div style="background: #0078db; color: #fff; font-weight: 800; font-size: 1.15rem; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,120,219,0.35);">NX</div>
-            <div style="display: flex; flex-direction: column; line-height: 1;">
-              <span class="eh-logo-text" style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Nexora<span style="color: #38bdf8;">.</span></span>
-              <span style="font-size: 0.58rem; color: #93c5fd; letter-spacing: 1.2px; font-weight: 700; margin-top: 2px;">REAL ESTATE PLATFORM</span>
+            <div style="background: linear-gradient(135deg, #0078db, #0052cc); color: #ffffff; font-weight: 900; font-size: 1.15rem; padding: 0.25rem 0.6rem; border-radius: 8px; letter-spacing: -0.02em; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 120, 219, 0.35);">
+              <span>NX</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 850; font-size: 1.35rem; color: #ffffff; letter-spacing: -0.02em; line-height: 1;">Nexora<span style="color: #38bdf8;">.</span></span>
+              <span style="font-size: 0.62rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Real Estate Platform</span>
             </div>
           </div>
-          
-          <div class="eh-header-city-pill" onclick="openExpandedSearchModal('buy')">
-            <span>📍 Delhi / NCR</span>
-            <span style="font-size: 0.7rem; opacity: 0.8;">▾</span>
-          </div>
+
+          <!-- Header City Selector Pill -->
+          <button class="eh-header-city-pill" onclick="openExpandedSearchModal('buy')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="eh-header-city-label">Delhi / NCR</span>
+            <span style="font-size: 0.75rem;">▾</span>
+          </button>
         </div>
 
+        <!-- Nexora Navigation Links with Rich Dropdowns -->
         <nav class="eh-nav">
-          <div class="eh-nav-item" onmouseenter="showEhDropdown('buyers')" onmouseleave="hideEhDropdown('buyers')">
-            <a class="eh-nav-link">For Buyers <span style="font-size: 0.65rem;">▾</span></a>
-            <div class="eh-dropdown-menu" id="eh-dropdown-buyers" style="display: none;">
-              <a onclick="switchEhSearchTab('buy')">Buy Residential Flats</a>
-              <a onclick="switchEhSearchTab('buy')">Ready to Move Homes</a>
-              <a onclick="switchEhSearchTab('new-launch')">New RERA Projects</a>
-              <a onclick="openExpandedSearchModal('buy')">Luxury Penthouses & Villas</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('buyers')" onmouseleave="hideEhDropdown('buyers')">
+            <a class="eh-nav-link" onclick="openExpandedSearchModal('buy')">For Buyers <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-buyers" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="openCustomerAllProjectsView()">🏗️ All Projects & Launches</a>
+              <a onclick="openExpandedSearchModal('buy')">🏢 Buy a Home (Direct Developer)</a>
+              <a onclick="openExpandedSearchModal('commercial')">🏬 Commercial Office & Retail</a>
+              <a onclick="openExpandedSearchModal('plots')">🏞️ Plots / Land</a>
+              <a onclick="openExpandedSearchModal('projects')">🏗️ Upcoming RERA Launches</a>
+              <a onclick="openShieldedCallModal()">🛡️ 0-Spam Shielded Direct Call</a>
             </div>
           </div>
 
-          <div class="eh-nav-item" onmouseenter="showEhDropdown('tenants')" onmouseleave="hideEhDropdown('tenants')">
-            <a class="eh-nav-link">For Tenants <span style="font-size: 0.65rem;">▾</span></a>
-            <div class="eh-dropdown-menu" id="eh-dropdown-tenants" style="display: none;">
-              <a onclick="switchEhSearchTab('rent')">Flats for Rent</a>
-              <a onclick="switchEhSearchTab('rent')">Direct Owner Rentals (0% Brokerage)</a>
-              <a onclick="selectExploreOption('pg')">PG & Co-living Spaces</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('tenants')" onmouseleave="hideEhDropdown('tenants')">
+            <a class="eh-nav-link" onclick="openExpandedSearchModal('rent')">For Tenants <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-tenants" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="openExpandedSearchModal('rent')">🔑 Rent a Home (Verified Flats)</a>
+              <a onclick="openExpandedSearchModal('commercial')">🏢 Commercial Lease</a>
+              <a onclick="openExpandedSearchModal('pg')">🛏️ PG & Co-living Spaces</a>
             </div>
           </div>
 
-          <div class="eh-nav-item" onmouseenter="showEhDropdown('owners')" onmouseleave="hideEhDropdown('owners')">
-            <a class="eh-nav-link">For Owners <span style="font-size: 0.65rem;">▾</span></a>
-            <div class="eh-dropdown-menu" id="eh-dropdown-owners" style="display: none;">
-              <a onclick="openPostPropertyPage()">Post Property for Free</a>
-              <a onclick="switchOwnerNewsTab('news')">Owner Legal & Tax Guides</a>
-              <a onclick="openOwnerArticleModal('tax-deductions', 'tax')">Tax Deduction Guide (Sec 54)</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('owners')" onmouseleave="hideEhDropdown('owners')">
+            <a class="eh-nav-link" onclick="openPostPropertyPage()">For Owners <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-owners" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="openPostPropertyPage()">📢 Post Property FREE (0% Brokerage)</a>
+              <a onclick="openPostPropertyPage()">📋 Owner Verification & Shield</a>
+              <a onclick="openInsightsModal()">📊 Rental Yield Calculator</a>
             </div>
           </div>
 
-          <div class="eh-nav-item" onmouseenter="showEhDropdown('dealers')" onmouseleave="hideEhDropdown('dealers')">
-            <a class="eh-nav-link">For Dealers / Builders <span style="font-size: 0.65rem;">▾</span></a>
-            <div class="eh-dropdown-menu" id="eh-dropdown-dealers" style="display: none;">
-              <a onclick="setViewMode('login')">Channel Partner Portal</a>
-              <a onclick="setViewMode('login')">Developer Dashboard</a>
-              <a onclick="setViewMode('login')">Builder Sales Suite</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('dealers')" onmouseleave="hideEhDropdown('dealers')">
+            <a class="eh-nav-link" onclick="setViewMode('login')">For Dealers / Builders <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-dealers" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="setViewMode('login')">🤝 Channel Partner RERA Registry</a>
+              <a onclick="setViewMode('login'); setRoleFilter('ADMIN')">🏢 Developer Project Manager Portal</a>
             </div>
           </div>
 
@@ -7713,7 +7720,7 @@ function renderPublicWebsite(root) {
         </div>
       </header>
 
-      <!-- 2. HERO BANNER -->
+      <!-- 2. HERO SECTION -->
       <section class="eh-hero-section">
         <div class="eh-hero-container">
           <div class="eh-hero-left-col">
@@ -7723,7 +7730,7 @@ function renderPublicWebsite(root) {
         </div>
       </section>
 
-      <!-- 3. OVERLAPPING IN-PAGE SEARCH CONSOLE (MATCHING SCREENSHOT) -->
+      <!-- 3. OVERLAPPING IN-PAGE SEARCH CONSOLE -->
       <div class="eh-search-floating-wrapper">
         <div class="eh-search-floating-box">
           <!-- Top Tabs Bar -->
@@ -7823,7 +7830,7 @@ function renderPublicWebsite(root) {
         </div>
       </div>
 
-      <!-- 4. "GET STARTED WITH EXPLORING REAL ESTATE OPTIONS" (7 HORIZONTAL STRIP CARDS MATCHING SCREENSHOT) -->
+      <!-- 4. "GET STARTED WITH EXPLORING REAL ESTATE OPTIONS" (7 HORIZONTAL STRIP CARDS) -->
       <section class="eh-explore-options-container">
         <div class="eh-explore-title">GET STARTED WITH EXPLORING REAL ESTATE OPTIONS</div>
         <div class="eh-explore-cards-strip">
@@ -7887,192 +7894,301 @@ function renderPublicWebsite(root) {
         </div>
       </section>
 
-      <!-- 5. LUXURY ARCHITECTURAL LIVING ROOM BANNER & OWNER ARTICLES / GUIDES -->
-      <div style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; box-sizing: border-box;">
-        <div style="border-radius: 24px; overflow: hidden; height: 380px; width: 100%; position: relative; background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; box-shadow: 0 12px 36px rgba(0,0,0,0.08);">
-          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%);"></div>
-        </div>
-      </div>
+      <!-- 5. SHOWCASE 1: BUY A HOME (LIVING ROOM + TOP ARTICLES ON HOME BUYING) -->
+      <section class="bah-showcase-section" id="buy-home-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Square Living Room Image -->
+          <div class="bah-square-box">
+            <img src="/assets/buy_home_showcase.jpg" alt="Luxury Living Room Interior" class="bah-square-img" loading="eager" />
+          </div>
 
-      <section class="ona-section">
+          <!-- Right Column: Editorial Title Added Beside The Image -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Top articles on<br/>home buying</h2>
+            <p class="bah-beside-sub">Read from Beginners check-list to Pro Tips</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOP ARTICLES ON HOME BUYING (FULL-WIDTH GLASS CARD) -->
+      <section class="nx-news-section" id="nexora-news-section">
+        <div class="nx-news-card">
+          <div class="nx-news-tabs-bar">
+            <button class="nx-news-tab active" id="nx-ntab-news" onclick="switchNexoraNewsTab('news')">News</button>
+            <button class="nx-news-tab" id="nx-ntab-legal" onclick="switchNexoraNewsTab('legal')">Tax & Legal</button>
+            <button class="nx-news-tab" id="nx-ntab-guides" onclick="switchNexoraNewsTab('guides')">Help Guides</button>
+            <button class="nx-news-tab" id="nx-ntab-investment" onclick="switchNexoraNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="nx-news-grid" id="nx-news-grid-container">
+            <!-- Dynamically populated by renderNexoraNewsGrid() -->
+          </div>
+
+          <div class="nx-news-bottom-row">
+            <a class="nx-news-read-more-link" onclick="openAllNewsModal()">
+              Read realty news, guides & articles →
+            </a>
+            <button class="nx-news-nav-arrow" onclick="rotateNexoraNewsNext()" title="Next Articles">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. NEWLY LAUNCHED PROJECTS (CENTERED HEADING WITH LEFT & RIGHT CAROUSEL CONTROLS) -->
+      <section class="nl-showcase-section" id="newly-launched-section">
+        <div class="nl-outer-box">
+          <div class="nl-header-row centered">
+            <div class="nl-title-group">
+              <div class="nl-icon-badge">
+                🏢
+              </div>
+              <div style="text-align: left;">
+                <h2 class="nl-heading">Newly launched projects</h2>
+                <p class="nl-subheading">Bigger home in the same budget</p>
+              </div>
+            </div>
+            <div class="nl-sync-badge-pill">
+              <span class="nx-pulse-dot" style="background:#0284c7; width:6px; height:6px;"></span>
+              <span>Live CRM Synced</span>
+            </div>
+          </div>
+
+          <div class="nl-carousel-container">
+            <button class="nl-carousel-nav-btn prev" onclick="scrollNewlyLaunched('left')" title="Previous Newly Launched Projects" aria-label="Previous">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+
+            <div class="nl-cards-track" id="nl-cards-track">
+              <!-- Dynamically populated by loadNewlyLaunchedProjects() -->
+            </div>
+
+            <button class="nl-carousel-nav-btn next" onclick="scrollNewlyLaunched('right')" title="Next Newly Launched Projects" aria-label="Next">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. UPCOMING PROJECTS (BILLBOARD HERO CAROUSEL WITH EARLY BIRD BENEFITS) -->
+      <section class="up-section" id="upcoming-projects-section">
+        <div class="up-header">
+          <h2 class="up-heading">Upcoming Projects</h2>
+          <p class="up-subheading">Visit these projects and get early bird benefits</p>
+        </div>
+
+        <div class="up-carousel-wrapper">
+          <button class="up-nav-btn prev" onclick="scrollUpcomingProjects('prev')" title="Previous Upcoming Project" aria-label="Previous">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+
+          <div class="up-billboard-track" id="up-billboard-track">
+            <!-- Dynamically populated by loadUpcomingProjects() -->
+          </div>
+
+          <button class="up-nav-btn next" onclick="scrollUpcomingProjects('next')" title="Next Upcoming Project" aria-label="Next">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <div class="up-dots-container" id="up-dots-container"></div>
+      </section>
+
+      <!-- 8. SHOWCASE 2: RENTAL ADVICE SHOWCASE (RED ARMCHAIR & TREE + BEST RENTING ADVICE) -->
+      <section class="bah-showcase-section" id="rent-home-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Rental Showcase Image -->
+          <div class="bah-square-box">
+            <img src="/assets/rental_showcase.jpg" alt="Luxury Rental Interior" class="bah-square-img" style="object-position: center 50%;" loading="eager" />
+          </div>
+
+          <!-- Right Column: Editorial Title Added Beside The Image -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Best Renting<br/>Advice by Our Top<br/>Editors</h2>
+            <p class="bah-beside-sub">Read from Beginners check-list to Pro Tips</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEST RENTING ADVICE & LIVE RENTAL NEWS -->
+      <section class="rna-section" id="rental-news-section">
+        <div class="rna-card">
+          <div class="rna-tabs-row">
+            <button class="rna-tab-btn active" id="rna-tab-news" onclick="switchRentalNewsTab('news')">News</button>
+            <button class="rna-tab-btn" id="rna-tab-tax-legal" onclick="switchRentalNewsTab('tax-legal')">Tax & Legal</button>
+            <button class="rna-tab-btn" id="rna-tab-help-guides" onclick="switchRentalNewsTab('help-guides')">Help Guides</button>
+            <button class="rna-tab-btn" id="rna-tab-investment" onclick="switchRentalNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="rna-grid-wrapper">
+            <button class="rna-arrow-btn prev" id="rna-arrow-prev" onclick="prevRentalNewsPage()" title="Previous Articles" style="display: none;">
+              ‹
+            </button>
+
+            <div class="rna-articles-grid" id="rna-articles-grid">
+              <!-- Dynamically populated by renderRentalNewsGrid() -->
+            </div>
+
+            <button class="rna-arrow-btn next" id="rna-arrow-next" onclick="nextRentalNewsPage()" title="Next Articles">
+              ›
+            </button>
+          </div>
+
+          <div class="rna-footer-link-row">
+            <a class="rna-footer-link" onclick="openAllRentalNewsModal()">
+              <span>Read realty news, guides & articles</span>
+              <span>→</span>
+            </a>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;" id="rna-page-indicator">
+              Page 1 of 2
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. HANDPICKED RESIDENTIAL PROJECTS (FEATURED ACROSS INDIA) -->
+      <section class="hrp-section" id="curated-section">
+        <div class="hrp-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h2 class="hrp-title">Handpicked Residential Projects</h2>
+              <p class="hrp-subheading">Featured Residential projects across India</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <span style="font-size: 0.78rem; font-weight: 750; color: #7e22ce; background: #f3e8ff; padding: 0.25rem 0.75rem; border-radius: 9999px;">
+                ⭐ Nexora Handpicked
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hrp-carousel-container">
+          <button class="hrp-carousel-btn prev" onclick="scrollHandpickedProjects('left')" title="Previous Projects" aria-label="Previous">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+
+          <div class="hrp-cards-track" id="hrp-cards-track">
+            <!-- Dynamically populated by renderHandpickedResidentialProjects() -->
+          </div>
+
+          <button class="hrp-carousel-btn next" onclick="scrollHandpickedProjects('right')" title="Next Projects" aria-label="Next">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <!-- Backward Compatibility Anchors -->
+        <div id="pub-curated-container" style="display: none;"></div>
+        <div id="pub-buy-container" style="display: none;"></div>
+        <div id="pub-rent-container" style="display: none;"></div>
+        <div id="pub-invest-container" style="display: none;"></div>
+      </section>
+
+      <!-- 10. SHOWCASE 3: PLOTS & LAND SHOWCASE (4 WHITE SQUARE PINS VISIBLE: OBJECT-POSITION 50% 58%) -->
+      <section class="bah-showcase-section" id="plot-land-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Land Plot Showcase Image (600px x 440px) -->
+          <div class="bah-square-box">
+            <img src="/assets/plot_showcase.jpg" alt="Residential and Commercial Land Plots" class="bah-square-img" style="object-position: 50% 58%;" loading="eager" />
+          </div>
+
+          <!-- Right Column: Editorial Title Added Beside The Image -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Best articles on<br/>Plots/Land</h2>
+            <p class="bah-beside-sub">Read from Beginners check-list to Pro Tips</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEST ARTICLES ON PLOTS/LAND -->
+      <section class="pna-section" id="plot-news-section">
+        <div class="pna-card">
+          <div class="pna-tabs-row">
+            <button class="pna-tab-btn active" id="pna-tab-news" onclick="switchPlotNewsTab('news')">News</button>
+            <button class="pna-tab-btn" id="pna-tab-legal" onclick="switchPlotNewsTab('legal')">Tax & Legal</button>
+            <button class="pna-tab-btn" id="pna-tab-guides" onclick="switchPlotNewsTab('guides')">Help Guides</button>
+            <button class="pna-tab-btn" id="pna-tab-investment" onclick="switchPlotNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="pna-grid-wrapper">
+            <button class="pna-arrow-btn prev" id="pna-arrow-prev" onclick="prevPlotNewsPage()" title="Previous Articles" style="display: none;">‹</button>
+            <div class="pna-articles-grid" id="pna-articles-grid">
+              <!-- Dynamically populated by renderPlotNewsGrid() -->
+            </div>
+            <button class="pna-arrow-btn next" id="pna-arrow-next" onclick="nextPlotNewsPage()" title="Next Articles">›</button>
+          </div>
+
+          <div class="pna-footer-link-row">
+            <a class="pna-footer-link" onclick="openAllPlotNewsModal()">
+              <span>Read realty news, guides & articles</span>
+              <span>→</span>
+            </a>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;" id="pna-page-indicator">Page 1 of 2</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11. SHOWCASE 4: PROPERTY OWNERS SHOWCASE (BEAUTIFUL BUSINESSWOMAN HOLDING PHONE + POST PROPERTY FREE) -->
+      <section class="bah-showcase-section" id="owner-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Beautiful Indian Businesswoman Holding Smartphone (600px x 440px) -->
+          <div class="bah-square-box" style="background: #e8f5e9;">
+            <img src="/assets/owner_showcase.jpg" alt="Sell or Rent Faster with Nexora" class="bah-square-img" style="object-position: center 20%;" loading="eager" />
+          </div>
+
+          <!-- Right Column: Sell or Rent Faster CTAs -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Sell or rent faster at the<br/>right price!</h2>
+            <p class="bah-beside-sub">List your property now</p>
+
+            <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; align-items: flex-start;">
+              <button class="btn btn-primary" onclick="openPostPropertyPage()" style="background: #0078db; color: #ffffff; padding: 0.85rem 2.25rem; font-size: 1rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 120, 219, 0.35); transition: all 0.15s ease;">
+                Post Property, It's FREE
+              </button>
+              <a href="https://wa.me/919876543210?text=Hi%20Nexora,%20I%20want%20to%20post%20my%20property%20for%20free" target="_blank" style="color: #059669; font-weight: 600; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span>Post via <span style="font-weight: 700;">WhatsApp</span></span>
+                <span>→</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ARTICLES AND GUIDES FOR PROPERTY OWNERS (EXACT MATCHING OVERLAPPING FULL-WIDTH GLASS CARD) -->
+      <section class="ona-section" id="owner-news-section">
         <div class="ona-card">
           <div class="ona-tabs-row">
             <button class="ona-tab-btn active" id="ona-tab-news" onclick="switchOwnerNewsTab('news')">News</button>
-            <button class="ona-tab-btn" id="ona-tab-tax" onclick="switchOwnerNewsTab('tax')">Tax & Legal</button>
-            <button class="ona-tab-btn" id="ona-tab-help" onclick="switchOwnerNewsTab('help')">Help Guides</button>
+            <button class="ona-tab-btn" id="ona-tab-legal" onclick="switchOwnerNewsTab('legal')">Tax & Legal</button>
+            <button class="ona-tab-btn" id="ona-tab-guides" onclick="switchOwnerNewsTab('guides')">Help Guides</button>
             <button class="ona-tab-btn" id="ona-tab-investment" onclick="switchOwnerNewsTab('investment')">Investment</button>
           </div>
 
           <div class="ona-split-row">
             <div class="ona-left-col">
-              <h3 class="ona-inner-title">Articles & Guides for Real Estate / Property Owners</h3>
-              <p class="ona-inner-sub">Expert legal guidance, taxation insights, RERA updates, and high-yield wealth strategies curated for Indian homeowners.</p>
+              <h3 class="ona-inner-title">Articles and guides<br/>for property owners</h3>
+              <p class="ona-inner-sub">Read from Beginners check-list to Pro Tips</p>
             </div>
 
             <div class="ona-grid-wrapper">
-              <button class="ona-arrow-btn prev" id="ona-arrow-prev" onclick="prevOwnerNewsPage()" style="display: none;">‹</button>
-              <div class="ona-articles-grid" id="ona-articles-grid"></div>
-              <button class="ona-arrow-btn next" id="ona-arrow-next" onclick="nextOwnerNewsPage()">›</button>
+              <button class="ona-arrow-btn prev" id="ona-arrow-prev" onclick="prevOwnerNewsPage()" title="Previous Articles" style="display: none;">‹</button>
+              <div class="ona-articles-grid" id="ona-articles-grid">
+                <!-- Dynamically populated by renderOwnerNewsGrid() -->
+              </div>
+              <button class="ona-arrow-btn next" id="ona-arrow-next" onclick="nextOwnerNewsPage()" title="Next Articles">›</button>
             </div>
           </div>
 
           <div class="ona-footer-link-row">
-            <span id="ona-page-indicator" style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Page 1 of 2</span>
-            <a class="ona-footer-link" onclick="openAllOwnerNewsModal()">View all Owner Guides & Articles →</a>
+            <a class="ona-footer-link" onclick="openAllOwnerNewsModal()">
+              <span>Read realty news, guides & articles</span>
+              <span>→</span>
+            </a>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;" id="ona-page-indicator">Page 1 of 2</div>
           </div>
         </div>
       </section>
 
-      <!-- 6. CURATED EXCLUSIVE OPPORTUNITIES -->
-      <section class="eh-curated-showcase-section" id="curated-section">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem;">
-          <div>
-            <span style="font-size: 0.76rem; font-weight: 800; color: #0078db; text-transform: uppercase; letter-spacing: 0.05em;">Curated Opportunities</span>
-            <h2 style="font-size: 1.75rem; font-weight: 850; color: #091e42; margin: 0.2rem 0 0;">Exclusive Real Estate Showcase</h2>
-          </div>
-          <a onclick="openCustomerAllProjectsView()" style="font-size: 0.88rem; font-weight: 700; color: #0078db; cursor: pointer;">Browse All Projects →</a>
-        </div>
-
-        <div class="eh-curated-tabs-strip">
-          <button class="eh-curated-tab-pill active" id="curated-pill-all" onclick="renderCuratedRow('all')">✨ All Curated</button>
-          <button class="eh-curated-tab-pill" id="curated-pill-buy" onclick="renderCuratedRow('buy')">🏡 Direct Developer Launches</button>
-          <button class="eh-curated-tab-pill" id="curated-pill-rent" onclick="renderCuratedRow('rent')">🔑 0% Brokerage Rentals</button>
-          <button class="eh-curated-tab-pill" id="curated-pill-invest" onclick="renderCuratedRow('invest')">👥 Pooled Group Deals</button>
-        </div>
-
-        <div id="pub-curated-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;"></div>
-      </section>
-
-      <!-- 7. NEWLY LAUNCHED PROJECTS (SYNCED WITH CRM) -->
-      <section class="nl-showcase-section">
-        <div class="nl-outer-box">
-          <div class="nl-header-row">
-            <span class="nl-sync-badge-pill">⚡ Synced with CRM Inventory Matrix</span>
-            <div class="nl-title-group">
-              <div class="nl-icon-badge">🚀</div>
-              <h2 style="font-size: 1.75rem; font-weight: 850; color: #091e42; margin: 0;">Newly Launched Projects</h2>
-            </div>
-            <p style="font-size: 0.92rem; color: #475569; margin: 0; max-width: 580px;">
-              Fresh inventory straight from verified tier-1 developers with direct RERA registrations and launch-day price locks.
-            </p>
-          </div>
-          <div id="nl-cards-track" class="nl-cards-track"></div>
-        </div>
-      </section>
-
-      <!-- 8. HANDPICKED RESIDENTIAL DEVELOPMENTS -->
-      <section class="hrp-section">
-        <div class="hrp-header">
-          <h2 class="hrp-title">Handpicked Residential Projects</h2>
-          <p class="hrp-subheading">Featured developments with verified RERA certificates, virtual tours, and guaranteed developer rates.</p>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-          <!-- Project 1: Mahindra AquaVista -->
-          <div style="background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
-            <div style="height: 220px; position: relative; overflow: hidden; cursor: pointer;" onclick="openCustomerProjectDetail('up-mahindra-aquavista')">
-              <img src="/assets/mahindra_aquavista.jpg" alt="Mahindra AquaVista" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
-              <span style="position: absolute; top: 0.75rem; left: 0.75rem; background: #0078db; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 6px;">
-                EXCLUSIVE LAUNCH
-              </span>
-            </div>
-            <div style="padding: 1.25rem; display: flex; flex-direction: column; flex: 1;">
-              <h3 style="font-size: 1.2rem; font-weight: 850; margin: 0 0 0.25rem; color: #091e42; cursor: pointer;" onclick="openCustomerProjectDetail('up-mahindra-aquavista')">Mahindra AquaVista</h3>
-              <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.85rem;">📍 Sector 59, Golf Course Extn, Gurugram</p>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: baseline;">
-                <div>
-                  <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Price</span>
-                  <div style="font-size: 1.3rem; font-weight: 850; color: #091e42;">₹2.85 - 5.40 Cr</div>
-                </div>
-                <div style="text-align: right;">
-                  <span style="font-size: 0.75rem; font-weight: 750; color: #16a34a;">3 & 4 BHK Luxury</span>
-                </div>
-              </div>
-              <div style="display: flex; gap: 0.5rem; margin-top: auto;">
-                <button class="btn btn-primary btn-sm" onclick="openCustomerProjectDetail('up-mahindra-aquavista')" style="flex: 1.2; justify-content: center; font-weight: 750; background: #0078db;">
-                  View Details
-                </button>
-                <button class="btn btn-secondary btn-sm" onclick="openDigitalBrochureModal('up-mahindra-aquavista')" style="flex: 1; justify-content: center; font-weight: 750;">
-                  Brochure
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Project 2: Sobha Neopolis -->
-          <div style="background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
-            <div style="height: 220px; position: relative; overflow: hidden; cursor: pointer;" onclick="openCustomerProjectDetail('up-sobha-neopolis')">
-              <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80" alt="Sobha Neopolis" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
-              <span style="position: absolute; top: 0.75rem; left: 0.75rem; background: #10b981; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 6px;">
-                GREEK THEMED
-              </span>
-            </div>
-            <div style="padding: 1.25rem; display: flex; flex-direction: column; flex: 1;">
-              <h3 style="font-size: 1.2rem; font-weight: 850; margin: 0 0 0.25rem; color: #091e42; cursor: pointer;" onclick="openCustomerProjectDetail('up-sobha-neopolis')">Sobha Neopolis Phase 2</h3>
-              <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.85rem;">📍 Panathur, Marathahalli-ORR, Bengaluru</p>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: baseline;">
-                <div>
-                  <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Price</span>
-                  <div style="font-size: 1.3rem; font-weight: 850; color: #091e42;">₹1.85 - 3.75 Cr</div>
-                </div>
-                <div style="text-align: right;">
-                  <span style="font-size: 0.75rem; font-weight: 750; color: #16a34a;">3 & 4 BHK Grecian</span>
-                </div>
-              </div>
-              <div style="display: flex; gap: 0.5rem; margin-top: auto;">
-                <button class="btn btn-primary btn-sm" onclick="openCustomerProjectDetail('up-sobha-neopolis')" style="flex: 1.2; justify-content: center; font-weight: 750; background: #0078db;">
-                  View Details
-                </button>
-                <button class="btn btn-secondary btn-sm" onclick="openDigitalBrochureModal('up-sobha-neopolis')" style="flex: 1; justify-content: center; font-weight: 750;">
-                  Brochure
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Project 3: DLF The Arbour -->
-          <div style="background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
-            <div style="height: 220px; position: relative; overflow: hidden; cursor: pointer;" onclick="openCustomerProjectDetail('up-dlf-arbour-2')">
-              <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80" alt="DLF The Arbour" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
-              <span style="position: absolute; top: 0.75rem; left: 0.75rem; background: #8b5cf6; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 6px;">
-                SKY MANSIONS
-              </span>
-            </div>
-            <div style="padding: 1.25rem; display: flex; flex-direction: column; flex: 1;">
-              <h3 style="font-size: 1.2rem; font-weight: 850; margin: 0 0 0.25rem; color: #091e42; cursor: pointer;" onclick="openCustomerProjectDetail('up-dlf-arbour-2')">DLF The Arbour Phase 2</h3>
-              <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.85rem;">📍 Sector 63, Golf Course Extn, Gurugram</p>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: baseline;">
-                <div>
-                  <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Price</span>
-                  <div style="font-size: 1.3rem; font-weight: 850; color: #091e42;">₹6.50 - 11.20 Cr</div>
-                </div>
-                <div style="text-align: right;">
-                  <span style="font-size: 0.75rem; font-weight: 750; color: #16a34a;">4 BHK Mansions</span>
-                </div>
-              </div>
-              <div style="display: flex; gap: 0.5rem; margin-top: auto;">
-                <button class="btn btn-primary btn-sm" onclick="openCustomerProjectDetail('up-dlf-arbour-2')" style="flex: 1.2; justify-content: center; font-weight: 750; background: #0078db;">
-                  View Details
-                </button>
-                <button class="btn btn-secondary btn-sm" onclick="openDigitalBrochureModal('up-dlf-arbour-2')" style="flex: 1; justify-content: center; font-weight: 750;">
-                  Brochure
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 9. UPCOMING PROJECTS BILLBOARD TRACK -->
-      <section class="up-section">
-        <div class="up-header">
-          <h2 class="up-heading">Upcoming Projects & Pre-Launches</h2>
-          <p class="up-subheading">Early registration open for high-demand masterplans with pre-launch pricing advantages.</p>
-        </div>
-        <div id="up-billboard-track" class="up-billboard-track"></div>
-      </section>
-
-      <!-- 10. EXPLORE POPULAR LOCALITIES -->
+      <!-- 12. POPULAR LOCALITIES IN TOP CITIES -->
       <section style="max-width: 1200px; margin: 0 auto 4rem; padding: 0 1.5rem; box-sizing: border-box;">
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem;">
           <div>
@@ -8092,12 +8208,12 @@ function renderPublicWebsite(root) {
         <div id="eh-popular-localities-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;"></div>
       </section>
 
-      <!-- 11. INTERACTIVE 3D ELEVATION VISUALIZER -->
+      <!-- 13. INTERACTIVE 3D ELEVATION VISUALIZER -->
       <section class="pub-3d-section" style="max-width: 1200px; margin: 0 auto 5rem; padding: 0 1.5rem; box-sizing: border-box;">
         <div id="pub-3d-visualizer-container"></div>
       </section>
 
-      <!-- 12. ENTERPRISE SAAS FOOTER -->
+      <!-- 14. ENTERPRISE SAAS FOOTER -->
       <footer style="background: #091426; color: #cbd5e1; padding: 4rem 1.5rem 2rem; border-top: 1px solid rgba(255,255,255,0.08);">
         <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2.5rem; margin-bottom: 3rem;">
           <div>
@@ -8129,7 +8245,7 @@ function renderPublicWebsite(root) {
             <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem;">
               <a onclick="openPostPropertyPage()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Post Property for Free</a>
               <a onclick="switchOwnerNewsTab('news')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Owner Market Reports</a>
-              <a onclick="switchOwnerNewsTab('tax')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Capital Gains Tax Guide</a>
+              <a onclick="switchOwnerNewsTab('legal')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Capital Gains Tax Guide</a>
               <a onclick="openShieldedCallModal()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">0-Spam Protected Inquiries</a>
             </div>
           </div>
@@ -8157,18 +8273,35 @@ function renderPublicWebsite(root) {
     </div>
   `;
 
-  // Initialize interactive components
+  // Initialize all interactive components
   switchEhSearchTab('buy');
-  renderCuratedRow('all');
+  if (typeof window.renderNexoraNewsGrid === 'function') {
+    window.renderNexoraNewsGrid('news');
+  }
   if (typeof window.loadNewlyLaunchedProjects === 'function') {
     window.loadNewlyLaunchedProjects();
   }
   if (typeof window.loadUpcomingProjects === 'function') {
     window.loadUpcomingProjects();
   }
-  renderOwnerNewsGrid('news', 0);
-  switchLocalityCity('ncr');
-  renderPub3DVisualizer();
+  if (typeof window.renderRentalNewsGrid === 'function') {
+    window.renderRentalNewsGrid();
+  }
+  if (typeof window.renderHandpickedResidentialProjects === 'function') {
+    window.renderHandpickedResidentialProjects();
+  }
+  if (typeof window.renderPlotNewsGrid === 'function') {
+    window.renderPlotNewsGrid('news');
+  }
+  if (typeof window.renderOwnerNewsGrid === 'function') {
+    window.renderOwnerNewsGrid('news');
+  }
+  if (typeof window.switchLocalityCity === 'function') {
+    window.switchLocalityCity('ncr');
+  }
+  if (typeof window.renderPub3DVisualizer === 'function') {
+    window.renderPub3DVisualizer();
+  }
 }
 
 

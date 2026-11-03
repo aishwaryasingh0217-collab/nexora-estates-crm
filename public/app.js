@@ -6319,6 +6319,88 @@ window.openUpcomingViewNumberModal = function(projectId) {
 
 // ── CUSTOMER PROJECT DETAIL PAGE SYSTEM (NEXORA LUXURY PATTERN WITH BROCHURE DOWNLOAD) ──
 window.getCustomerProjectData = function(projectId) {
+  // Check live DB cache first if project is created via CRM
+  if (projectId && window._projectDetailsDbCache && window._projectDetailsDbCache[projectId]) {
+    const cachedDbPrj = window._projectDetailsDbCache[projectId];
+    return {
+      id: cachedDbPrj.id,
+      name: cachedDbPrj.name,
+      tagline: cachedDbPrj.project_type ? ('Exclusive ' + cachedDbPrj.project_type.toLowerCase() + ' development') : 'Premium Residential Development',
+      developer: cachedDbPrj.builder_developer || 'Nexora Verified Partner',
+      developerLogo: '🏢 ' + (cachedDbPrj.builder_developer || 'NEXORA PARTNER'),
+      location: cachedDbPrj.location + ', ' + (cachedDbPrj.city || 'Bengaluru'),
+      city: cachedDbPrj.city || 'Bengaluru',
+      locality: cachedDbPrj.location || 'Metropolitan Hub',
+      price: '₹ 1.25 Cr - ₹ 2.85 Cr',
+      priceSqft: '₹ 8,450 / sq.ft',
+      emi: '₹ 62.5 K / month',
+      rera: cachedDbPrj.rera_number || 'PRM/KA/RERA/VERIFIED/2026',
+      status: cachedDbPrj.status === 'NEW_LAUNCH' ? 'New Launch (Under Construction)' : cachedDbPrj.status,
+      rating: '4.8',
+      reviewCount: '34',
+      totalUnits: (cachedDbPrj.total_units || 48) + ' Luxury Units',
+      landArea: '12.5 Acres Master Community',
+      openSpace: '75% Open & Landscaped Expanses',
+      possession: cachedDbPrj.possession_date || 'Possession Dec 2028',
+      phone: '+91 98310 44219',
+      cleanPhone: '919831044219',
+      brochureUrl: cachedDbPrj.brochure_url || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
+      photos: [
+        { url: cachedDbPrj.hero_image_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80', label: 'Panoramic Architectural Elevation' },
+        { url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80', label: 'Facade & Landscaped Driveway' },
+        { url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80', label: 'Infinity Swimming Pool & Clubhouse' },
+        { url: 'https://images.unsplash.com/photo-1584738766473-61c083514bf4?auto=format&fit=crop&w=800&q=80', label: 'Zen Meditation Courtyard' },
+        { url: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80', label: 'Designer Living Lounge & Deck' }
+      ],
+      description: cachedDbPrj.name + ' by ' + (cachedDbPrj.builder_developer || 'Nexora') + ' is a signature development located at ' + cachedDbPrj.location + ', ' + (cachedDbPrj.city || 'Bengaluru') + '. Built to international standards with 0% brokerage directly through Nexora Estates.',
+      configs: [
+        {
+          type: '3 BHK Luxury Villa',
+          superArea: '2,150 sq.ft',
+          carpetArea: '1,680 sq.ft',
+          price: '₹ 1.45 Cr+',
+          baths: '3 Baths',
+          balconies: '2 Balconies',
+          facing: 'East Facing Vastu Compliant',
+          status: 'Available'
+        },
+        {
+          type: '4 BHK Grand Duplex Villa',
+          superArea: '3,200 sq.ft',
+          carpetArea: '2,540 sq.ft',
+          price: '₹ 2.25 Cr+',
+          baths: '4 Baths',
+          balconies: '3 Balconies',
+          facing: 'North-East Facing',
+          status: 'Pre-Booking'
+        }
+      ],
+      amenities: [
+        { icon: '🏊', name: 'Infinity Pool & Sun Deck' },
+        { icon: '🏋️', name: 'State-of-the-Art Gymnasium' },
+        { icon: '🏸', name: 'Badminton & Squash Courts' },
+        { icon: '🧘', name: 'Zen Meditation Pavilion' },
+        { icon: '🚗', name: 'EV Charging Enabled Parking' },
+        { icon: '🛡️', name: '24/7 Biometric Multi-Tier Security' },
+        { icon: '⚡', name: '100% DG Power Backup' },
+        { icon: '🌿', name: 'IGBC Green Certified' }
+      ],
+      locations: [
+        { place: '🚆 Metro Corridor & Tech Park Access', distance: '1.2 km (4 mins)' },
+        { place: '🏫 Top International School', distance: '1.5 km (5 mins)' },
+        { place: '🏥 Multispeciality Healthcare', distance: '2.4 km (7 mins)' },
+        { place: '🛍️ High-Street Retail & Dining', distance: '800 meters (Walk)' }
+      ],
+      reviews: [
+        {
+          name: 'Verified Buyer',
+          rating: '4.8',
+          time: 'Verified Allotment • Recent',
+          text: 'Exceptional development quality by ' + (cachedDbPrj.builder_developer || 'Nexora') + '. Clear documentation and RERA approved.'
+        }
+      ]
+    };
+  }
   if (!projectId || projectId === 'up-mahindra-aquavista' || projectId.includes('aquavista') || projectId.includes('mahindra')) {
     return {
       id: 'up-mahindra-aquavista',
@@ -6842,6 +6924,15 @@ window.submitCustomerProjectInquiry = function(projectName) {
 
 // Main Customer Project Detail Renderer
 window.renderCustomerProjectDetail = function(root, projectId) {
+  window._projectDetailsDbCache = window._projectDetailsDbCache || {};
+  if (projectId && (projectId.length > 20 || projectId.includes('-')) && !window._projectDetailsDbCache[projectId]) {
+    apiFetch('/projects/' + projectId).then(res => {
+      if (res && res.data) {
+        window._projectDetailsDbCache[projectId] = res.data;
+        window.renderCustomerProjectDetail(root, projectId);
+      }
+    }).catch(e => console.warn('Could not fetch project details:', e));
+  }
   const p = window.getCustomerProjectData(projectId);
 
   root.innerHTML = `

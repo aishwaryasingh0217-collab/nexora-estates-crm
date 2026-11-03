@@ -4574,33 +4574,33 @@ window.APARTMENTS_VILLAS_CARDS = [
   },
   {
     id: 'builder-floor',
-    title: 'Independent /<br/>Builder Floor',
-    count: '3,400+ Properties',
-    bgColor: '#f8f2fb',
+    title: 'Builder Floor',
+    count: '170+ Properties',
+    bgColor: '#fef5e4',
     img: '/assets/card_builder_floor_clean.jpg',
     category: 'Builder Floor'
   },
   {
     id: 'studio-apartment',
-    title: '1 RK / Studio<br/>Apartment',
-    count: '1,200+ Properties',
-    bgColor: '#fff1ea',
+    title: '1 RK/ Studio<br/>Apartment',
+    count: '40+ Properties',
+    bgColor: '#f1f8fe',
     img: '/assets/card_studio_clean.jpg',
     category: 'Studio'
   },
   {
     id: 'serviced-apartment',
-    title: 'Serviced<br/>Apartment',
-    count: '450+ Properties',
-    bgColor: '#edf7fa',
+    title: 'Serviced<br/>Apartments',
+    count: '5 Properties',
+    bgColor: '#fef5e4',
     img: '/assets/card_serviced_clean.jpg',
     category: 'Serviced Apartment'
   },
   {
     id: 'farm-house',
-    title: 'Farm<br/>House',
-    count: '350+ Properties',
-    bgColor: '#f1f7ec',
+    title: 'Farm House',
+    count: '9 Properties',
+    bgColor: '#d7f2e3',
     img: '/assets/card_farmhouse_clean.jpg',
     category: 'Farmhouse'
   }

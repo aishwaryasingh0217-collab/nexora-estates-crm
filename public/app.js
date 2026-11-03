@@ -237,6 +237,14 @@ function renderApp() {
     return;
   }
 
+  // 0B. Dedicated Apartments & Properties Search Page (99acres pattern)
+  if (state.viewMode === 'properties' || window.location.hash === '#/properties' || window.location.hash === '#/apartments') {
+    if (typeof window.renderApartmentListingPage === 'function') {
+      window.renderApartmentListingPage(root);
+      return;
+    }
+  }
+
   // 1. If in public website mode, render the public website or customer views
   if (state.viewMode === 'website' || (!state.token && state.viewMode !== 'login')) {
     if (state.selectedCustomerProjectId) {
@@ -2799,6 +2807,10 @@ window.handlePubTypeFilter = function(type) {
 };
 
 window.executeHeroSearch = function() {
+  if (typeof window.openApartmentListingPage === 'function') {
+    window.openApartmentListingPage('ALL');
+    return;
+  }
   openExpandedSearchModal('buy');
 };
 
@@ -4589,20 +4601,20 @@ window.APARTMENTS_VILLAS_CARDS = [
     category: 'Studio'
   },
   {
-    id: 'serviced-apartment',
-    title: 'Serviced<br/>Apartments',
-    count: '5 Properties',
-    bgColor: '#fef5e4',
-    img: '/assets/card_serviced_clean.jpg',
-    category: 'Serviced Apartment'
-  },
-  {
     id: 'farm-house',
     title: 'Farm House',
     count: '9 Properties',
     bgColor: '#d7f2e3',
     img: '/assets/card_farmhouse_clean.jpg',
     category: 'Farmhouse'
+  },
+  {
+    id: 'serviced-apartment',
+    title: 'Serviced<br/>Apartments',
+    count: '5 Properties',
+    bgColor: '#fef5e4',
+    img: '/assets/card_serviced_clean.jpg',
+    category: 'Serviced Apartment'
   }
 ];
 
@@ -5081,6 +5093,10 @@ window.contactPropertyAgent = function(title, price, loc) {
 };
 
 window.openCategorySearch = function(cat) {
+  if (typeof window.openApartmentListingPage === 'function') {
+    window.openApartmentListingPage(cat);
+    return;
+  }
   const searchInput = document.querySelector('.hero-search-input') || document.querySelector('.eh-search-input');
   if (searchInput) {
     searchInput.value = cat;

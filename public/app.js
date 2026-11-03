@@ -5682,10 +5682,11 @@ window.loadNewlyLaunchedProjects = async function() {
               highlightType: 'completion',
               highlightText: p.possession_date ? `🔑 Completion in ${p.possession_date}` : '🔑 Completion in 2029',
               ribbon: 'NEW LAUNCH',
-              rera: p.rera_number ? '✔ RERA' : '✔ RERA',
+              rera: p.rera_number ? ('✔ RERA: ' + p.rera_number) : '✔ RERA',
               phone: '+91 98310 44219',
               img: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80',
               developer: p.builder_developer || 'Nexora Verified Partner',
+              brochureUrl: p.brochure_url,
               fromAdmin: true
             });
           }
@@ -5708,6 +5709,8 @@ window.loadNewlyLaunchedProjects = async function() {
       uniqueProjects.push(prj);
     }
   }
+
+  window._nexoraNewlyLaunchedProjectsCache = uniqueProjects;
 
   // Limit display to 4 to 6 projects as requested
   const displayProjects = uniqueProjects.slice(0, 6);
@@ -6432,7 +6435,9 @@ window.getCustomerProjectData = function(projectId) {
   // Look up other upcoming or newly launched projects
   let found = null;
   const allKnown = [
+    ...(window._nexoraNewlyLaunchedProjectsCache || []),
     ...(window._nexoraUpcomingProjectsCache || []),
+    ...(state.projects ? state.projects.map(p => ({ id: p.id, name: p.name, location: p.location + ', ' + p.city, developer: p.builder_developer, brochureUrl: p.brochure_url, rera: p.rera_number, possession: p.possession_date, config: (p.total_units || 100) + ' Units' })) : []),
     ...UPCOMING_PROJECTS_DEFAULT,
     ...NEWLY_LAUNCHED_PROJECTS_DEFAULT,
     ...HANDPICKED_RESIDENTIAL_PROJECTS
@@ -6462,7 +6467,7 @@ window.getCustomerProjectData = function(projectId) {
       possession: 'Possession 2028-2029',
       phone: found.phone || '+91 98409 23145',
       cleanPhone: (found.phone || '+91 98409 23145').replace(/[^\d]/g, ''),
-      brochureUrl: '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
+      brochureUrl: found.brochureUrl || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
       photos: [
         { url: found.img || '/assets/mahindra_aquavista.jpg', label: 'Primary Elevation View' },
         { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80', label: 'Architectural Panorama' },

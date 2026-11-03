@@ -7591,493 +7591,584 @@ window.submitDvigaConsultationForm = function() {
   modal.style.display = 'flex';
 };
 
+
+window.showEhDropdown = function(key) {
+  const d = document.getElementById(`eh-dropdown-${key}`);
+  if (d) d.style.display = 'block';
+};
+
+window.hideEhDropdown = function(key) {
+  const d = document.getElementById(`eh-dropdown-${key}`);
+  if (d) d.style.display = 'none';
+};
+
+window.openCustomerAllProjectsView = function() {
+  state.viewMode = 'website';
+  state.customerView = 'all-projects';
+  state.selectedCustomerProjectId = null;
+  window.location.hash = '#/all-projects';
+  renderApp();
+};
+
+window.openCustomerProjectDetail = function(projectId) {
+  state.viewMode = 'website';
+  state.selectedCustomerProjectId = projectId;
+  state.customerView = null;
+  window.location.hash = `#/project/${projectId}`;
+  renderApp();
+};
+
+window.openPublicHome = function() {
+  state.viewMode = 'website';
+  state.customerView = null;
+  state.selectedCustomerProjectId = null;
+  window.location.hash = '#';
+  renderApp();
+};
+
 function renderPublicWebsite(root) {
   root.innerHTML = `
-    <div class="dv-page">
-      <!-- 1. FIXED ULTRA-LUXURY ARCHITECTURAL HEADER -->
-      <header class="dv-header">
-        <div class="dv-header-inner">
-          <nav class="dv-nav-left">
-            <a class="dv-nav-link" href="#dv-project">The Project</a>
-            <a class="dv-nav-link" href="#dv-location">Location</a>
-            <a class="dv-nav-link" href="#dv-architecture">Architecture</a>
-            <a class="dv-nav-link" href="#dv-landscaping">Landscaping</a>
-            <a class="dv-nav-link" href="#dv-residences">Residences</a>
-          </nav>
+    <div class="eh-page-wrapper" style="background: #ffffff; min-height: 100vh; overflow-x: hidden;">
+      <!-- 1. STICKY GLASSMORPHIC HEADER (SCREENSHOT 1) -->
+      <header class="eh-header">
+        <div class="eh-logo-group">
+          <div class="eh-logo" onclick="openPublicHome()">
+            <div style="background: #0078db; color: #fff; font-weight: 800; font-size: 1.15rem; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,120,219,0.35);">NX</div>
+            <div style="display: flex; flex-direction: column; line-height: 1;">
+              <span class="eh-logo-text" style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">Nexora<span style="color: #38bdf8;">.</span></span>
+              <span style="font-size: 0.58rem; color: #93c5fd; letter-spacing: 1.2px; font-weight: 700; margin-top: 2px;">REAL ESTATE PLATFORM</span>
+            </div>
+          </div>
+          
+          <div class="eh-header-city-pill" onclick="openExpandedSearchModal('buy')">
+            <span>📍 Delhi / NCR</span>
+            <span style="font-size: 0.7rem; opacity: 0.8;">▾</span>
+          </div>
+        </div>
 
-          <div class="dv-brand-center" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">
-            <span class="dv-brand-title">NEXORA</span>
-            <span class="dv-brand-sub">Live and Create</span>
+        <nav class="eh-nav">
+          <div class="eh-nav-item" onmouseenter="showEhDropdown('buyers')" onmouseleave="hideEhDropdown('buyers')">
+            <a class="eh-nav-link">For Buyers <span style="font-size: 0.65rem;">▾</span></a>
+            <div class="eh-dropdown-menu" id="eh-dropdown-buyers" style="display: none;">
+              <a onclick="switchEhSearchTab('buy')">Buy Residential Flats</a>
+              <a onclick="switchEhSearchTab('buy')">Ready to Move Homes</a>
+              <a onclick="switchEhSearchTab('new-launch')">New RERA Projects</a>
+              <a onclick="openExpandedSearchModal('buy')">Luxury Penthouses & Villas</a>
+            </div>
           </div>
 
-          <div class="dv-nav-right">
-            <button class="dv-btn-call" onclick="openPublicSiteVisitModal('Private Consultation Request')">Request a Call</button>
-            <a class="dv-phone-link" href="tel:+919876543210">+91 98765 43210</a>
-            <button class="dv-btn-residences" onclick="document.getElementById('dv-residences').scrollIntoView({ behavior: 'smooth' })">Residences</button>
-            <button class="dv-btn-post-property" onclick="openPostPropertyPage()">Post Property <span style="background: #22c55e; color: #fff; font-size: 0.62rem; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.2rem;">FREE</span></button>
-            <button class="dv-btn-crm" onclick="setViewMode('login')" title="Open CRM Command Center">CRM Portal</button>
-            
-            <button class="dv-burger-btn" onclick="toggleDvigaDrawer(true)" title="Open Architectural Menu">
-              <span class="dv-burger-line"></span>
-              <span class="dv-burger-line" style="width: 16px;"></span>
-              <span class="dv-burger-line"></span>
+          <div class="eh-nav-item" onmouseenter="showEhDropdown('tenants')" onmouseleave="hideEhDropdown('tenants')">
+            <a class="eh-nav-link">For Tenants <span style="font-size: 0.65rem;">▾</span></a>
+            <div class="eh-dropdown-menu" id="eh-dropdown-tenants" style="display: none;">
+              <a onclick="switchEhSearchTab('rent')">Flats for Rent</a>
+              <a onclick="switchEhSearchTab('rent')">Direct Owner Rentals (0% Brokerage)</a>
+              <a onclick="selectExploreOption('pg')">PG & Co-living Spaces</a>
+            </div>
+          </div>
+
+          <div class="eh-nav-item" onmouseenter="showEhDropdown('owners')" onmouseleave="hideEhDropdown('owners')">
+            <a class="eh-nav-link">For Owners <span style="font-size: 0.65rem;">▾</span></a>
+            <div class="eh-dropdown-menu" id="eh-dropdown-owners" style="display: none;">
+              <a onclick="openPostPropertyPage()">Post Property for Free</a>
+              <a onclick="switchOwnerNewsTab('news')">Owner Legal & Tax Guides</a>
+              <a onclick="openOwnerArticleModal('tax-deductions', 'tax')">Tax Deduction Guide (Sec 54)</a>
+            </div>
+          </div>
+
+          <div class="eh-nav-item" onmouseenter="showEhDropdown('dealers')" onmouseleave="hideEhDropdown('dealers')">
+            <a class="eh-nav-link">For Dealers / Builders <span style="font-size: 0.65rem;">▾</span></a>
+            <div class="eh-dropdown-menu" id="eh-dropdown-dealers" style="display: none;">
+              <a onclick="setViewMode('login')">Channel Partner Portal</a>
+              <a onclick="setViewMode('login')">Developer Dashboard</a>
+              <a onclick="setViewMode('login')">Builder Sales Suite</a>
+            </div>
+          </div>
+
+          <div class="eh-nav-item">
+            <a class="eh-nav-link" onclick="openCustomerAllProjectsView()">🏗️ All Projects</a>
+          </div>
+
+          <div class="eh-nav-item">
+            <a class="eh-nav-link" onclick="openInsightsModal()">Insights <span class="eh-badge-new">NEW</span></a>
+          </div>
+        </nav>
+
+        <div class="eh-nav-actions">
+          <button class="eh-btn-post-property" onclick="openPostPropertyPage()">
+            Post Property <span class="badge-free">FREE</span>
+          </button>
+          <div class="eh-login-dropdown-wrapper">
+            <button class="eh-icon-btn" onclick="togglePubLoginDropdown(event)" title="User Account / CRM Login">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
             </button>
+            <div class="eh-dropdown-menu" id="eh-login-dropdown" style="display: none; right: 0;">
+              <a onclick="setViewMode('login')" style="font-weight: 700; color: #0078db;">🔐 Open CRM Staff Portal</a>
+              <a onclick="openPostPropertyPage()">🏡 Post Property FREE</a>
+              <a onclick="openShieldedCallModal()">🛡️ 0-Spam Shield Contact</a>
+            </div>
           </div>
         </div>
       </header>
 
-      <!-- 2. FULLSCREEN HERO CANVAS WITH INTERACTIVE CURSOR & SCROLL DIVE -->
-      <section class="dv-hero" id="dv-hero-section">
-        <!-- Floating Cursor Follower Pill (Dviga .help-pop) -->
-        <div class="dv-cursor-pop" id="dv-cursor-pop">
-          <span>✦ Move cursor to shift perspective • Scroll to dive in</span>
+      <!-- 2. HERO BANNER -->
+      <section class="eh-hero-section">
+        <div class="eh-hero-container">
+          <div class="eh-hero-left-col">
+            <h1 class="eh-hero-title">Find a Home You'll Love</h1>
+            <p class="eh-hero-subtitle">India's most trusted real estate ecosystem for buyers, tenants, owners, and developers.</p>
+          </div>
         </div>
+      </section>
 
-        <!-- Background Layers for Smooth View Changes -->
-        <div class="dv-hero-canvas" id="dv-hero-canvas">
-          <!-- Layer 0: Daytime Architecture Facade -->
-          <div class="dv-hero-layer active" id="dv-layer-0" style="background-image: url('https://static.tildacdn.com/tild3633-3464-4635-a161-643435363666/Group_2131330245.jpg');"></div>
-          <!-- Layer 1: Golden Sunset Perspective -->
-          <div class="dv-hero-layer" id="dv-layer-1" style="background-image: url('https://static.tildacdn.com/tild3437-3133-4334-b030-313564376162/Mask_group-1.jpg');"></div>
-          <!-- Layer 2: Dusk Architectural Illumination -->
-          <div class="dv-hero-layer" id="dv-layer-2" style="background-image: url('https://static.tildacdn.com/tild6238-3437-4332-b161-373332323565/Mask_group.jpg');"></div>
-          <!-- Layer 3: Night Crystal Tower Illumination -->
-          <div class="dv-hero-layer" id="dv-layer-3" style="background-image: url('https://static.tildacdn.com/tild3638-3663-4231-a465-383834323837/CHANGE1_1.jpg');"></div>
-        </div>
-
-        <div class="dv-hero-overlay"></div>
-
-        <div class="dv-hero-content">
-          <span class="dv-hero-eyebrow">Premium Residences Near Metropolitan Corridors</span>
-          <h1 class="dv-hero-title">NEXORA<br/><span style="font-style: italic; font-weight: 300; text-transform: none; color: #f2e6d6;">Live and Create</span></h1>
-          <p class="dv-hero-sub">
-            A sanctuary for modern leaders and creatives. Architecture that inspires, panoramic vistas that energize, and a community designed to carry forward a legacy of breakthrough ideas.
-          </p>
-          <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap;">
-            <button class="dv-btn-residences" style="padding: 0.9rem 2.25rem; font-size: 0.85rem;" onclick="document.getElementById('dv-residences').scrollIntoView({ behavior: 'smooth' })">
-              Explore Residences →
+      <!-- 3. OVERLAPPING IN-PAGE SEARCH CONSOLE (MATCHING SCREENSHOT) -->
+      <div class="eh-search-floating-wrapper">
+        <div class="eh-search-floating-box">
+          <!-- Top Tabs Bar -->
+          <div class="eh-top-tabs-bar">
+            <button class="eh-top-tab-item active" id="eh-tab-buy" onclick="switchEhSearchTab('buy')">Buy</button>
+            <button class="eh-top-tab-item" id="eh-tab-rent" onclick="switchEhSearchTab('rent')">Rent</button>
+            <button class="eh-top-tab-item" id="eh-tab-new-launch" onclick="switchEhSearchTab('new-launch')">
+              New Launch <span class="eh-red-dot"></span>
             </button>
-            <button class="dv-btn-call" style="padding: 0.85rem 2rem; font-size: 0.85rem;" onclick="open3DVisualizerModal()">
-              Launch 3D Tour 🎮
+            <button class="eh-top-tab-item" id="eh-tab-commercial" onclick="switchEhSearchTab('commercial')">Commercial</button>
+            <button class="eh-top-tab-item" id="eh-tab-plots" onclick="switchEhSearchTab('plots')">Plots/Land</button>
+            <button class="eh-top-tab-item" id="eh-tab-projects" onclick="switchEhSearchTab('projects')">Townships</button>
+          </div>
+
+          <!-- Main Input Bar -->
+          <div class="eh-floating-input-bar">
+            <div class="eh-dropdown-trigger" onclick="toggleInpageFilters()" id="eh-type-dropdown-btn">
+              <span id="eh-selected-type-text">All Residential</span>
+              <span style="font-size: 0.75rem; color: #6b778c;">▾</span>
+            </div>
+
+            <div class="eh-search-input-field" onclick="openExpandedSearchModal(window.curatedMode || 'buy')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7a869a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="eh-quick-search-input" placeholder='Search "3 BHK for sale in Mumbai, Delhi, Bengaluru, Gurgaon..."' readonly />
+            </div>
+
+            <button class="eh-tool-btn" onclick="detectUserCity(event)" title="Detect My Current Location">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="22" y1="12" x2="18" y2="12"></line>
+                <line x1="6" y1="12" x2="2" y2="12"></line>
+                <line x1="12" y1="6" x2="12" y2="2"></line>
+                <line x1="12" y1="22" x2="12" y2="18"></line>
+              </svg>
+            </button>
+
+            <button class="eh-tool-btn" onclick="triggerVoiceSearch(event)" title="Voice Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+
+            <button class="eh-btn-search-blue" onclick="executeHeroSearch()">
+              Search
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
             </button>
           </div>
-        </div>
 
-        <!-- Bottom Perspective Switcher Pill Controller -->
-        <div class="dv-hero-controls-bar">
-          <button class="dv-perspective-btn active" id="dv-pill-0" onclick="setDvigaPerspective(0)">01. Daytime</button>
-          <button class="dv-perspective-btn" id="dv-pill-1" onclick="setDvigaPerspective(1)">02. Golden Sunset</button>
-          <button class="dv-perspective-btn" id="dv-pill-2" onclick="setDvigaPerspective(2)">03. Twilight Facade</button>
-          <button class="dv-perspective-btn" id="dv-pill-3" onclick="setDvigaPerspective(3)">04. Night Glow</button>
-        </div>
-      </section>
+          <!-- Collapsible In-Page Filter Drawer -->
+          <div class="eh-inpage-filter-drawer" id="eh-inpage-drawer" style="display: none;">
+            <div class="eh-drawer-header">
+              <span class="eh-drawer-title">RESIDENTIAL PROPERTY TYPES</span>
+              <button class="eh-drawer-clear-btn" onclick="clearInpageCheckboxes()">Clear All</button>
+            </div>
 
-      <!-- 3. THE PROJECT (PHILOSOPHY & METRICS) -->
-      <section class="dv-section dv-section-cream" id="dv-project">
-        <div class="dv-container">
-          <div class="dv-section-header">
-            <span class="dv-eyebrow">The Project</span>
-            <h2 class="dv-heading-serif">A Home for the Idea-Driven</h2>
-            <p class="dv-narrative-p">
-              Nexora Estates, the landmark luxury residential collection, is situated in India's premier metropolitan avenues. Nestled in a quiet, intimate sanctuary near lush parklands and architectural icons, it is positioned just minutes from central commercial districts.
-            </p>
-            <p class="dv-narrative-p">
-              We are designing an environment for those who carry forward a legacy of excellence. The residences provide a private enclave where crystal-inspired architecture elevates daily life, panoramic glass energizes your mornings, and dynamic shared spaces foster the exchange of visionary ideas.
-            </p>
-          </div>
+            <div class="eh-checkbox-grid" id="eh-inpage-ptypes">
+              <label class="eh-checkbox-item"><input type="checkbox" value="flat" checked onchange="applyInpageFilters()" /> Flat / Apartment</label>
+              <label class="eh-checkbox-item"><input type="checkbox" value="builder-floor" checked onchange="applyInpageFilters()" /> Independent Builder Floor</label>
+              <label class="eh-checkbox-item"><input type="checkbox" value="villa" checked onchange="applyInpageFilters()" /> Residential House / Villa</label>
+              <label class="eh-checkbox-item"><input type="checkbox" value="plot" onchange="applyInpageFilters()" /> Residential Land / Plot</label>
+              <label class="eh-checkbox-item"><input type="checkbox" value="studio" onchange="applyInpageFilters()" /> 1 RK / Studio Apartment</label>
+              <label class="eh-checkbox-item"><input type="checkbox" value="farmhouse" onchange="applyInpageFilters()" /> Luxury Farm House</label>
+              <label class="eh-checkbox-item"><input type="checkbox" value="serviced-apt" onchange="applyInpageFilters()" /> Serviced Apartment</label>
+            </div>
 
-          <!-- Key Metrics Grid (Dviga Masters Pattern) -->
-          <div class="dv-stats-grid">
-            <div class="dv-stat-card">
-              <div class="dv-stat-val">8–25</div>
-              <div class="dv-stat-label">Stories of Skyline Vistas</div>
-              <div class="dv-stat-desc">Varying building heights offering 360-degree panoramic skyline horizons and natural light.</div>
+            <div class="eh-commercial-hint">
+              Looking for commercial spaces? <a onclick="switchEhSearchTab('commercial')">Switch to Commercial (Office, Retail, Shop) →</a>
             </div>
-            <div class="dv-stat-card">
-              <div class="dv-stat-val">11</div>
-              <div class="dv-stat-label">Landmark Buildings</div>
-              <div class="dv-stat-desc">Architectural masterplan engineered by world-renowned studios with crystal-inspired glass facades.</div>
-            </div>
-            <div class="dv-stat-card">
-              <div class="dv-stat-val">5.2</div>
-              <div class="dv-stat-label">Acres of Landscaping</div>
-              <div class="dv-stat-desc">Private courtyard sanctuary, linear forest park, botanical gardens, and yoga decks.</div>
-            </div>
-            <div class="dv-stat-card">
-              <div class="dv-stat-val">6.4</div>
-              <div class="dv-stat-label">Acres Total Masterplan</div>
-              <div class="dv-stat-desc">A serene, gated enclave shielded from city bustle where life and work achieve harmony.</div>
-            </div>
-            <div class="dv-stat-card">
-              <div class="dv-stat-val">80%</div>
-              <div class="dv-stat-label">Panoramic Glass Facades</div>
-              <div class="dv-stat-desc">Floor-to-ceiling glass up to 3m with superior acoustic isolation and private terrace sliders.</div>
-            </div>
-            <div class="dv-stat-card">
-              <div class="dv-stat-val">0%</div>
-              <div class="dv-stat-label">Direct Developer Brokerage</div>
-              <div class="dv-stat-desc">Wholesale co-buying pool exchange, 100% verified RERA documentation, and complete privacy.</div>
+
+            <div class="eh-filter-pills-row">
+              <select class="eh-filter-pill-select" id="eh-filter-budget" onchange="applyInpageFilters()">
+                <option value="">Budget: Any</option>
+                <option value="under-1cr">Under ₹1 Cr</option>
+                <option value="1cr-2cr">₹1 Cr - ₹2 Cr</option>
+                <option value="2cr-5cr">₹2 Cr - ₹5 Cr</option>
+                <option value="5cr-plus">₹5 Cr & Above</option>
+              </select>
+
+              <select class="eh-filter-pill-select" id="eh-filter-bedroom" onchange="applyInpageFilters()">
+                <option value="">Bedrooms: Any</option>
+                <option value="1">1 BHK</option>
+                <option value="2">2 BHK</option>
+                <option value="3">3 BHK</option>
+                <option value="4">4+ BHK</option>
+              </select>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- 4. LOCATION & DISTRICT CONNECTIVITY -->
-      <section class="dv-section dv-section-darker" id="dv-location">
-        <div class="dv-container">
-          <div class="dv-section-header">
-            <span class="dv-eyebrow">Location</span>
-            <h2 class="dv-heading-serif">Everything Within Reach</h2>
-            <p class="dv-narrative-p" style="color: rgba(242, 230, 214, 0.85);">
-              The highly developed infrastructure surrounding the estate allows you to enjoy every advantage of metropolitan life while returning home to serene seclusion.
-            </p>
-          </div>
-
-          <!-- Category Selector Tabs -->
-          <div class="dv-cat-tabs-row">
-            <button class="dv-cat-tab active" onclick="switchDvigaLocationTab('shopping', this)">Shopping & Retail</button>
-            <button class="dv-cat-tab" onclick="switchDvigaLocationTab('schools', this)">Education & Schools</button>
-            <button class="dv-cat-tab" onclick="switchDvigaLocationTab('parks', this)">Outdoor Living & Parks</button>
-            <button class="dv-cat-tab" onclick="switchDvigaLocationTab('sports', this)">Sports & Recreation</button>
-            <button class="dv-cat-tab" onclick="switchDvigaLocationTab('transit', this)">Transit & Highways</button>
-          </div>
-
-          <div class="dv-amenities-grid" id="dv-amenities-container">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-      </section>
-
-      <!-- 5. ARCHITECTURE & CRYSTAL FACADES -->
-      <section class="dv-section dv-section-linen" id="dv-architecture">
-        <div class="dv-container">
-          <div class="dv-editorial-grid">
-            <div>
-              <span class="dv-eyebrow">Architecture</span>
-              <h2 class="dv-heading-serif">Crystal-Inspired Silhouette</h2>
-              <p class="dv-narrative-p">
-                Featuring an intricate crystalline facade, the architecture creates a stunning interplay of light and shadow throughout the day. Up to 80% glass exterior walls flood the residences with warm natural sunlight.
-              </p>
-              <div class="dv-check-list">
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Expansive Glass Panels:</b> Up to 3.0 m continuous architectural double-glazed glazing.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Acoustic Privacy:</b> Multi-layer acoustic glass blocks external urban sound completely.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Bay Windows & Terraces:</b> Naturally lit walk-in wardrobes, en-suite baths, and wrap-around viewing decks.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Exterior Accent Illumination:</b> Sculptural night lighting transforms the towers into an iconic skyline beacon.</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="dv-editorial-img-box">
-              <img src="https://static.tildacdn.com/tild6661-6237-4665-b966-373432376531/3.jpg" alt="Crystal Architecture Facade" class="dv-editorial-img" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 6. LANDSCAPING & PRIVATE SANCTUARY -->
-      <section class="dv-section dv-section-dark" id="dv-landscaping">
-        <div class="dv-container">
-          <div class="dv-editorial-grid" style="direction: rtl;">
-            <div style="direction: ltr;">
-              <span class="dv-eyebrow">Landscaping</span>
-              <h2 class="dv-heading-serif">Three Pillars of Landscape Design</h2>
-              <p class="dv-narrative-p" style="color: rgba(242, 230, 214, 0.85);">
-                The grounds feature two distinct realms — the linear forest greenbelt and the private sanctuary courtyard — curated with over 500 indigenous trees for year-round blooming.
-              </p>
-              <div class="dv-check-list">
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✦</span>
-                  <div><b>Inspiration:</b> Natural stone pathways, ambient landscape illumination, and sculptural water fountains.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✦</span>
-                  <div><b>Connection:</b> Open-air amphitheater, yoga lawn, ping-pong pavilions, and shaded co-working pods with charging stations.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✦</span>
-                  <div><b>Sanctuary:</b> Shaded pergola with water cascades, private toddler sensory play zones, and aromatic herb gardens.</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="dv-editorial-img-box" style="direction: ltr;">
-              <img src="https://static.tildacdn.com/tild6331-6339-4633-a236-323065616163/4.jpg" alt="Landscaping and Private Courtyard" class="dv-editorial-img" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 7. INTERIORS & GRAND LOBBY -->
-      <section class="dv-section dv-section-cream" id="dv-interiors">
-        <div class="dv-container">
-          <div class="dv-editorial-grid">
-            <div>
-              <span class="dv-eyebrow">The Art of Design</span>
-              <h2 class="dv-heading-serif">A 160 M² Double-Height Volume</h2>
-              <p class="dv-narrative-p">
-                The interiors are a seamless extension of the architectural philosophy. Featuring 6-meter ceilings and floor-to-ceiling glass, the focal point of the Grand Lobby is a custom sculptural staircase surrounded by curated art installations and indoor botanical gardens.
-              </p>
-              <div class="dv-check-list">
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Terracotta & Warm Wood:</b> Ceilings finished in rich terracotta tones harmonize with natural oak and brushed bronze.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Curated Layered Lighting:</b> Concealed cove LED lighting and bespoke statement pendants create an intimate warmth.</div>
-                </div>
-                <div class="dv-check-item">
-                  <span class="dv-check-icon">✓</span>
-                  <div><b>Business & Meeting Lounge:</b> Private soundproof telephone booths, executive conference suites, and espresso bar.</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="dv-editorial-img-box">
-              <img src="https://static.tildacdn.com/tild6533-3838-4930-a430-356666363235/_3_______01_20260211.jpg" alt="Grand Lobby Interior" class="dv-editorial-img" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 8. INTERACTIVE 3D VIRTUAL TOUR BANNER -->
-      <section class="dv-section dv-section-darker" style="text-align: center;">
-        <div class="dv-container" style="max-width: 860px;">
-          <span class="dv-eyebrow">Interactive Visualizer</span>
-          <h2 class="dv-heading-serif">Experience The Development in 3D</h2>
-          <p class="dv-narrative-p" style="color: rgba(242, 230, 214, 0.85); margin: 0 auto 2rem;">
-            Explore the towers, toggle day and night illumination, examine hot-spot unit availability, and take a 360-degree tour of the architectural masterplan.
-          </p>
-          <div style="position: relative; border-radius: 20px; overflow: hidden; margin-bottom: 2rem; box-shadow: 0 24px 60px rgba(0,0,0,0.4);">
-            <img src="https://static.tildacdn.com/tild6661-3966-4063-b666-643862313566/Mask_group.jpg" alt="3D Tour Preview" style="width: 100%; height: 380px; object-fit: cover; display: block;" />
-            <div style="position: absolute; inset: 0; background: rgba(34, 22, 20, 0.4); display: flex; align-items: center; justify-content: center;">
-              <button class="dv-btn-residences" style="padding: 1rem 2.5rem; font-size: 0.95rem; border-radius: 9999px;" onclick="open3DVisualizerModal()">
-                ▶ Launch Interactive 3D Tour
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 9. RESIDENCES & MASTERFUL LAYOUTS -->
-      <section class="dv-section dv-section-linen" id="dv-residences">
-        <div class="dv-container">
-          <div class="dv-section-header" style="text-align: center;">
-            <span class="dv-eyebrow">Floor Plans</span>
-            <h2 class="dv-heading-serif">Masterful Interiors & Layouts</h2>
-            <p class="dv-narrative-p" style="margin: 0 auto;">
-              Ranging from 78 to 160 sq.m (840 to 1,720 sq.ft) with soaring 3.1-meter finished ceilings, multiple corner exposures, and oversized terraces.
-            </p>
-          </div>
-
-          <!-- Residence Category Tabs -->
-          <div class="dv-cat-tabs-row" style="justify-content: center; margin-bottom: 2.5rem;">
-            <button class="dv-cat-tab active" onclick="switchDvigaResidenceTab('all', this)">All Residences</button>
-            <button class="dv-cat-tab" onclick="switchDvigaResidenceTab('1bhk', this)">1-Bedroom (46–62 M²)</button>
-            <button class="dv-cat-tab" onclick="switchDvigaResidenceTab('2bhk', this)">2-Bedroom (78–99 M²)</button>
-            <button class="dv-cat-tab" onclick="switchDvigaResidenceTab('3bhk', this)">3-Bedroom (99–115 M²)</button>
-            <button class="dv-cat-tab" onclick="switchDvigaResidenceTab('4bhk', this)">4-Bedroom Penthouse (160 M²)</button>
-          </div>
-
-          <div class="dv-plans-grid" id="dv-plans-container">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-      </section>
-
-      <!-- 10. MASTERFUL DETAILS & ENGINEERING EXCELLENCE -->
-      <section class="dv-section dv-section-dark" id="dv-amenities">
-        <div class="dv-container">
-          <div class="dv-section-header">
-            <span class="dv-eyebrow">Engineering Systems</span>
-            <h2 class="dv-heading-serif">Masterful Technical Details</h2>
-            <p class="dv-narrative-p" style="color: rgba(242, 230, 214, 0.85);">
-              Uncompromising standards of security, acoustic comfort, intelligent climate engineering, and seamless concierge convenience.
-            </p>
-          </div>
-
-          <div class="dv-eng-grid">
-            <div class="dv-eng-card">
-              <div class="dv-eng-icon">🚗</div>
-              <h3 class="dv-eng-title">Subterranean Garage</h3>
-              <p class="dv-eng-desc">Two-level parking with 363 oversized spaces, automated ALPR license plate entry, tire-wash stations, and EV superchargers.</p>
-            </div>
-
-            <div class="dv-eng-card">
-              <div class="dv-eng-icon">🛗</div>
-              <h3 class="dv-eng-title">High-Speed Elevators</h3>
-              <p class="dv-eng-desc">Up to 4.0 m/s destination dispatch elevators with touchless smartphone calling, cellular signal boosters, and direct parking access.</p>
-            </div>
-
-            <div class="dv-eng-card">
-              <div class="dv-eng-icon">💧</div>
-              <h3 class="dv-eng-title">Multi-Stage Filtration</h3>
-              <p class="dv-eng-desc">Industrial sediment filtration, softening, and drinking-grade purification with instant hot water recirculation on all floors.</p>
-            </div>
-
-            <div class="dv-eng-card">
-              <div class="dv-eng-icon">🛡️</div>
-              <h3 class="dv-eng-title">AI-Shielded Security</h3>
-              <p class="dv-eng-desc">24/7 gated perimeter security, AI predictive video analytics, encrypted biometric access, and resident privacy shielding.</p>
-            </div>
-
-            <div class="dv-eng-card">
-              <div class="dv-eng-icon">🛎️</div>
-              <h3 class="dv-eng-title">Full-Service Concierge</h3>
-              <p class="dv-eng-desc">Dedicated courier handling, resident mobile app, individual smart utility submetering, and automated appointment reminders.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 11. PROPERTY OWNERS HIGHLIGHT (POST PROPERTY FREE - 0% BROKERAGE) -->
-      <section class="dv-section dv-section-cream">
-        <div class="dv-container">
-          <div class="dv-owner-card">
-            <img src="/assets/owner_showcase.jpg" alt="Sell or Rent Faster with Nexora" class="dv-owner-img" />
-            <div class="dv-owner-content">
-              <span class="dv-eyebrow" style="color: #c06d30;">Property Owners &amp; Landlords</span>
-              <h2 class="dv-heading-serif" style="color: #ffffff; font-size: 2.25rem;">Sell or rent faster at the right price!</h2>
-              <p style="color: rgba(242, 230, 214, 0.85); font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem;">
-                Advertise your property with 0% brokerage on India's most verified real estate exchange. Receive instant buyer inquiries directly to your phone with 0-Spam Shield protection.
-              </p>
-              <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <button class="dv-btn-residences" onclick="openPostPropertyPage()" style="padding: 0.85rem 2rem; font-size: 0.85rem;">
-                  Post Property, It's FREE →
-                </button>
-                <a href="https://wa.me/919876543210?text=Hi%20Nexora,%20I%20want%20to%20list%20my%20property" target="_blank" class="dv-btn-call" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-                  <span>Post via WhatsApp</span> <span>→</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 12. REQUEST A CALL / PRIVATE CONSULTATION FORM -->
-      <section class="dv-section dv-section-dark" id="dv-contact">
-        <div class="dv-container">
-          <div class="dv-contact-box">
-            <span class="dv-eyebrow">Private Consultation</span>
-            <h2 class="dv-heading-serif" style="color: #ffffff; font-size: 2.4rem;">Discover Your Future Residence</h2>
-            <p style="color: rgba(242, 230, 214, 0.85); font-size: 0.95rem; line-height: 1.6; margin: 0 auto 2.25rem;">
-              Request detailed floor plans, pricing sheets, and arrange a private tour of the development with an institutional advisor.
-            </p>
-
-            <form onsubmit="event.preventDefault(); submitDvigaConsultationForm();">
-              <div class="dv-input-row">
-                <input type="text" id="dv-client-name" class="dv-input" placeholder="Your Full Name" required />
-                <input type="tel" id="dv-client-phone" class="dv-input" placeholder="Phone Number (+91)" required />
-              </div>
-              <div style="margin-bottom: 1.25rem;">
-                <select id="dv-client-residence" class="dv-input">
-                  <option value="2-Bedroom Residence">Interested in 2-Bedroom Residence (78–99 M²)</option>
-                  <option value="3-Bedroom Residence">Interested in 3-Bedroom Residence (99–115 M²)</option>
-                  <option value="4-Bedroom Penthouse">Interested in 4-Bedroom Penthouse (160 M²)</option>
-                  <option value="1-Bedroom Executive">Interested in 1-Bedroom Executive (46–62 M²)</option>
-                </select>
-              </div>
-
-              <button type="submit" class="dv-submit-btn">
-                Request Private Consultation →
-              </button>
-
-              <div style="font-size: 0.72rem; color: rgba(242, 230, 214, 0.5); margin-top: 1rem;">
-                🔒 By submitting, you agree to Nexora's Privacy Shield &amp; 0-Spam guarantee.
-              </div>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- 13. FULL LUXURY FOOTER -->
-      <footer style="background-color: #221614; padding: 4rem 2rem 3rem; border-top: 1px solid rgba(242, 230, 214, 0.1);">
-        <div class="dv-container" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 2rem;">
-          <div>
-            <div style="font-family: var(--dv-font-arch); font-size: 1.25rem; font-weight: 800; letter-spacing: 0.25em; color: #ffffff; text-transform: uppercase;">
-              NEXORA ESTATES
-            </div>
-            <div style="font-size: 0.72rem; color: var(--dv-accent); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.25rem;">
-              Live and Create • 100% RERA Certified
-            </div>
-            <p style="font-size: 0.8rem; color: rgba(242, 230, 214, 0.5); max-width: 420px; line-height: 1.6; margin-top: 1rem;">
-              Pricing, floor plans, and renderings shown on this website are for illustrative purposes and subject to RERA approvals. Built with precision for direct developer buyers.
-            </p>
-          </div>
-
-          <div style="display: flex; gap: 3rem; flex-wrap: wrap;">
-            <div>
-              <div style="font-family: var(--dv-font-arch); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; color: #ffffff; text-transform: uppercase; margin-bottom: 0.85rem;">Navigation</div>
-              <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.82rem;">
-                <a href="#dv-project" style="color: rgba(242, 230, 214, 0.7); text-decoration: none;">The Project</a>
-                <a href="#dv-location" style="color: rgba(242, 230, 214, 0.7); text-decoration: none;">Location</a>
-                <a href="#dv-architecture" style="color: rgba(242, 230, 214, 0.7); text-decoration: none;">Architecture</a>
-                <a href="#dv-landscaping" style="color: rgba(242, 230, 214, 0.7); text-decoration: none;">Landscaping</a>
-                <a href="#dv-residences" style="color: rgba(242, 230, 214, 0.7); text-decoration: none;">Residences</a>
-              </div>
-            </div>
-
-            <div>
-              <div style="font-family: var(--dv-font-arch); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; color: #ffffff; text-transform: uppercase; margin-bottom: 0.85rem;">Platform Access</div>
-              <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.82rem;">
-                <a onclick="openPostPropertyPage()" style="color: #4ade80; text-decoration: none; cursor: pointer;">Post Property (0% Brokerage)</a>
-                <a onclick="setViewMode('login')" style="color: rgba(242, 230, 214, 0.7); text-decoration: none; cursor: pointer;">CRM Command Center</a>
-                <a onclick="quickLoginAs('BUYER')" style="color: rgba(242, 230, 214, 0.7); text-decoration: none; cursor: pointer;">Customer Lounge</a>
-                <a onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" style="color: var(--dv-accent); text-decoration: none; cursor: pointer;">Back to Top ↑</a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="max-width: 1240px; margin: 3rem auto 0; padding-top: 1.5rem; border-top: 1px solid rgba(242, 230, 214, 0.08); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: rgba(242, 230, 214, 0.4); flex-wrap: wrap; gap: 1rem;">
-          <div>© 2026 NEXORA ESTATES PLATFORM. All rights reserved.</div>
-          <div>Direct Developer Allocation &bull; Zero Brokerage</div>
-        </div>
-      </footer>
-
-      <!-- 14. FULLSCREEN ARCHITECTURAL STAIRCASE DRAWER -->
-      <div class="dv-drawer" id="dv-drawer">
-        <div class="dv-drawer-top">
-          <div style="font-family: var(--dv-font-arch); font-size: 1.1rem; font-weight: 800; letter-spacing: 0.25em; color: #ffffff;">
-            NEXORA ESTATES
-          </div>
-          <button class="dv-drawer-close" onclick="toggleDvigaDrawer(false)" title="Close Navigation">✕</button>
-        </div>
-
-        <div class="dv-drawer-links">
-          <a class="dv-drawer-item" href="#dv-project" onclick="toggleDvigaDrawer(false)">The Project</a>
-          <a class="dv-drawer-item" href="#dv-location" onclick="toggleDvigaDrawer(false)">Location</a>
-          <a class="dv-drawer-item" href="#dv-architecture" onclick="toggleDvigaDrawer(false)">Architecture</a>
-          <a class="dv-drawer-item" href="#dv-landscaping" onclick="toggleDvigaDrawer(false)">Landscaping</a>
-          <a class="dv-drawer-item" href="#dv-residences" onclick="toggleDvigaDrawer(false)">Residences &amp; Plans</a>
-          <a class="dv-drawer-item" href="#dv-amenities" onclick="toggleDvigaDrawer(false)">Engineering &amp; Amenities</a>
-          <a class="dv-drawer-item" onclick="toggleDvigaDrawer(false); openPostPropertyPage();" style="color: #4ade80;">Post Property (FREE)</a>
-          <a class="dv-drawer-item" onclick="toggleDvigaDrawer(false); setViewMode('login');" style="color: var(--dv-accent);">CRM Portal Sign In</a>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(242, 230, 214, 0.15); padding-top: 1.5rem; font-size: 0.85rem; color: rgba(242, 230, 214, 0.6);">
-          <div>+91 98765 43210</div>
-          <div>Direct Concierge Desk</div>
         </div>
       </div>
+
+      <!-- 4. "GET STARTED WITH EXPLORING REAL ESTATE OPTIONS" (7 HORIZONTAL STRIP CARDS MATCHING SCREENSHOT) -->
+      <section class="eh-explore-options-container">
+        <div class="eh-explore-title">GET STARTED WITH EXPLORING REAL ESTATE OPTIONS</div>
+        <div class="eh-explore-cards-strip">
+          <!-- 1. Buying a home -->
+          <div class="eh-explore-card" onclick="selectExploreOption('buy')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/buy_home_showcase.jpg" alt="Buying a home" />
+            </div>
+            <div class="eh-explore-card-title">Buying a home</div>
+          </div>
+
+          <!-- 2. Renting a home -->
+          <div class="eh-explore-card" onclick="selectExploreOption('rent')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/rental_showcase.jpg" alt="Renting a home" />
+            </div>
+            <div class="eh-explore-card-title">Renting a home</div>
+          </div>
+
+          <!-- 3. Invest in Real Estate -->
+          <div class="eh-explore-card" onclick="selectExploreOption('invest')">
+            <div class="eh-explore-card-img-wrap">
+              <span class="eh-card-sub-badge">NEW</span>
+              <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=400&q=80" alt="Invest in Real Estate" />
+            </div>
+            <div class="eh-explore-card-title">Invest in Real Estate</div>
+          </div>
+
+          <!-- 4. Sell/Rent your property -->
+          <div class="eh-explore-card" onclick="openPostPropertyPage()">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/owner_showcase.jpg" alt="Sell/Rent your property" />
+            </div>
+            <div class="eh-explore-card-title">Sell/Rent your property</div>
+          </div>
+
+          <!-- 5. Plots/Land -->
+          <div class="eh-explore-card" onclick="selectExploreOption('plots')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/plot_showcase.jpg" alt="Plots/Land" />
+            </div>
+            <div class="eh-explore-card-title">Plots/Land</div>
+          </div>
+
+          <!-- 6. Explore Insights -->
+          <div class="eh-explore-card" onclick="openInsightsModal()">
+            <div class="eh-explore-card-img-wrap">
+              <span class="eh-card-sub-badge">NEW</span>
+              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80" alt="Explore Insights" />
+            </div>
+            <div class="eh-explore-card-title">Explore Insights</div>
+          </div>
+
+          <!-- 7. PG / Co-living -->
+          <div class="eh-explore-card" onclick="selectExploreOption('pg')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80" alt="PG / Co-living" />
+            </div>
+            <div class="eh-explore-card-title">PG / Co-living</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. LUXURY ARCHITECTURAL LIVING ROOM BANNER & OWNER ARTICLES / GUIDES -->
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; box-sizing: border-box;">
+        <div style="border-radius: 24px; overflow: hidden; height: 380px; width: 100%; position: relative; background: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; box-shadow: 0 12px 36px rgba(0,0,0,0.08);">
+          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%);"></div>
+        </div>
+      </div>
+
+      <section class="ona-section">
+        <div class="ona-card">
+          <div class="ona-tabs-row">
+            <button class="ona-tab-btn active" id="ona-tab-news" onclick="switchOwnerNewsTab('news')">News</button>
+            <button class="ona-tab-btn" id="ona-tab-tax" onclick="switchOwnerNewsTab('tax')">Tax & Legal</button>
+            <button class="ona-tab-btn" id="ona-tab-help" onclick="switchOwnerNewsTab('help')">Help Guides</button>
+            <button class="ona-tab-btn" id="ona-tab-investment" onclick="switchOwnerNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="ona-split-row">
+            <div class="ona-left-col">
+              <h3 class="ona-inner-title">Articles & Guides for Real Estate / Property Owners</h3>
+              <p class="ona-inner-sub">Expert legal guidance, taxation insights, RERA updates, and high-yield wealth strategies curated for Indian homeowners.</p>
+            </div>
+
+            <div class="ona-grid-wrapper">
+              <button class="ona-arrow-btn prev" id="ona-arrow-prev" onclick="prevOwnerNewsPage()" style="display: none;">‹</button>
+              <div class="ona-articles-grid" id="ona-articles-grid"></div>
+              <button class="ona-arrow-btn next" id="ona-arrow-next" onclick="nextOwnerNewsPage()">›</button>
+            </div>
+          </div>
+
+          <div class="ona-footer-link-row">
+            <span id="ona-page-indicator" style="font-size: 0.82rem; color: #64748b; font-weight: 600;">Page 1 of 2</span>
+            <a class="ona-footer-link" onclick="openAllOwnerNewsModal()">View all Owner Guides & Articles →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. CURATED EXCLUSIVE OPPORTUNITIES -->
+      <section class="eh-curated-showcase-section" id="curated-section">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem;">
+          <div>
+            <span style="font-size: 0.76rem; font-weight: 800; color: #0078db; text-transform: uppercase; letter-spacing: 0.05em;">Curated Opportunities</span>
+            <h2 style="font-size: 1.75rem; font-weight: 850; color: #091e42; margin: 0.2rem 0 0;">Exclusive Real Estate Showcase</h2>
+          </div>
+          <a onclick="openCustomerAllProjectsView()" style="font-size: 0.88rem; font-weight: 700; color: #0078db; cursor: pointer;">Browse All Projects →</a>
+        </div>
+
+        <div class="eh-curated-tabs-strip">
+          <button class="eh-curated-tab-pill active" id="curated-pill-all" onclick="renderCuratedRow('all')">✨ All Curated</button>
+          <button class="eh-curated-tab-pill" id="curated-pill-buy" onclick="renderCuratedRow('buy')">🏡 Direct Developer Launches</button>
+          <button class="eh-curated-tab-pill" id="curated-pill-rent" onclick="renderCuratedRow('rent')">🔑 0% Brokerage Rentals</button>
+          <button class="eh-curated-tab-pill" id="curated-pill-invest" onclick="renderCuratedRow('invest')">👥 Pooled Group Deals</button>
+        </div>
+
+        <div id="pub-curated-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;"></div>
+      </section>
+
+      <!-- 7. NEWLY LAUNCHED PROJECTS (SYNCED WITH CRM) -->
+      <section class="nl-showcase-section">
+        <div class="nl-outer-box">
+          <div class="nl-header-row">
+            <span class="nl-sync-badge-pill">⚡ Synced with CRM Inventory Matrix</span>
+            <div class="nl-title-group">
+              <div class="nl-icon-badge">🚀</div>
+              <h2 style="font-size: 1.75rem; font-weight: 850; color: #091e42; margin: 0;">Newly Launched Projects</h2>
+            </div>
+            <p style="font-size: 0.92rem; color: #475569; margin: 0; max-width: 580px;">
+              Fresh inventory straight from verified tier-1 developers with direct RERA registrations and launch-day price locks.
+            </p>
+          </div>
+          <div id="nl-cards-track" class="nl-cards-track"></div>
+        </div>
+      </section>
+
+      <!-- 8. HANDPICKED RESIDENTIAL DEVELOPMENTS -->
+      <section class="hrp-section">
+        <div class="hrp-header">
+          <h2 class="hrp-title">Handpicked Residential Projects</h2>
+          <p class="hrp-subheading">Featured developments with verified RERA certificates, virtual tours, and guaranteed developer rates.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+          <!-- Project 1: Mahindra AquaVista -->
+          <div style="background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
+            <div style="height: 220px; position: relative; overflow: hidden; cursor: pointer;" onclick="openCustomerProjectDetail('up-mahindra-aquavista')">
+              <img src="/assets/mahindra_aquavista.jpg" alt="Mahindra AquaVista" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
+              <span style="position: absolute; top: 0.75rem; left: 0.75rem; background: #0078db; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 6px;">
+                EXCLUSIVE LAUNCH
+              </span>
+            </div>
+            <div style="padding: 1.25rem; display: flex; flex-direction: column; flex: 1;">
+              <h3 style="font-size: 1.2rem; font-weight: 850; margin: 0 0 0.25rem; color: #091e42; cursor: pointer;" onclick="openCustomerProjectDetail('up-mahindra-aquavista')">Mahindra AquaVista</h3>
+              <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.85rem;">📍 Sector 59, Golf Course Extn, Gurugram</p>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: baseline;">
+                <div>
+                  <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Price</span>
+                  <div style="font-size: 1.3rem; font-weight: 850; color: #091e42;">₹2.85 - 5.40 Cr</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 0.75rem; font-weight: 750; color: #16a34a;">3 & 4 BHK Luxury</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; margin-top: auto;">
+                <button class="btn btn-primary btn-sm" onclick="openCustomerProjectDetail('up-mahindra-aquavista')" style="flex: 1.2; justify-content: center; font-weight: 750; background: #0078db;">
+                  View Details
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="openDigitalBrochureModal('up-mahindra-aquavista')" style="flex: 1; justify-content: center; font-weight: 750;">
+                  Brochure
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 2: Sobha Neopolis -->
+          <div style="background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
+            <div style="height: 220px; position: relative; overflow: hidden; cursor: pointer;" onclick="openCustomerProjectDetail('up-sobha-neopolis')">
+              <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80" alt="Sobha Neopolis" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
+              <span style="position: absolute; top: 0.75rem; left: 0.75rem; background: #10b981; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 6px;">
+                GREEK THEMED
+              </span>
+            </div>
+            <div style="padding: 1.25rem; display: flex; flex-direction: column; flex: 1;">
+              <h3 style="font-size: 1.2rem; font-weight: 850; margin: 0 0 0.25rem; color: #091e42; cursor: pointer;" onclick="openCustomerProjectDetail('up-sobha-neopolis')">Sobha Neopolis Phase 2</h3>
+              <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.85rem;">📍 Panathur, Marathahalli-ORR, Bengaluru</p>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: baseline;">
+                <div>
+                  <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Price</span>
+                  <div style="font-size: 1.3rem; font-weight: 850; color: #091e42;">₹1.85 - 3.75 Cr</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 0.75rem; font-weight: 750; color: #16a34a;">3 & 4 BHK Grecian</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; margin-top: auto;">
+                <button class="btn btn-primary btn-sm" onclick="openCustomerProjectDetail('up-sobha-neopolis')" style="flex: 1.2; justify-content: center; font-weight: 750; background: #0078db;">
+                  View Details
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="openDigitalBrochureModal('up-sobha-neopolis')" style="flex: 1; justify-content: center; font-weight: 750;">
+                  Brochure
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 3: DLF The Arbour -->
+          <div style="background: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
+            <div style="height: 220px; position: relative; overflow: hidden; cursor: pointer;" onclick="openCustomerProjectDetail('up-dlf-arbour-2')">
+              <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80" alt="DLF The Arbour" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
+              <span style="position: absolute; top: 0.75rem; left: 0.75rem; background: #8b5cf6; color: #ffffff; font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 6px;">
+                SKY MANSIONS
+              </span>
+            </div>
+            <div style="padding: 1.25rem; display: flex; flex-direction: column; flex: 1;">
+              <h3 style="font-size: 1.2rem; font-weight: 850; margin: 0 0 0.25rem; color: #091e42; cursor: pointer;" onclick="openCustomerProjectDetail('up-dlf-arbour-2')">DLF The Arbour Phase 2</h3>
+              <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.85rem;">📍 Sector 63, Golf Course Extn, Gurugram</p>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: baseline;">
+                <div>
+                  <span style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Direct Price</span>
+                  <div style="font-size: 1.3rem; font-weight: 850; color: #091e42;">₹6.50 - 11.20 Cr</div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 0.75rem; font-weight: 750; color: #16a34a;">4 BHK Mansions</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; margin-top: auto;">
+                <button class="btn btn-primary btn-sm" onclick="openCustomerProjectDetail('up-dlf-arbour-2')" style="flex: 1.2; justify-content: center; font-weight: 750; background: #0078db;">
+                  View Details
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="openDigitalBrochureModal('up-dlf-arbour-2')" style="flex: 1; justify-content: center; font-weight: 750;">
+                  Brochure
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. UPCOMING PROJECTS BILLBOARD TRACK -->
+      <section class="up-section">
+        <div class="up-header">
+          <h2 class="up-heading">Upcoming Projects & Pre-Launches</h2>
+          <p class="up-subheading">Early registration open for high-demand masterplans with pre-launch pricing advantages.</p>
+        </div>
+        <div id="up-billboard-track" class="up-billboard-track"></div>
+      </section>
+
+      <!-- 10. EXPLORE POPULAR LOCALITIES -->
+      <section style="max-width: 1200px; margin: 0 auto 4rem; padding: 0 1.5rem; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem;">
+          <div>
+            <span style="font-size: 0.76rem; font-weight: 800; color: #0078db; text-transform: uppercase; letter-spacing: 0.05em;">City Intelligence</span>
+            <h2 style="font-size: 1.75rem; font-weight: 850; color: #091e42; margin: 0.2rem 0 0;">Popular Localities in Top Cities</h2>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+          <button class="eh-curated-tab-pill active" id="loc-city-ncr" onclick="switchLocalityCity('ncr')">Delhi / NCR</button>
+          <button class="eh-curated-tab-pill" id="loc-city-mumbai" onclick="switchLocalityCity('mumbai')">Mumbai</button>
+          <button class="eh-curated-tab-pill" id="loc-city-blr" onclick="switchLocalityCity('blr')">Bengaluru</button>
+          <button class="eh-curated-tab-pill" id="loc-city-pune" onclick="switchLocalityCity('pune')">Pune</button>
+          <button class="eh-curated-tab-pill" id="loc-city-hyd" onclick="switchLocalityCity('hyd')">Hyderabad</button>
+        </div>
+
+        <div id="eh-popular-localities-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;"></div>
+      </section>
+
+      <!-- 11. INTERACTIVE 3D ELEVATION VISUALIZER -->
+      <section class="pub-3d-section" style="max-width: 1200px; margin: 0 auto 5rem; padding: 0 1.5rem; box-sizing: border-box;">
+        <div id="pub-3d-visualizer-container"></div>
+      </section>
+
+      <!-- 12. ENTERPRISE SAAS FOOTER -->
+      <footer style="background: #091426; color: #cbd5e1; padding: 4rem 1.5rem 2rem; border-top: 1px solid rgba(255,255,255,0.08);">
+        <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2.5rem; margin-bottom: 3rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
+              <div style="background: #0078db; color: #fff; font-weight: 800; font-size: 1.1rem; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">NX</div>
+              <span style="font-size: 1.3rem; font-weight: 800; color: #ffffff;">Nexora<span style="color: #38bdf8;">.</span></span>
+            </div>
+            <p style="font-size: 0.86rem; line-height: 1.6; color: #94a3b8; margin: 0 0 1.25rem;">
+              India's high-performance real estate ecosystem connecting buyers, tenants, owners, channel partners, and institutional developers.
+            </p>
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80; font-size: 0.75rem; font-weight: 750; padding: 0.35rem 0.75rem; border-radius: 9999px;">
+              <span>🛡️ 0-Spam Shield Active</span>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 750; color: #ffffff; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.05em;">Explore Properties</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem;">
+              <a onclick="switchEhSearchTab('buy')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Buy Flats in Delhi NCR</a>
+              <a onclick="switchEhSearchTab('buy')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Buy Flats in Mumbai</a>
+              <a onclick="switchEhSearchTab('rent')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Rental Homes in Bengaluru</a>
+              <a onclick="switchEhSearchTab('new-launch')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">New RERA Launches 2026</a>
+              <a onclick="switchEhSearchTab('plots')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Residential Plots & Land</a>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 750; color: #ffffff; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.05em;">For Property Owners</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem;">
+              <a onclick="openPostPropertyPage()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Post Property for Free</a>
+              <a onclick="switchOwnerNewsTab('news')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Owner Market Reports</a>
+              <a onclick="switchOwnerNewsTab('tax')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Capital Gains Tax Guide</a>
+              <a onclick="openShieldedCallModal()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">0-Spam Protected Inquiries</a>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 750; color: #ffffff; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.05em;">Portals & Platform</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem;">
+              <a onclick="setViewMode('login')" style="color: #38bdf8; font-weight: 750; text-decoration: none; cursor: pointer;">🔐 CRM Command Center Login</a>
+              <a onclick="setViewMode('login')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Channel Partner Portal</a>
+              <a onclick="setViewMode('login')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Builder Inventory Suite</a>
+              <a onclick="openCustomerAllProjectsView()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">All Verified Projects</a>
+              <a onclick="openInsightsModal()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Real Estate Market Intelligence</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width: 1200px; margin: 0 auto; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: #64748b;">
+          <div>© 2026 Nexora Estates Platform. All rights reserved. RERA Compliant SaaS Infrastructure.</div>
+          <div style="display: flex; gap: 1.5rem;">
+            <span>Direct Desk: +91 98765 43210</span>
+            <a onclick="openShieldedCallModal()" style="color: #38bdf8; cursor: pointer;">Shielded Call Request</a>
+          </div>
+        </div>
+      </footer>
     </div>
   `;
 
   // Initialize interactive components
-  initDvigaHeroInteraction();
-  switchDvigaLocationTab('shopping');
-  switchDvigaResidenceTab('all');
+  switchEhSearchTab('buy');
+  renderCuratedRow('all');
+  if (typeof window.loadNewlyLaunchedProjects === 'function') {
+    window.loadNewlyLaunchedProjects();
+  }
+  if (typeof window.loadUpcomingProjects === 'function') {
+    window.loadUpcomingProjects();
+  }
+  renderOwnerNewsGrid('news', 0);
+  switchLocalityCity('ncr');
+  renderPub3DVisualizer();
 }
 
 

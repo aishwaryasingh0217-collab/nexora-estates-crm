@@ -2847,7 +2847,7 @@ window.initHeroKenBurnsScreensaver = function() {
   window.heroSlideInterval = setInterval(function() {
     const next = (window.currentHeroSlide + 1) % window.HERO_SLIDES_META.length;
     window.switchHeroSlide(next);
-  }, 6500);
+  }, 3000);
 };
 
 window.switchHeroSlide = function(idx) {
@@ -2857,9 +2857,6 @@ window.switchHeroSlide = function(idx) {
 
 window.updateHeroScreensaverDOM = function(idx) {
   const slides = document.querySelectorAll('.eh-screensaver-slide');
-  const pills = document.querySelectorAll('.eh-ss-pill');
-  const label = document.getElementById('eh-ss-label');
-
   slides.forEach((slide, i) => {
     if (i === idx) {
       slide.classList.add('active');
@@ -2869,15 +2866,6 @@ window.updateHeroScreensaverDOM = function(idx) {
       slide.style.zIndex = '1';
     }
   });
-
-  pills.forEach((pill, i) => {
-    if (i === idx) pill.classList.add('active');
-    else pill.classList.remove('active');
-  });
-
-  if (label && window.HERO_SLIDES_META[idx]) {
-    label.innerText = window.HERO_SLIDES_META[idx].title;
-  }
 };
 
 
@@ -8354,24 +8342,7 @@ function renderPublicWebsite(root) {
         <div class="eh-hero-video-overlay"></div>
         <div class="eh-hero-container">
           <div class="eh-hero-left-col">
-            <span class="eh-hero-luxury-eyebrow">Curated Residences & Developments</span>
             <h1 class="eh-hero-title">Find a Home You'll Love</h1>
-            <p class="eh-hero-subtitle">India's most trusted real estate ecosystem for buyers, tenants, owners, and developers.</p>
-          </div>
-        </div>
-
-        <!-- Screensaver Live Indicator & Architectural Badging -->
-        <div class="eh-screensaver-controls">
-          <div class="eh-screensaver-badge" id="eh-screensaver-badge">
-            <span class="eh-ss-dot"></span>
-            <span id="eh-ss-label">The Horizon Villa • Twilight View</span>
-          </div>
-          <div class="eh-screensaver-indicators" id="eh-screensaver-indicators">
-            <button class="eh-ss-pill active" onclick="switchHeroSlide(0)" title="The Horizon Villa"></button>
-            <button class="eh-ss-pill" onclick="switchHeroSlide(1)" title="Palm Boulevard Estate"></button>
-            <button class="eh-ss-pill" onclick="switchHeroSlide(2)" title="Double-Height Penthouse"></button>
-            <button class="eh-ss-pill" onclick="switchHeroSlide(3)" title="Waterfront Marina Residence"></button>
-            <button class="eh-ss-pill" onclick="switchHeroSlide(4)" title="The Courtyard Pavilion"></button>
           </div>
         </div>
       </section>

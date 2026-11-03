@@ -2337,7 +2337,7 @@ tr:hover td {
   background-repeat: no-repeat;
   opacity: 0;
   transform: scale(1.0);
-  transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, opacity;
   pointer-events: none;
 }
@@ -2347,23 +2347,23 @@ tr:hover td {
 }
 
 .eh-screensaver-slide[data-index="0"].active {
-  animation: kenBurnsZoomIn 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+  animation: kenBurnsZoomIn 3.4s cubic-bezier(0.15, 0, 0.2, 1) forwards;
 }
 
 .eh-screensaver-slide[data-index="1"].active {
-  animation: kenBurnsZoomOut 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+  animation: kenBurnsZoomOut 3.4s cubic-bezier(0.15, 0, 0.2, 1) forwards;
 }
 
 .eh-screensaver-slide[data-index="2"].active {
-  animation: kenBurnsPanRight 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+  animation: kenBurnsPanRight 3.4s cubic-bezier(0.15, 0, 0.2, 1) forwards;
 }
 
 .eh-screensaver-slide[data-index="3"].active {
-  animation: kenBurnsZoomIn 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+  animation: kenBurnsZoomIn 3.4s cubic-bezier(0.15, 0, 0.2, 1) forwards;
 }
 
 .eh-screensaver-slide[data-index="4"].active {
-  animation: kenBurnsPanLeft 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+  animation: kenBurnsPanLeft 3.4s cubic-bezier(0.15, 0, 0.2, 1) forwards;
 }
 
 @keyframes kenBurnsZoomIn {
@@ -2504,29 +2504,19 @@ tr:hover td {
 }
 
 .eh-hero-left-col {
-  max-width: 580px;
+  max-width: 780px;
   width: 100%;
 }
 
-.eh-hero-luxury-eyebrow {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.62);
-  margin-bottom: 0.6rem;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
-}
-
 .eh-hero-title {
-  font-size: 2.5rem;
-  font-weight: 600;
-  line-height: 1.18;
-  color: rgba(255, 255, 255, 0.85);
-  letter-spacing: -0.018em;
-  margin: 0 0 0.65rem;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+  font-size: clamp(2.6rem, 4.5vw, 3.8rem);
+  font-weight: 750;
+  line-height: 1.12;
+  color: #ffffff;
+  letter-spacing: -0.025em;
+  margin: 0 0 1.25rem 0;
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.75), 0 2px 8px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
 .eh-hero-subtitle {

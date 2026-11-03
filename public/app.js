@@ -2822,6 +2822,64 @@ window.togglePubLoginDropdown = function(e) {
   }
 };
 
+// ============================================================================
+// CINEMATIC KEN BURNS SCREENSAVER HERO SLIDESHOW (5 ULTRA-LUXURY RESIDENCES)
+// ============================================================================
+window.HERO_SLIDES_META = [
+  { img: '/assets/hero_slide_1_villa.jpg', title: 'The Horizon Villa • Twilight View' },
+  { img: '/assets/hero_slide_2_estate.jpg', title: 'Palm Boulevard Estate • Golden Hour' },
+  { img: '/assets/hero_slide_3_interior.jpg', title: 'Double-Height Living Penthouse' },
+  { img: '/assets/hero_slide_4_waterfront.jpg', title: 'Waterfront Marina Residence' },
+  { img: '/assets/hero_slide_5_terrace.jpg', title: 'The Courtyard Pavilion • Architectural Suite' }
+];
+
+window.heroSlideInterval = null;
+window.currentHeroSlide = 0;
+
+window.initHeroKenBurnsScreensaver = function() {
+  if (window.heroSlideInterval) {
+    clearInterval(window.heroSlideInterval);
+    window.heroSlideInterval = null;
+  }
+  window.currentHeroSlide = 0;
+  window.updateHeroScreensaverDOM(0);
+
+  window.heroSlideInterval = setInterval(function() {
+    const next = (window.currentHeroSlide + 1) % window.HERO_SLIDES_META.length;
+    window.switchHeroSlide(next);
+  }, 6500);
+};
+
+window.switchHeroSlide = function(idx) {
+  window.currentHeroSlide = idx;
+  window.updateHeroScreensaverDOM(idx);
+};
+
+window.updateHeroScreensaverDOM = function(idx) {
+  const slides = document.querySelectorAll('.eh-screensaver-slide');
+  const pills = document.querySelectorAll('.eh-ss-pill');
+  const label = document.getElementById('eh-ss-label');
+
+  slides.forEach((slide, i) => {
+    if (i === idx) {
+      slide.classList.add('active');
+      slide.style.zIndex = '2';
+    } else {
+      slide.classList.remove('active');
+      slide.style.zIndex = '1';
+    }
+  });
+
+  pills.forEach((pill, i) => {
+    if (i === idx) pill.classList.add('active');
+    else pill.classList.remove('active');
+  });
+
+  if (label && window.HERO_SLIDES_META[idx]) {
+    label.innerText = window.HERO_SLIDES_META[idx].title;
+  }
+};
+
 
 // ──────────────────────────────────────────────────────────
 // NEXORA SALE REAL ESTATE NEWS ENGINE (TOP ARTICLES ON HOME BUYING)
@@ -8284,18 +8342,36 @@ function renderPublicWebsite(root) {
         </div>
       </header>
 
-      <!-- 2. HERO SECTION WITH CINEMATIC VIDEO BACKGROUND -->
-      <section class="eh-hero-section">
-        <video class="eh-hero-video-bg" autoplay loop muted playsinline poster="/assets/hero-bg.png">
-          <source src="/assets/hero_video_enhanced_1080p.mp4" type="video/mp4" />
-          <source src="/assets/hero_video.mp4" type="video/mp4" />
-        </video>
+      <!-- 2. HERO SECTION WITH CINEMATIC KEN BURNS SCREENSAVER (5 ULTRA-LUXURY RESIDENCES) -->
+      <section class="eh-hero-section" id="eh-hero-section">
+        <div class="eh-screensaver-viewport" id="eh-screensaver-viewport">
+          <div class="eh-screensaver-slide active" data-index="0" style="background-image: url('/assets/hero_slide_1_villa.jpg');"></div>
+          <div class="eh-screensaver-slide" data-index="1" style="background-image: url('/assets/hero_slide_2_estate.jpg');"></div>
+          <div class="eh-screensaver-slide" data-index="2" style="background-image: url('/assets/hero_slide_3_interior.jpg');"></div>
+          <div class="eh-screensaver-slide" data-index="3" style="background-image: url('/assets/hero_slide_4_waterfront.jpg');"></div>
+          <div class="eh-screensaver-slide" data-index="4" style="background-image: url('/assets/hero_slide_5_terrace.jpg');"></div>
+        </div>
         <div class="eh-hero-video-overlay"></div>
         <div class="eh-hero-container">
           <div class="eh-hero-left-col">
             <span class="eh-hero-luxury-eyebrow">Curated Residences & Developments</span>
             <h1 class="eh-hero-title">Find a Home You'll Love</h1>
             <p class="eh-hero-subtitle">India's most trusted real estate ecosystem for buyers, tenants, owners, and developers.</p>
+          </div>
+        </div>
+
+        <!-- Screensaver Live Indicator & Architectural Badging -->
+        <div class="eh-screensaver-controls">
+          <div class="eh-screensaver-badge" id="eh-screensaver-badge">
+            <span class="eh-ss-dot"></span>
+            <span id="eh-ss-label">The Horizon Villa • Twilight View</span>
+          </div>
+          <div class="eh-screensaver-indicators" id="eh-screensaver-indicators">
+            <button class="eh-ss-pill active" onclick="switchHeroSlide(0)" title="The Horizon Villa"></button>
+            <button class="eh-ss-pill" onclick="switchHeroSlide(1)" title="Palm Boulevard Estate"></button>
+            <button class="eh-ss-pill" onclick="switchHeroSlide(2)" title="Double-Height Penthouse"></button>
+            <button class="eh-ss-pill" onclick="switchHeroSlide(3)" title="Waterfront Marina Residence"></button>
+            <button class="eh-ss-pill" onclick="switchHeroSlide(4)" title="The Courtyard Pavilion"></button>
           </div>
         </div>
       </section>
@@ -8941,6 +9017,9 @@ function renderPublicWebsite(root) {
   }
   if (typeof window.renderPub3DVisualizer === 'function') {
     window.renderPub3DVisualizer();
+  }
+  if (typeof window.initHeroKenBurnsScreensaver === 'function') {
+    window.initHeroKenBurnsScreensaver();
   }
 
   // Dynamic luxury navbar scroll spy: invisible at top, glassmorphism when scrolled

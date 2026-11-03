@@ -2304,7 +2304,7 @@ tr:hover td {
   color: #0078db;
 }
 
-/* ── HERO BANNER WITH VIDEO BACKGROUND ── */
+/* ── HERO BANNER WITH CINEMATIC KEN BURNS SCREENSAVER BACKGROUND ── */
 .eh-hero-section {
   position: relative;
   min-height: 600px;
@@ -2318,17 +2318,88 @@ tr:hover td {
   background-color: #061124;
 }
 
-.eh-hero-video-bg {
+.eh-screensaver-viewport {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center center;
+  overflow: hidden;
   z-index: 1;
+}
+
+.eh-screensaver-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(1.0);
+  transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
   pointer-events: none;
-  filter: brightness(1.1) contrast(1.06) saturate(1.12);
+}
+
+.eh-screensaver-slide.active {
+  opacity: 1;
+}
+
+.eh-screensaver-slide[data-index="0"].active {
+  animation: kenBurnsZoomIn 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+}
+
+.eh-screensaver-slide[data-index="1"].active {
+  animation: kenBurnsZoomOut 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+}
+
+.eh-screensaver-slide[data-index="2"].active {
+  animation: kenBurnsPanRight 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+}
+
+.eh-screensaver-slide[data-index="3"].active {
+  animation: kenBurnsZoomIn 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+}
+
+.eh-screensaver-slide[data-index="4"].active {
+  animation: kenBurnsPanLeft 8.5s cubic-bezier(0.15, 0, 0.2, 1) forwards;
+}
+
+@keyframes kenBurnsZoomIn {
+  0% {
+    transform: scale(1.0) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.1) translate3d(-1%, -0.5%, 0);
+  }
+}
+
+@keyframes kenBurnsZoomOut {
+  0% {
+    transform: scale(1.12) translate3d(0.8%, 0.4%, 0);
+  }
+  100% {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes kenBurnsPanRight {
+  0% {
+    transform: scale(1.04) translate3d(-1.5%, 0, 0);
+  }
+  100% {
+    transform: scale(1.12) translate3d(1.5%, -0.5%, 0);
+  }
+}
+
+@keyframes kenBurnsPanLeft {
+  0% {
+    transform: scale(1.1) translate3d(1.5%, 0, 0);
+  }
+  100% {
+    transform: scale(1.03) translate3d(-1.5%, -0.5%, 0);
+  }
 }
 
 .eh-hero-video-overlay {
@@ -2336,14 +2407,91 @@ tr:hover td {
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(6, 17, 36, 0.4) 0%,
-    rgba(6, 17, 36, 0.08) 18%,
-    transparent 30%,
-    transparent 72%,
-    rgba(6, 17, 36, 0.35) 100%
-  );
+    rgba(6, 17, 36, 0.45) 0%,
+    rgba(6, 17, 36, 0.12) 22%,
+    transparent 35%,
+    rgba(6, 17, 36, 0.25) 75%,
+    rgba(6, 17, 36, 0.5) 100%
+  ),
+  radial-gradient(circle at 25% 45%, rgba(6, 17, 36, 0.4) 0%, transparent 60%);
   z-index: 2;
   pointer-events: none;
+}
+
+.eh-screensaver-controls {
+  position: absolute;
+  bottom: 4.5rem;
+  right: 2.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(6, 17, 36, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 30px;
+  padding: 0.5rem 1.15rem 0.5rem 1.25rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition: all 0.3s ease;
+}
+
+.eh-screensaver-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.eh-ss-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+}
+
+.eh-screensaver-indicators {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.eh-ss-pill {
+  width: 18px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.28);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.35s ease;
+}
+
+.eh-ss-pill:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.eh-ss-pill.active {
+  width: 34px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+@media (max-width: 768px) {
+  .eh-screensaver-controls {
+    bottom: 2rem;
+    right: 1.25rem;
+    padding: 0.4rem 0.85rem;
+    gap: 0.65rem;
+  }
+  .eh-screensaver-badge {
+    display: none;
+  }
 }
 
 .eh-hero-container {

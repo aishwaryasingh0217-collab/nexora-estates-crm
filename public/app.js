@@ -9768,7 +9768,13 @@ window.exportComparisonPdf = function (data) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(212, 179, 127);
-    doc.text(`AI-CURATED PROPERTY COMPARISON MATRIX • QUERY: "${data.query || 'Custom Match'}"`, 40, 52)
+    doc.text(`AI-CURATED PROPERTY COMPARISON MATRIX • QUERY: "${data.query || 'Custom Match'}"`, 40, 52);
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}`, 680, 44);
+
+    // Columns: Parameter | Option 1 | Option 2 | Option 3 | Option 4
     const headers = ['SPECIFICATION / CRITERIA', ...matches.map((m, idx) => `OPTION ${idx + 1}: ${m.unitNumber} (${m.matchScore}% Match)`)];
 
     const rows = [

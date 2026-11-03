@@ -2096,20 +2096,36 @@ tr:hover td {
 
 /* ── NEXORA TOP HEADER ── */
 .eh-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
-  background: linear-gradient(180deg, rgba(6, 17, 36, 0.85) 0%, rgba(6, 17, 36, 0.5) 60%, rgba(6, 17, 36, 0.08) 100%);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.8rem 2.5rem;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid transparent;
+  padding: 1.1rem 2.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", -apple-system, sans-serif;
-  transition: all 0.3s ease;
+  transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              backdrop-filter 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              -webkit-backdrop-filter 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.3s ease;
+}
+
+.eh-header.is-scrolled {
+  background: rgba(7, 18, 36, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  padding: 0.75rem 2.5rem;
 }
 
 .eh-logo-group {
@@ -2291,11 +2307,10 @@ tr:hover td {
 /* ── HERO BANNER WITH VIDEO BACKGROUND ── */
 .eh-hero-section {
   position: relative;
-  min-height: 580px;
-  height: clamp(560px, 52vw, 720px);
+  min-height: 600px;
+  height: clamp(580px, 54vw, 760px);
   width: 100%;
-  margin-top: -65px;
-  padding: calc(65px + 4rem) 2.5rem 6.5rem;
+  padding: 7.5rem 2.5rem 6.5rem;
   display: flex;
   align-items: flex-start;
   box-sizing: border-box;
@@ -2313,14 +2328,20 @@ tr:hover td {
   object-position: center center;
   z-index: 1;
   pointer-events: none;
+  filter: brightness(1.1) contrast(1.06) saturate(1.12);
 }
 
 .eh-hero-video-overlay {
   position: absolute;
   inset: 0;
-  background: 
-    linear-gradient(180deg, rgba(6, 17, 36, 0.75) 0%, rgba(6, 17, 36, 0.2) 28%, rgba(6, 17, 36, 0.1) 55%, rgba(6, 17, 36, 0.7) 100%),
-    linear-gradient(90deg, rgba(6, 17, 36, 0.75) 0%, rgba(6, 17, 36, 0.45) 45%, rgba(6, 17, 36, 0.05) 80%);
+  background: linear-gradient(
+    180deg,
+    rgba(6, 17, 36, 0.4) 0%,
+    rgba(6, 17, 36, 0.08) 18%,
+    transparent 30%,
+    transparent 72%,
+    rgba(6, 17, 36, 0.35) 100%
+  );
   z-index: 2;
   pointer-events: none;
 }
@@ -2335,27 +2356,40 @@ tr:hover td {
 }
 
 .eh-hero-left-col {
-  max-width: 620px;
+  max-width: 580px;
   width: 100%;
 }
 
+.eh-hero-luxury-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  margin-bottom: 0.6rem;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
 .eh-hero-title {
-  font-size: 2.8rem;
-  font-weight: 850;
-  line-height: 1.15;
-  color: #ffffff;
-  letter-spacing: -0.025em;
-  margin: 0 0 0.75rem;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1.18;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: -0.018em;
+  margin: 0 0 0.65rem;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
 }
 
 .eh-hero-subtitle {
-  font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.94);
-  line-height: 1.5;
-  max-width: 560px;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.015em;
+  max-width: 500px;
   margin: 0;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
 }
 
 /* ── OVERLAPPING IN-PAGE SEARCH CONSOLE (NEXORA SMART INPAGESEARCHBOX) ── */
@@ -2548,8 +2582,15 @@ tr:hover td {
 }
 
 @keyframes ehSlideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .eh-drawer-header {
@@ -3119,21 +3160,26 @@ tr:hover td {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
+
   .bah-square-box {
     width: 100%;
     max-width: 420px;
     height: 340px;
     margin: 0 auto;
   }
+
   .bah-beside-col {
     padding: 0 0.5rem;
   }
+
   .bah-beside-title {
     font-size: 2rem;
   }
+
   .nx-news-section {
     margin-top: 1.5rem;
   }
+
   .nx-news-grid {
     grid-template-columns: 1fr;
   }
@@ -3163,9 +3209,20 @@ tr:hover td {
 }
 
 @keyframes nxPulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 .nx-news-heading {
@@ -3363,10 +3420,12 @@ tr:hover td {
   .nx-news-card {
     grid-template-columns: 1fr;
   }
+
   .nx-news-left-col {
     border-right: none;
     border-bottom: 1px solid #ebecf0;
   }
+
   .nx-news-grid {
     grid-template-columns: 1fr;
   }
@@ -3728,6 +3787,7 @@ tr:hover td {
   .nl-project-card {
     flex: 0 0 290px;
   }
+
   .nl-outer-box {
     padding: 1.25rem 1rem;
   }
@@ -3819,7 +3879,8 @@ tr:hover td {
   position: absolute;
   top: 14px;
   left: 14px;
-  background: #a21caf; /* Purple matching screenshot */
+  background: #a21caf;
+  /* Purple matching screenshot */
   color: #ffffff;
   font-size: 0.68rem;
   font-weight: 800;
@@ -3982,6 +4043,7 @@ tr:hover td {
   .hrp-card {
     flex: 0 0 300px;
   }
+
   .hrp-content-box {
     margin: -50px 10px 0;
     padding: 1.5rem 1rem 1rem;
@@ -4079,13 +4141,11 @@ tr:hover td {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(9, 20, 38, 0.78) 0%,
-    rgba(9, 20, 38, 0.3) 30%,
-    rgba(9, 20, 38, 0.05) 60%,
-    rgba(9, 20, 38, 0.85) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(9, 20, 38, 0.78) 0%,
+      rgba(9, 20, 38, 0.3) 30%,
+      rgba(9, 20, 38, 0.05) 60%,
+      rgba(9, 20, 38, 0.85) 100%);
   pointer-events: none;
 }
 
@@ -4300,34 +4360,43 @@ tr:hover td {
   .up-hero-media-wrap {
     height: 320px;
   }
+
   .up-hero-text-overlay {
     top: 1.25rem;
     left: 1.25rem;
   }
+
   .up-project-title {
     font-size: 1.45rem;
   }
+
   .up-project-location {
     font-size: 0.9rem;
   }
+
   .up-bottom-bar {
     padding: 1.25rem;
     flex-direction: column;
     align-items: flex-start;
   }
+
   .up-bottom-right {
     width: 100%;
   }
+
   .up-btn-view-number {
     width: 100%;
     justify-content: center;
   }
+
   .up-nav-btn.prev {
     left: 4px;
   }
+
   .up-nav-btn.next {
     right: 4px;
   }
+
   .up-benefit-pill {
     left: 1.25rem;
     bottom: 1rem;
@@ -4903,17 +4972,21 @@ tr:hover td {
   .cpd-main-layout {
     grid-template-columns: 1fr;
   }
+
   .cpd-right-col {
     position: static;
   }
+
   .cpd-gallery-grid {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 200px 140px;
   }
+
   .cpd-gallery-item.main {
     grid-column: 1 / 3;
     grid-row: 1 / 2;
   }
+
   .cpd-floorplan-details-box {
     grid-template-columns: 1fr;
   }
@@ -5232,9 +5305,11 @@ tr:hover td {
   .cap-grid {
     grid-template-columns: 1fr;
   }
+
   .cap-hero-header {
     padding: 1.75rem 1.25rem;
   }
+
   .cap-hero-title {
     font-size: 1.65rem;
   }
@@ -5313,9 +5388,20 @@ tr:hover td {
 }
 
 @keyframes rnaPulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
 }
 
 .rna-right {
@@ -5558,9 +5644,11 @@ tr:hover td {
   justify-content: center;
   transition: background 0.15s ease;
 }
+
 .rna-modal-close:hover {
   background: rgba(255, 255, 255, 0.35);
 }
+
 .rna-modal-title {
   font-size: 1.35rem;
   font-weight: 800;
@@ -5568,18 +5656,21 @@ tr:hover td {
   line-height: 1.35;
   margin: 0 0 0.85rem;
 }
+
 .rna-modal-summary {
   font-size: 0.95rem;
   color: #334155;
   line-height: 1.65;
   margin: 0 0 1.25rem;
 }
+
 .rna-modal-section-title {
   font-size: 0.98rem;
   font-weight: 750;
   color: #0f172a;
   margin: 1.25rem 0 0.5rem;
 }
+
 .rna-modal-list {
   padding-left: 1.25rem;
   margin: 0 0 1rem;
@@ -5587,6 +5678,7 @@ tr:hover td {
   font-size: 0.9rem;
   line-height: 1.6;
 }
+
 .rna-modal-list li {
   margin-bottom: 0.4rem;
 }
@@ -5597,10 +5689,12 @@ tr:hover td {
     gap: 1.75rem;
     padding: 1.75rem;
   }
+
   .rna-articles-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+
   .rna-arrow-btn {
     display: none;
   }
@@ -5810,6 +5904,7 @@ tr:hover td {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+
   .pna-arrow-btn {
     display: none;
   }
@@ -6050,10 +6145,12 @@ tr:hover td {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
+
   .ona-articles-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+
   .ona-arrow-btn {
     display: none;
   }

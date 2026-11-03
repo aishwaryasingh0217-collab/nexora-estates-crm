@@ -7728,6 +7728,7 @@ function renderPublicWebsite(root) {
         <div class="eh-hero-video-overlay"></div>
         <div class="eh-hero-container">
           <div class="eh-hero-left-col">
+            <span class="eh-hero-luxury-eyebrow">Curated Residences & Developments</span>
             <h1 class="eh-hero-title">Find a Home You'll Love</h1>
             <p class="eh-hero-subtitle">India's most trusted real estate ecosystem for buyers, tenants, owners, and developers.</p>
           </div>
@@ -8306,6 +8307,21 @@ function renderPublicWebsite(root) {
   if (typeof window.renderPub3DVisualizer === 'function') {
     window.renderPub3DVisualizer();
   }
+
+  // Dynamic luxury navbar scroll spy: invisible at top, glassmorphism when scrolled
+  const handleHeaderScroll = () => {
+    const header = document.querySelector('.eh-header');
+    if (!header) return;
+    if (window.scrollY > 25) {
+      header.classList.add('is-scrolled');
+    } else {
+      header.classList.remove('is-scrolled');
+    }
+  };
+  window.removeEventListener('scroll', window.__ehNavbarScrollHandler);
+  window.__ehNavbarScrollHandler = handleHeaderScroll;
+  window.addEventListener('scroll', handleHeaderScroll, { passive: true });
+  handleHeaderScroll();
 }
 
 
@@ -9752,13 +9768,7 @@ window.exportComparisonPdf = function (data) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(212, 179, 127);
-    doc.text(`AI-CURATED PROPERTY COMPARISON MATRIX • QUERY: "${data.query || 'Custom Match'}"`, 40, 52);
-
-    doc.setFontSize(8.5);
-    doc.setTextColor(148, 163, 184);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}`, 680, 44);
-
-    // Columns: Parameter | Option 1 | Option 2 | Option 3 | Option 4
+    doc.text(`AI-CURATED PROPERTY COMPARISON MATRIX • QUERY: "${data.query || 'Custom Match'}"`, 40, 52)
     const headers = ['SPECIFICATION / CRITERIA', ...matches.map((m, idx) => `OPTION ${idx + 1}: ${m.unitNumber} (${m.matchScore}% Match)`)];
 
     const rows = [

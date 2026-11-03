@@ -4543,6 +4543,554 @@ window.openPostPropertyModal = function() {
   openPostPropertyPage();
 };
 
+// ============================================================================
+// 99ACRES STYLE: APARTMENTS, VILLAS AND MORE (7 CARDS) & CONTINUE BROWSING
+// ============================================================================
+
+window.APARTMENTS_VILLAS_CARDS = [
+  {
+    id: 'residential-apartment',
+    title: 'Residential<br/>Apartment',
+    count: '12,000+ Properties',
+    bgColor: '#fcf4e8',
+    img: '/assets/card_apartment_clean.jpg',
+    category: 'Apartment'
+  },
+  {
+    id: 'independent-house-villa',
+    title: 'Independent<br/>House/ Villa',
+    count: '2,800+ Properties',
+    bgColor: '#f0f6fc',
+    img: '/assets/card_villa_clean.jpg',
+    category: 'Villa'
+  },
+  {
+    id: 'residential-plot',
+    title: 'Residential<br/>Plot',
+    count: '2,700+ Properties',
+    bgColor: '#ebf8f0',
+    img: '/assets/card_plot_clean.jpg',
+    category: 'Plot'
+  },
+  {
+    id: 'builder-floor',
+    title: 'Independent /<br/>Builder Floor',
+    count: '3,400+ Properties',
+    bgColor: '#f8f2fb',
+    img: '/assets/card_builder_floor_clean.jpg',
+    category: 'Builder Floor'
+  },
+  {
+    id: 'studio-apartment',
+    title: '1 RK / Studio<br/>Apartment',
+    count: '1,200+ Properties',
+    bgColor: '#fff1ea',
+    img: '/assets/card_studio_clean.jpg',
+    category: 'Studio'
+  },
+  {
+    id: 'serviced-apartment',
+    title: 'Serviced<br/>Apartment',
+    count: '450+ Properties',
+    bgColor: '#edf7fa',
+    img: '/assets/card_serviced_clean.jpg',
+    category: 'Serviced Apartment'
+  },
+  {
+    id: 'farm-house',
+    title: 'Farm<br/>House',
+    count: '350+ Properties',
+    bgColor: '#f1f7ec',
+    img: '/assets/card_farmhouse_clean.jpg',
+    category: 'Farmhouse'
+  }
+];
+
+window.CONTINUE_BROWSING_DATA = {
+  blr: {
+    label: 'Buy in Bangalore East',
+    subText: 'The most searched projects in Bangalore East',
+    properties: [
+      {
+        id: 'blr-p1',
+        price: '₹ 75 L',
+        title: '2 BHK Independent House/Villa, 3 Baths',
+        loc: 'In Prasanth Layout, Whitefield',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 2 months ago',
+        img: '/assets/card_villa_clean.jpg'
+      },
+      {
+        id: 'blr-p2',
+        price: '₹ 48 L',
+        title: '2 BHK Independent House/Villa, 2 Baths',
+        loc: 'In SKH Echium, Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 4 days ago',
+        img: '/assets/buy_home_showcase.jpg'
+      },
+      {
+        id: 'blr-p3',
+        price: '₹ 48 L',
+        title: '2 BHK Independent House/Villa, 2 Baths',
+        loc: 'In Premium 2bhk villas , Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 1 month ago',
+        img: '/assets/card_builder_floor_clean.jpg'
+      },
+      {
+        id: 'blr-p4',
+        price: '₹ 48 L',
+        title: '2 BHK Independent House/Villa, 2 Baths',
+        loc: 'In ITPL, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 1 month ago',
+        img: '/assets/card_studio_clean.jpg'
+      },
+      {
+        id: 'blr-p5',
+        price: '₹ 40 L',
+        title: 'Residential Land / Plot',
+        loc: 'In SKH Echium, Whitefield, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 4 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p6',
+        price: '₹ 42 L',
+        title: 'Residential Land / Plot',
+        loc: 'In SKH Echium, Whitefield, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 4 months ago',
+        img: '/assets/plot_showcase.jpg'
+      },
+      {
+        id: 'blr-p7',
+        price: '₹ 43 L',
+        title: 'Residential Land / Plot',
+        loc: 'In SKH Echium, Whitefield, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 4 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p8',
+        price: '₹ 44.4 L',
+        title: 'Residential Land / Plot',
+        loc: 'In White Field Ville, Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 6 months ago',
+        img: '/assets/plot_showcase.jpg'
+      },
+      {
+        id: 'blr-p9',
+        price: '₹ 44.4 L',
+        title: 'Residential Land / Plot',
+        loc: 'In Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 6 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p10',
+        price: '₹ 44.4 L',
+        title: 'Residential Land / Plot',
+        loc: 'In White Field Ville, Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 6 months ago',
+        img: '/assets/plot_showcase.jpg'
+      },
+      {
+        id: 'blr-p11',
+        price: '₹ 44.4 L',
+        title: 'Residential Land / Plot',
+        loc: 'In White Field Ville, Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 6 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p12',
+        price: '₹ 44.4 L',
+        title: 'Residential Land / Plot',
+        loc: 'In Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 6 months ago',
+        img: '/assets/plot_showcase.jpg'
+      },
+      {
+        id: 'blr-p13',
+        price: '₹ 44.4 L',
+        title: 'Residential Land / Plot',
+        loc: 'In White Field Ville, Whitefield, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 6 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p14',
+        price: '₹ 40 L',
+        title: 'Residential Land / Plot',
+        loc: 'In KR Puram, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 1 month ago',
+        img: '/assets/plot_showcase.jpg'
+      },
+      {
+        id: 'blr-p15',
+        price: '₹ 42 L',
+        title: 'Residential Land / Plot',
+        loc: 'In Hoodi, Bangalore',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 7 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p16',
+        price: '₹ 40 L',
+        title: '2 BHK Independent House/Villa, 2 Baths',
+        loc: 'In Whitefield, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 5 months ago',
+        img: '/assets/card_villa_clean.jpg'
+      },
+      {
+        id: 'blr-p17',
+        price: '₹ 41 L',
+        title: 'Residential Land / Plot',
+        loc: 'In Whitefield, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 4 months ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'blr-p18',
+        price: '₹ 45 L',
+        title: 'Residential Land / Plot',
+        loc: 'In Whitefield, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 2 weeks ago',
+        img: '/assets/plot_showcase.jpg'
+      },
+      {
+        id: 'blr-p19',
+        price: '₹ 45 L',
+        title: '2 BHK Independent House/Villa, 2 Baths',
+        loc: 'In KR Puram, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 3 weeks ago',
+        img: '/assets/buy_home_showcase.jpg'
+      },
+      {
+        id: 'blr-p20',
+        price: '₹ 46 L',
+        title: 'Residential Land / Plot',
+        loc: 'In Varthur, Bangalore',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 3 weeks ago',
+        img: '/assets/card_plot_clean.jpg'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-jupiter',
+        name: 'Jupiter Homes',
+        rera: 'RERA',
+        status: 'Ready since Jan 2024',
+        typeDesc: '2 BHK Apartment in Samethanahalli, Near Whitefield, Bangalore',
+        price: '₹ 82 - 90 L',
+        link: 'https://www.99acres.com/jupiter-homes-samethanahalli-bangalore-east-npxid-r396679',
+        img: '/assets/project_jupiter.jpg'
+      },
+      {
+        id: 'proj-shriram',
+        name: 'Shriram WYT Field',
+        rera: 'RERA',
+        status: 'Newly built · Nov 2025',
+        typeDesc: '2 BHK Apartment in Whitefield, Bangalore',
+        price: '₹ 88.8 L - 1.06 Cr',
+        link: 'https://www.99acres.com/shriram-wyt-field-whitefield-bangalore-east-npxid-r354672',
+        img: '/assets/project_shriram.jpg'
+      }
+    ]
+  },
+  chn: {
+    label: 'Buy in Chennai South',
+    subText: 'The most searched projects in Chennai South (OMR & ECR Corridors)',
+    properties: [
+      {
+        id: 'chn-p1',
+        price: '₹ 58 L',
+        title: '2 BHK Luxury Apartment, 2 Baths',
+        loc: 'In Sholinganallur, OMR, Chennai',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 1 week ago',
+        img: '/assets/card_apartment_clean.jpg'
+      },
+      {
+        id: 'chn-p2',
+        price: '₹ 72 L',
+        title: '3 BHK Gated Villa, 3 Baths',
+        loc: 'In Velachery South, Chennai',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 3 days ago',
+        img: '/assets/card_villa_clean.jpg'
+      },
+      {
+        id: 'chn-p3',
+        price: '₹ 42 L',
+        title: 'CMDA Approved Residential Plot',
+        loc: 'In Medavakkam, Chennai South',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 2 weeks ago',
+        img: '/assets/card_plot_clean.jpg'
+      },
+      {
+        id: 'chn-p4',
+        price: '₹ 88 L',
+        title: '3 BHK Sea-Breeze Apartment',
+        loc: 'In Thoraipakkam, OMR, Chennai',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 5 days ago',
+        img: '/assets/buy_home_showcase.jpg'
+      },
+      {
+        id: 'chn-p5',
+        price: '₹ 38 L',
+        title: 'Gated Villa Plot, Ready for Construction',
+        loc: 'In Perungudi, Chennai South',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 1 month ago',
+        img: '/assets/plot_showcase.jpg'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-casagrand',
+        name: 'Casagrand Primrose',
+        rera: 'RERA',
+        status: 'Under Construction · Dec 2025',
+        typeDesc: '2 & 3 BHK High-Rise Residences in Perungalathur, Chennai South',
+        price: '₹ 65 - 95 L',
+        link: 'https://www.99acres.com/',
+        img: '/assets/project_jupiter.jpg'
+      },
+      {
+        id: 'proj-tvs',
+        name: 'TVS Emerald Peninsula',
+        rera: 'RERA',
+        status: 'Newly Launched · 2026',
+        typeDesc: '100% Corner Homes in Manapakkam, Chennai South',
+        price: '₹ 85 L - 1.25 Cr',
+        link: 'https://www.99acres.com/',
+        img: '/assets/project_shriram.jpg'
+      }
+    ]
+  },
+  explore: {
+    label: 'Explore New City',
+    subText: 'Discover booming investment hotspots across Indian Metros',
+    properties: [
+      {
+        id: 'exp-p1',
+        price: '₹ 1.85 Cr',
+        title: '2 BHK Designer Apartment with Sea View',
+        loc: 'In Bandra West, Mumbai',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 2 days ago',
+        img: '/assets/card_apartment_clean.jpg'
+      },
+      {
+        id: 'exp-p2',
+        price: '₹ 95 L',
+        title: '3 BHK High-Tech Apartment',
+        loc: 'In Gachibowli, Financial District, Hyderabad',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 1 week ago',
+        img: '/assets/buy_home_showcase.jpg'
+      },
+      {
+        id: 'exp-p3',
+        price: '₹ 72 L',
+        title: '2 BHK Riverside Residence',
+        loc: 'In Koregaon Park, Pune',
+        postedType: 'dealer',
+        postedText: 'Posted by Dealer 4 days ago',
+        img: '/assets/card_builder_floor_clean.jpg'
+      },
+      {
+        id: 'exp-p4',
+        price: '₹ 60 L',
+        title: 'Villa Plot in Gated Township',
+        loc: 'In Mokila / Tellapur Corridor, Hyderabad',
+        postedType: 'owner',
+        postedText: 'Posted by Owner 3 weeks ago',
+        img: '/assets/card_plot_clean.jpg'
+      }
+    ],
+    projects: [
+      {
+        id: 'proj-lodha',
+        name: 'Lodha Crown Skyline',
+        rera: 'RERA',
+        status: 'Ready Possession',
+        typeDesc: '1 & 2 BHK Premium Residences in Thane West, Mumbai MMR',
+        price: '₹ 62 - 88 L',
+        link: 'https://www.99acres.com/',
+        img: '/assets/project_jupiter.jpg'
+      },
+      {
+        id: 'proj-myhome',
+        name: 'My Home Sayuk',
+        rera: 'RERA',
+        status: 'Under Construction · 2025',
+        typeDesc: '2, 2.5 & 3 BHK Iconic Towers in Tellapur, Hyderabad',
+        price: '₹ 98 L - 1.45 Cr',
+        link: 'https://www.99acres.com/',
+        img: '/assets/project_shriram.jpg'
+      }
+    ]
+  }
+};
+
+window.renderApartmentsVillasCarousel = function() {
+  const track = document.getElementById('avm-carousel-track');
+  if (!track) return;
+  track.innerHTML = window.APARTMENTS_VILLAS_CARDS.map(card => `
+    <div class="avm-card" style="background-color: ${card.bgColor};" onclick="openCategorySearch('${card.category}')" title="Explore ${card.category} in Bangalore & Top Cities">
+      <div class="avm-card-top">
+        <h3 class="avm-card-title">${card.title}</h3>
+        <p class="avm-card-count">${card.count}</p>
+      </div>
+      <div class="avm-card-img-wrap">
+        <img src="${card.img}" alt="${card.category}" class="avm-card-img" loading="lazy" />
+      </div>
+    </div>
+  `).join('');
+};
+
+window.scrollApartmentsVillas = function(direction) {
+  const track = document.getElementById('avm-carousel-track');
+  if (!track) return;
+  const amount = 320;
+  track.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+};
+
+window.currentContinueBrowsingTab = 'blr';
+
+window.switchContinueBrowsingTab = function(tabKey) {
+  window.currentContinueBrowsingTab = tabKey;
+  document.querySelectorAll('.cb-tab-pill').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('cb-tab-' + tabKey);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const tabData = window.CONTINUE_BROWSING_DATA[tabKey] || window.CONTINUE_BROWSING_DATA.blr;
+  
+  const subEl = document.getElementById('cb-projects-sub');
+  if (subEl) subEl.innerText = tabData.subText;
+
+  renderCuratedProperties(tabKey);
+  renderRecommendedProjects(tabKey);
+};
+
+window.renderCuratedProperties = function(tabKey) {
+  const track = document.getElementById('cb-curated-properties-track');
+  if (!track) return;
+  const tabData = window.CONTINUE_BROWSING_DATA[tabKey] || window.CONTINUE_BROWSING_DATA.blr;
+
+  track.innerHTML = tabData.properties.map(p => `
+    <div class="cb-prop-card" id="${p.id}">
+      <div class="cb-prop-img-box">
+        <img src="${p.img}" alt="${p.title}" class="cb-prop-img" loading="lazy" />
+        <span class="cb-badge ${p.postedType}">${p.postedType === 'owner' ? 'Owner' : 'Dealer'}</span>
+        <button class="cb-prop-heart" onclick="togglePropertyFavorite(this, event)" title="Save Property">♥</button>
+      </div>
+      <div class="cb-prop-info">
+        <div class="cb-prop-price">${p.price}</div>
+        <div class="cb-prop-title" title="${p.title}">${p.title}</div>
+        <div class="cb-prop-loc" title="${p.loc}">
+          <span style="color: #0078db;">📍</span>
+          <span>${p.loc}</span>
+        </div>
+        <div class="cb-prop-meta">
+          <span class="cb-prop-time">${p.postedText}</span>
+          <div class="cb-prop-actions">
+            <button class="cb-prop-btn outline" onclick="contactPropertyAgent('${p.title.replace(/'/g, "\\'")}', '${p.price}', '${p.loc.replace(/'/g, "\\'")}')" title="Contact via WhatsApp">Contact</button>
+            <button class="cb-prop-btn primary" onclick="openCategorySearch('${p.title.includes('Land') ? 'Plot' : 'Villa'}')" title="View Details">View</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.scrollCuratedProperties = function(direction) {
+  const track = document.getElementById('cb-curated-properties-track');
+  if (!track) return;
+  const amount = 310;
+  track.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+};
+
+window.renderRecommendedProjects = function(tabKey) {
+  const grid = document.getElementById('cb-recommended-projects-grid');
+  if (!grid) return;
+  const tabData = window.CONTINUE_BROWSING_DATA[tabKey] || window.CONTINUE_BROWSING_DATA.blr;
+
+  grid.innerHTML = tabData.projects.map(proj => `
+    <div class="cb-proj-card" id="${proj.id}">
+      <div class="cb-proj-banner">
+        <img src="${proj.img}" alt="${proj.name}" loading="lazy" />
+        <div class="cb-proj-badges">
+          <span class="cb-proj-badge-rera">${proj.rera}</span>
+          <span class="cb-proj-badge-status">${proj.status}</span>
+        </div>
+      </div>
+      <div class="cb-proj-body">
+        <div class="cb-proj-title-row">
+          <h4 class="cb-proj-name">${proj.name}</h4>
+          <span class="cb-proj-price">${proj.price}</span>
+        </div>
+        <p class="cb-proj-desc">${proj.typeDesc}</p>
+        <div class="cb-proj-footer">
+          <a href="${proj.link}" target="_blank" rel="noopener noreferrer" class="cb-proj-link-btn" title="View Project on 99acres">
+            <span>Explore on 99acres</span>
+            <span>↗</span>
+          </a>
+          <button class="cb-proj-inquire-btn" onclick="contactPropertyAgent('Project: ${proj.name}', '${proj.price}', '${proj.typeDesc.replace(/'/g, "\\'")}')">Inquire</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.togglePropertyFavorite = function(btn, ev) {
+  if (ev) ev.stopPropagation();
+  btn.classList.toggle('active');
+  if (btn.classList.contains('active')) {
+    btn.style.color = '#ef4444';
+    btn.style.background = '#ffffff';
+  } else {
+    btn.style.color = '#64748b';
+  }
+};
+
+window.contactPropertyAgent = function(title, price, loc) {
+  const msg = encodeURIComponent('Hi Nexora, I am interested in this listing:\n' + title + '\nPrice: ' + price + '\nLocation: ' + loc);
+  window.open('https://wa.me/919876543210?text=' + msg, '_blank');
+};
+
+window.openCategorySearch = function(cat) {
+  const searchInput = document.querySelector('.hero-search-input') || document.querySelector('.eh-search-input');
+  if (searchInput) {
+    searchInput.value = cat;
+  }
+  const el = document.getElementById('continue-browsing-section');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+};
+
 window.postPropertyFormState = {
   intent: 'Sell',
   category: 'Residential',
@@ -8159,6 +8707,70 @@ function renderPublicWebsite(root) {
         </div>
       </section>
 
+      <!-- 11A. 99ACRES STYLE: APARTMENTS, VILLAS AND MORE (7 CARDS CAROUSEL) -->
+      <section class="avm-section" id="apartments-villas-section">
+        <div class="avm-header">
+          <div>
+            <h2 class="avm-title">Apartments, Villas and more</h2>
+            <p class="avm-subtitle">in Bangalore East, Delhi / NCR &amp; Top Metropolitan Cities</p>
+          </div>
+        </div>
+
+        <div class="avm-track-wrapper">
+          <button class="avm-nav-arrow prev" onclick="scrollApartmentsVillas('left')" title="Previous Categories" aria-label="Previous">‹</button>
+          <div class="avm-track" id="avm-carousel-track">
+            <!-- 7 Cards populated by renderApartmentsVillasCarousel() -->
+          </div>
+          <button class="avm-nav-arrow next" onclick="scrollApartmentsVillas('right')" title="Next Categories" aria-label="Next">›</button>
+        </div>
+      </section>
+
+      <!-- 11B. 99ACRES STYLE: CONTINUE BROWSING WITH TABS & CURATED PROPERTIES / PROJECTS -->
+      <section class="cb-section" id="continue-browsing-section">
+        <h2 class="cb-main-title">Continue browsing...</h2>
+
+        <!-- City Corridors Tabs -->
+        <div class="cb-tabs-row" id="cb-tabs-row">
+          <button class="cb-tab-pill active" id="cb-tab-blr" onclick="switchContinueBrowsingTab('blr')">Buy in Bangalore East</button>
+          <button class="cb-tab-pill" id="cb-tab-chn" onclick="switchContinueBrowsingTab('chn')">Buy in Chennai South</button>
+          <button class="cb-tab-pill" id="cb-tab-explore" onclick="switchContinueBrowsingTab('explore')">Explore New City</button>
+        </div>
+
+        <!-- Curated Properties Block -->
+        <div class="cb-block">
+          <div class="cb-block-header">
+            <div>
+              <h3 class="cb-block-title">Recommended Properties</h3>
+              <p class="cb-block-sub">Curated especially for you</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="avm-nav-arrow prev" style="position: static; transform: none; width: 36px; height: 36px; font-size: 1.2rem;" onclick="scrollCuratedProperties('left')" title="Previous Properties">‹</button>
+              <button class="avm-nav-arrow next" style="position: static; transform: none; width: 36px; height: 36px; font-size: 1.2rem;" onclick="scrollCuratedProperties('right')" title="Next Properties">›</button>
+            </div>
+          </div>
+
+          <div class="cb-prop-track-wrapper">
+            <div class="cb-prop-track" id="cb-curated-properties-track">
+              <!-- 20 Curated Properties populated by renderCuratedProperties() -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommended Projects Block -->
+        <div class="cb-block" style="margin-bottom: 0;">
+          <div class="cb-block-header">
+            <div>
+              <h3 class="cb-block-title">Recommended Projects</h3>
+              <p class="cb-block-sub" id="cb-projects-sub">The most searched projects in Bangalore East</p>
+            </div>
+          </div>
+
+          <div class="cb-proj-grid" id="cb-recommended-projects-grid">
+            <!-- Featured Projects (Jupiter Homes, Shriram WYT Field) -->
+          </div>
+        </div>
+      </section>
+
       <!-- ARTICLES AND GUIDES FOR PROPERTY OWNERS (EXACT MATCHING OVERLAPPING FULL-WIDTH GLASS CARD) -->
       <section class="ona-section" id="owner-news-section">
         <div class="ona-card">
@@ -8301,6 +8913,12 @@ function renderPublicWebsite(root) {
   }
   if (typeof window.renderOwnerNewsGrid === 'function') {
     window.renderOwnerNewsGrid('news');
+  }
+  if (typeof window.renderApartmentsVillasCarousel === 'function') {
+    window.renderApartmentsVillasCarousel();
+  }
+  if (typeof window.switchContinueBrowsingTab === 'function') {
+    window.switchContinueBrowsingTab('blr');
   }
   if (typeof window.switchLocalityCity === 'function') {
     window.switchLocalityCity('ncr');

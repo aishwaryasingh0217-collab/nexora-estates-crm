@@ -8804,112 +8804,6 @@ function renderPublicWebsite(root) {
         </div>
       </section>
 
-      <!-- 11B. 99ACRES STYLE: CONTINUE BROWSING WITH TABS & CURATED PROPERTIES / PROJECTS -->
-      <section class="cb-section" id="continue-browsing-section">
-        <h2 class="cb-main-title">Continue browsing...</h2>
-
-        <!-- City Corridors Tabs -->
-        <div class="cb-tabs-row" id="cb-tabs-row">
-          <button class="cb-tab-pill active" id="cb-tab-blr" onclick="switchContinueBrowsingTab('blr')">Buy in Bangalore East</button>
-          <button class="cb-tab-pill" id="cb-tab-chn" onclick="switchContinueBrowsingTab('chn')">Buy in Chennai South</button>
-          <button class="cb-tab-pill" id="cb-tab-explore" onclick="switchContinueBrowsingTab('explore')">Explore New City</button>
-        </div>
-
-        <!-- Curated Properties Block -->
-        <div class="cb-block">
-          <div class="cb-block-header">
-            <div>
-              <h3 class="cb-block-title">Recommended Properties</h3>
-              <p class="cb-block-sub">Curated especially for you</p>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-              <button class="avm-nav-arrow prev" style="position: static; transform: none; width: 36px; height: 36px; font-size: 1.2rem;" onclick="scrollCuratedProperties('left')" title="Previous Properties">‹</button>
-              <button class="avm-nav-arrow next" style="position: static; transform: none; width: 36px; height: 36px; font-size: 1.2rem;" onclick="scrollCuratedProperties('right')" title="Next Properties">›</button>
-            </div>
-          </div>
-
-          <div class="cb-prop-track-wrapper">
-            <div class="cb-prop-track" id="cb-curated-properties-track">
-              <!-- 20 Curated Properties populated by renderCuratedProperties() -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Recommended Projects Block -->
-        <div class="cb-block" style="margin-bottom: 0;">
-          <div class="cb-block-header">
-            <div>
-              <h3 class="cb-block-title">Recommended Projects</h3>
-              <p class="cb-block-sub" id="cb-projects-sub">The most searched projects in Bangalore East</p>
-            </div>
-          </div>
-
-          <div class="cb-proj-grid" id="cb-recommended-projects-grid">
-            <!-- Featured Projects (Jupiter Homes, Shriram WYT Field) -->
-          </div>
-        </div>
-      </section>
-
-      <!-- ARTICLES AND GUIDES FOR PROPERTY OWNERS (EXACT MATCHING OVERLAPPING FULL-WIDTH GLASS CARD) -->
-      <section class="ona-section" id="owner-news-section">
-        <div class="ona-card">
-          <div class="ona-tabs-row">
-            <button class="ona-tab-btn active" id="ona-tab-news" onclick="switchOwnerNewsTab('news')">News</button>
-            <button class="ona-tab-btn" id="ona-tab-legal" onclick="switchOwnerNewsTab('legal')">Tax & Legal</button>
-            <button class="ona-tab-btn" id="ona-tab-guides" onclick="switchOwnerNewsTab('guides')">Help Guides</button>
-            <button class="ona-tab-btn" id="ona-tab-investment" onclick="switchOwnerNewsTab('investment')">Investment</button>
-          </div>
-
-          <div class="ona-split-row">
-            <div class="ona-left-col">
-              <h3 class="ona-inner-title">Articles and guides<br/>for property owners</h3>
-              <p class="ona-inner-sub">Read from Beginners check-list to Pro Tips</p>
-            </div>
-
-            <div class="ona-grid-wrapper">
-              <button class="ona-arrow-btn prev" id="ona-arrow-prev" onclick="prevOwnerNewsPage()" title="Previous Articles" style="display: none;">‹</button>
-              <div class="ona-articles-grid" id="ona-articles-grid">
-                <!-- Dynamically populated by renderOwnerNewsGrid() -->
-              </div>
-              <button class="ona-arrow-btn next" id="ona-arrow-next" onclick="nextOwnerNewsPage()" title="Next Articles">›</button>
-            </div>
-          </div>
-
-          <div class="ona-footer-link-row">
-            <a class="ona-footer-link" onclick="openAllOwnerNewsModal()">
-              <span>Read realty news, guides & articles</span>
-              <span>→</span>
-            </a>
-            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;" id="ona-page-indicator">Page 1 of 2</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 12. POPULAR LOCALITIES IN TOP CITIES -->
-      <section style="max-width: 1200px; margin: 0 auto 4rem; padding: 0 1.5rem; box-sizing: border-box;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem;">
-          <div>
-            <span style="font-size: 0.76rem; font-weight: 800; color: #0078db; text-transform: uppercase; letter-spacing: 0.05em;">City Intelligence</span>
-            <h2 style="font-size: 1.75rem; font-weight: 850; color: #091e42; margin: 0.2rem 0 0;">Popular Localities in Top Cities</h2>
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
-          <button class="eh-curated-tab-pill active" id="loc-city-ncr" onclick="switchLocalityCity('ncr')">Delhi / NCR</button>
-          <button class="eh-curated-tab-pill" id="loc-city-mumbai" onclick="switchLocalityCity('mumbai')">Mumbai</button>
-          <button class="eh-curated-tab-pill" id="loc-city-blr" onclick="switchLocalityCity('blr')">Bengaluru</button>
-          <button class="eh-curated-tab-pill" id="loc-city-pune" onclick="switchLocalityCity('pune')">Pune</button>
-          <button class="eh-curated-tab-pill" id="loc-city-hyd" onclick="switchLocalityCity('hyd')">Hyderabad</button>
-        </div>
-
-        <div id="eh-popular-localities-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;"></div>
-      </section>
-
-      <!-- 13. INTERACTIVE 3D ELEVATION VISUALIZER -->
-      <section class="pub-3d-section" style="max-width: 1200px; margin: 0 auto 5rem; padding: 0 1.5rem; box-sizing: border-box;">
-        <div id="pub-3d-visualizer-container"></div>
-      </section>
-
       <!-- 14. ENTERPRISE SAAS FOOTER -->
       <footer style="background: #091426; color: #cbd5e1; padding: 4rem 1.5rem 2rem; border-top: 1px solid rgba(255,255,255,0.08);">
         <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2.5rem; margin-bottom: 3rem;">
@@ -8990,20 +8884,8 @@ function renderPublicWebsite(root) {
   if (typeof window.renderPlotNewsGrid === 'function') {
     window.renderPlotNewsGrid('news');
   }
-  if (typeof window.renderOwnerNewsGrid === 'function') {
-    window.renderOwnerNewsGrid('news');
-  }
   if (typeof window.renderApartmentsVillasCarousel === 'function') {
     window.renderApartmentsVillasCarousel();
-  }
-  if (typeof window.switchContinueBrowsingTab === 'function') {
-    window.switchContinueBrowsingTab('blr');
-  }
-  if (typeof window.switchLocalityCity === 'function') {
-    window.switchLocalityCity('ncr');
-  }
-  if (typeof window.renderPub3DVisualizer === 'function') {
-    window.renderPub3DVisualizer();
   }
   if (typeof window.initHeroKenBurnsScreensaver === 'function') {
     window.initHeroKenBurnsScreensaver();

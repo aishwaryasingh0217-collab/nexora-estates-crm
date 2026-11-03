@@ -7723,6 +7723,7 @@ function renderPublicWebsite(root) {
       <!-- 2. HERO SECTION WITH CINEMATIC VIDEO BACKGROUND -->
       <section class="eh-hero-section">
         <video class="eh-hero-video-bg" autoplay loop muted playsinline poster="/assets/hero-bg.png">
+          <source src="/assets/hero_video_enhanced_1080p.mp4" type="video/mp4" />
           <source src="/assets/hero_video.mp4" type="video/mp4" />
         </video>
         <div class="eh-hero-video-overlay"></div>

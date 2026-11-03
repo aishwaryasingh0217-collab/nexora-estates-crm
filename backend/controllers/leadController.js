@@ -593,11 +593,176 @@ const convertLeadToCustomer = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/leads/webhook
+ * Universal Ad-Lead Ingestion Webhook (Meta Ads, 99acres, MagicBricks, Google Ads, Zapier)
+ * Features intelligent Round-Robin sales agent auto-assignment & instant notification dispatch
+ */
+const handleLeadWebhook = async (req, res, next) => {
+  try {
+    const payload = req.body || {};
+
+    // Normalize name
+    let firstName = payload.first_name || payload.name || payload.client_name || '';
+    let lastName = payload.last_name || '';
+    if (!lastName && payload.full_name) {
+      const parts = payload.full_name.trim().split(' ');
+      firstName = parts[0] || 'Prospective';
+      lastName = parts.slice(1).join(' ') || 'Buyer';
+    } else if (!lastName && firstName && firstName.includes(' ')) {
+      const parts = firstName.trim().split(' ');
+      firstName = parts[0];
+      lastName = parts.slice(1).join(' ');
+    }
+
+    if (!firstName) firstName = 'Prospective';
+    if (!lastName) lastName = 'Buyer';
+
+    // Normalize phone & email
+    const rawPhone = payload.phone || payload.phone_number || payload.mobile || payload.contact || '+91 9900000000';
+    const email = payload.email || payload.email_address || null;
+
+    // Normalize source
+    let source = (payload.source || payload.platform || payload.lead_source || 'DIGITAL_ADS').toUpperCase();
+    if (source.includes('META') || source.includes('FB') || source.includes('FACEBOOK') || source.includes('INSTAGRAM')) {
+      source = 'FACEBOOK_ADS';
+    } else if (source.includes('99ACRES')) {
+      source = '99ACRES';
+    } else if (source.includes('MAGIC') || source.includes('MAGICBRICKS')) {
+      source = 'MAGICBRICKS';
+    } else if (source.includes('GOOGLE')) {
+      source = 'GOOGLE_ADS';
+    } else if (source.includes('WEB') || source.includes('LANDING')) {
+      source = 'WEBSITE';
+    }
+
+    // Identify project preference if passed
+    let preferredProjectId = payload.project_id || null;
+    if (!preferredProjectId && payload.project_name) {
+      const [projRows] = await pool.query('SELECT id FROM projects WHERE name LIKE ? LIMIT 1', [`%${payload.project_name}%`]);
+      if (projRows.length > 0) {
+        preferredProjectId = projRows[0].id;
+      }
+    }
+
+    // Deduplication check: check if phone number already exists
+    const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
+    const [existing] = await pool.query(
+      `SELECT id, first_name, last_name, assigned_agent_id, stage FROM leads WHERE phone LIKE ? LIMIT 1`,
+      [`%${cleanDigits}%`]
+    );
+
+    if (existing.length > 0) {
+      const existingLead = existing[0];
+      // Append note and notify agent
+      await pool.query(
+        `UPDATE leads SET notes = CONCAT(COALESCE(notes, ''), '\n[Re-Enquiry from ${source} at ', NOW(), ']: ', ?) WHERE id = ?`,
+        [payload.notes || payload.message || payload.comments || 'Customer submitted another ad lead form.', existingLead.id]
+      );
+
+      if (existingLead.assigned_agent_id) {
+        await createNotification({
+          userId: existingLead.assigned_agent_id,
+          type: 'WARNING',
+          title: `Re-Enquiry: ${existingLead.first_name} ${existingLead.last_name}`,
+          message: `Existing lead re-enquired via ${source}. Follow up immediately.`,
+          relatedEntityType: 'LEAD',
+          relatedEntityId: existingLead.id
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        action: 'DUPLICATE_UPDATED',
+        message: 'Lead already exists. Re-enquiry recorded and assigned agent alerted.',
+        leadId: existingLead.id
+      });
+    }
+
+    // Round-Robin Assignment: find active sales executive with the lowest lead count or least recently assigned
+    const [agents] = await pool.query(`
+      SELECT u.id, u.first_name, u.last_name, u.email,
+             COUNT(l.id) AS active_leads_count,
+             MAX(l.created_at) AS last_lead_assigned_at
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      LEFT JOIN leads l ON u.id = l.assigned_agent_id AND l.stage NOT IN ('Booking Done', 'WON', 'Lost', 'LOST')
+      WHERE u.status = 'ACTIVE' AND (r.name IN ('SALES_EXECUTIVE', 'SALES_MANAGER', 'SUPER_ADMIN'))
+      GROUP BY u.id
+      ORDER BY active_leads_count ASC, last_lead_assigned_at ASC
+      LIMIT 1
+    `);
+
+    const assignedAgent = agents.length > 0 ? agents[0] : null;
+    const assignedAgentId = assignedAgent ? assignedAgent.id : null;
+
+    // Create New Lead
+    const leadId = crypto.randomUUID();
+    const budgetMin = payload.budget_min ? parseFloat(payload.budget_min) : null;
+    const budgetMax = payload.budget_max ? parseFloat(payload.budget_max) : null;
+    const notes = payload.notes || payload.message || payload.comments || `Ingested via ${source} Webhook Integration`;
+
+    // SLA Due: 2 hours from now
+    const slaDueDate = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+
+    await pool.query(`
+      INSERT INTO leads (
+        id, first_name, last_name, phone, email, source, stage,
+        budget_min, budget_max, preferred_project_id, assigned_agent_id,
+        sla_due_date, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, 'New Lead', ?, ?, ?, ?, ?, ?)
+    `, [
+      leadId, firstName, lastName, rawPhone, email, source,
+      budgetMin, budgetMax, preferredProjectId, assignedAgentId,
+      slaDueDate, notes
+    ]);
+
+    // Send instant notification to assigned agent
+    if (assignedAgentId) {
+      await createNotification({
+        userId: assignedAgentId,
+        type: 'SUCCESS',
+        title: `🔥 New Ad Lead Assigned: ${firstName} ${lastName}`,
+        message: `High-intent lead received from ${source}. SLA Target: 2 hours. Call: ${rawPhone}`,
+        relatedEntityType: 'LEAD',
+        relatedEntityId: leadId
+      });
+    }
+
+    await broadcastToAdmins({
+      type: 'INFO',
+      title: `Ad Lead Ingested: ${firstName} ${lastName}`,
+      message: `Lead auto-routed to ${assignedAgent ? assignedAgent.first_name + ' ' + assignedAgent.last_name : 'Unassigned'} via Round-Robin.`,
+      relatedEntityType: 'LEAD',
+      relatedEntityId: leadId
+    });
+
+    res.status(201).json({
+      status: 'success',
+      action: 'LEAD_INGESTED',
+      message: `Lead ingested successfully and auto-assigned to ${assignedAgent ? assignedAgent.first_name + ' ' + assignedAgent.last_name : 'General Pool'}.`,
+      data: {
+        leadId,
+        firstName,
+        lastName,
+        phone: rawPhone,
+        source,
+        assignedTo: assignedAgent ? `${assignedAgent.first_name} ${assignedAgent.last_name}` : 'Unassigned',
+        slaDueDate
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getLeads,
   getLeadById,
   createLead,
   updateLead,
   bookLead,
-  convertLeadToCustomer
+  convertLeadToCustomer,
+  handleLeadWebhook
 };
+

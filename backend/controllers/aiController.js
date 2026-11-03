@@ -1,4 +1,4 @@
-const { processChatMessage } = require('../services/aiService');
+const { processChatMessage, analyzeLeadCopilot, matchPropertyInventory } = require('../services/aiService');
 
 /**
  * POST /api/ai/chat
@@ -32,6 +32,51 @@ const chat = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/ai/lead-copilot/:id
+ * Fetches AI lead intent analysis, heat score, recommended action, and customized follow-up pitches
+ */
+const getLeadCopilotAnalysis = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Lead ID is required.'
+      });
+    }
+
+    const analysis = await analyzeLeadCopilot(id);
+
+    res.status(200).json({
+      status: 'success',
+      data: analysis
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/ai/property-matcher
+ * Natural language AI inventory matcher & comparison matrix
+ */
+const matchInventory = async (req, res, next) => {
+  try {
+    const { query = '', filters = {} } = req.body || {};
+    const matchResults = await matchPropertyInventory(query, filters);
+
+    res.status(200).json({
+      status: 'success',
+      data: matchResults
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-  chat
+  chat,
+  getLeadCopilotAnalysis,
+  matchInventory
 };

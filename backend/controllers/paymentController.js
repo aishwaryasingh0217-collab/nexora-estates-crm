@@ -228,9 +228,143 @@ const createMilestone = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/payments/demand-notices/summary
+ * Aggregates pending and overdue construction milestones for batch demand notice dispatch
+ */
+const getDemandNoticesSummary = async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        p.id AS project_id,
+        p.name AS project_name,
+        p.rera_number,
+        b.id AS building_id,
+        b.name AS building_name,
+        pm.milestone_name,
+        COUNT(DISTINCT pm.id) AS total_notices_count,
+        SUM(pm.due_amount) AS total_demand_amount,
+        SUM(COALESCE(paid_tbl.paid_sum, 0)) AS total_received_amount,
+        SUM(pm.due_amount - COALESCE(paid_tbl.paid_sum, 0)) AS total_balance_due,
+        MIN(pm.due_date) AS earliest_due_date,
+        MAX(pm.due_date) AS latest_due_date
+      FROM payment_milestones pm
+      JOIN deals d ON pm.deal_id = d.id
+      JOIN units u ON d.unit_id = u.id
+      JOIN projects p ON u.project_id = p.id
+      LEFT JOIN buildings b ON u.building_id = b.id
+      LEFT JOIN (
+        SELECT milestone_id, SUM(amount_received) AS paid_sum
+        FROM payments
+        GROUP BY milestone_id
+      ) paid_tbl ON pm.id = paid_tbl.milestone_id
+      WHERE pm.status IN ('PENDING', 'PARTIAL')
+        AND d.status NOT IN ('CANCELLED', 'DRAFT')
+      GROUP BY p.id, b.id, pm.milestone_name
+      ORDER BY earliest_due_date ASC
+    `);
+
+    res.status(200).json({
+      status: 'success',
+      results: rows.length,
+      data: rows
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/payments/demand-notices/eligible
+ * List granular eligible demand notice unit records
+ */
+const getEligibleDemandNotices = async (req, res, next) => {
+  try {
+    const { project_id, building_id, milestone_name, search } = req.query;
+
+    let query = `
+      SELECT 
+        pm.id AS milestone_id,
+        pm.milestone_name,
+        pm.due_percentage,
+        pm.due_amount,
+        pm.due_date,
+        pm.status AS milestone_status,
+        COALESCE(paid_tbl.paid_sum, 0) AS total_paid,
+        (pm.due_amount - COALESCE(paid_tbl.paid_sum, 0)) AS balance_payable,
+        DATEDIFF(CURDATE(), pm.due_date) AS days_overdue,
+        d.id AS deal_id,
+        d.deal_number,
+        d.agreed_total_amount,
+        u.id AS unit_id,
+        u.unit_number,
+        u.floor_number,
+        u.unit_type,
+        u.super_area_sqft,
+        b.id AS building_id,
+        COALESCE(b.name, 'Phase 1') AS building_name,
+        p.id AS project_id,
+        p.name AS project_name,
+        p.rera_number,
+        c.id AS customer_id,
+        c.first_name AS customer_first_name,
+        c.last_name AS customer_last_name,
+        c.phone AS customer_phone,
+        c.email AS customer_email,
+        c.pan_tax_id AS customer_pan
+      FROM payment_milestones pm
+      JOIN deals d ON pm.deal_id = d.id
+      JOIN units u ON d.unit_id = u.id
+      JOIN projects p ON u.project_id = p.id
+      JOIN customers c ON d.customer_id = c.id
+      LEFT JOIN buildings b ON u.building_id = b.id
+      LEFT JOIN (
+        SELECT milestone_id, SUM(amount_received) AS paid_sum
+        FROM payments
+        GROUP BY milestone_id
+      ) paid_tbl ON pm.id = paid_tbl.milestone_id
+      WHERE pm.status IN ('PENDING', 'PARTIAL')
+        AND d.status NOT IN ('CANCELLED', 'DRAFT')
+    `;
+    const params = [];
+
+    if (project_id) {
+      query += ` AND p.id = ?`;
+      params.push(project_id);
+    }
+    if (building_id) {
+      query += ` AND b.id = ?`;
+      params.push(building_id);
+    }
+    if (milestone_name) {
+      query += ` AND pm.milestone_name = ?`;
+      params.push(milestone_name);
+    }
+    if (search) {
+      query += ` AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ? OR u.unit_number LIKE ? OR d.deal_number LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    query += ` ORDER BY pm.due_date ASC, u.unit_number ASC`;
+
+    const [notices] = await pool.query(query, params);
+
+    res.status(200).json({
+      status: 'success',
+      results: notices.length,
+      data: notices
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getPayments,
   getDealMilestones,
   recordPayment,
-  createMilestone
+  createMilestone,
+  getDemandNoticesSummary,
+  getEligibleDemandNotices
 };
+

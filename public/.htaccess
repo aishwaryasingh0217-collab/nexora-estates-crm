@@ -1,0 +1,18 @@
+# Nexora CRM cPanel Apache Configuration
+<IfModule mod_dir.c>
+  DirectorySlash On
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /nexora-crm/
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /nexora-crm/index.html [L]
+</IfModule>

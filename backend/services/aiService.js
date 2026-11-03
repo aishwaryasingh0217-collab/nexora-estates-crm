@@ -794,6 +794,453 @@ async function processChatMessage(userMessage, userRole = 'ADMIN', conversationH
   };
 }
 
+/**
+ * AI Lead Copilot: Analyzes lead intent, calculates heat score (0-100),
+ * suggests optimal site visit slots, and generates customized 1-click follow-up messages.
+ */
+async function analyzeLeadCopilot(leadId) {
+  const [leads] = await pool.query(`
+    SELECT l.*, p.name AS project_name, p.city AS project_city, p.location AS project_location,
+           u.first_name AS agent_first_name, u.last_name AS agent_last_name, u.email AS agent_email, u.phone AS agent_phone
+    FROM leads l
+    LEFT JOIN projects p ON l.preferred_project_id = p.id
+    LEFT JOIN users u ON l.assigned_agent_id = u.id
+    WHERE l.id = ?
+  `, [leadId]);
+
+  if (!leads || leads.length === 0) {
+    throw new Error('Lead not found');
+  }
+
+  const lead = leads[0];
+  const clientFullName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Valued Client';
+  const agentFullName = `${lead.agent_first_name || ''} ${lead.agent_last_name || ''}`.trim() || 'Nexora Estates Representative';
+
+  // 1. Fetch site visit history
+  const [visits] = await pool.query(`
+    SELECT id, status, scheduled_time, client_feedback, created_at
+    FROM site_visits
+    WHERE lead_id = ?
+    ORDER BY scheduled_time DESC
+  `, [leadId]);
+
+  // 2. Fetch inventory availability in their preferred project
+  let matchingUnitsCount = 0;
+  let minAvailablePrice = null;
+  if (lead.preferred_project_id) {
+    const [units] = await pool.query(`
+      SELECT COUNT(*) AS total_avail, MIN(base_price) AS min_price
+      FROM units
+      WHERE project_id = ? AND status = 'AVAILABLE'
+    `, [lead.preferred_project_id]);
+    if (units.length > 0) {
+      matchingUnitsCount = units[0].total_avail || 0;
+      minAvailablePrice = units[0].min_price || null;
+    }
+  }
+
+  // 3. Compute Lead Heat Score (0-100) & Key Factors
+  let score = 50;
+  const factors = [];
+
+  // Stage Scoring
+  const stageWeights = {
+    'INCOMING': { pts: 25, reason: 'Fresh incoming inquiry awaiting primary qualification' },
+    'CONTACTED': { pts: 45, reason: 'Initial contact made; requirements identified' },
+    'VISIT_SCHEDULED': { pts: 75, reason: 'Site visit confirmed on calendar' },
+    'VISIT_COMPLETED': { pts: 88, reason: 'Site visit completed with high engagement' },
+    'NEGOTIATION': { pts: 94, reason: 'In commercial negotiation stage' },
+    'WON': { pts: 100, reason: 'Booking confirmed' },
+    'LOST': { pts: 10, reason: 'Lead marked as lost' }
+  };
+
+  const stageData = stageWeights[lead.stage] || { pts: 40, reason: 'Active stage' };
+  score = stageData.pts;
+  factors.push({ factor: 'Pipeline Stage', impact: `+${stageData.pts}`, description: stageData.reason });
+
+  // Source Scoring
+  if (['REFERRAL', 'WALK_IN'].includes(lead.source)) {
+    score += 15;
+    factors.push({ factor: 'High-Intent Source', impact: '+15', description: `Sourced via ${lead.source} (typically 3x higher conversion)` });
+  } else if (['WEBSITE_FORM', 'WHATSAPP'].includes(lead.source)) {
+    score += 10;
+    factors.push({ factor: 'Digital Inbound Source', impact: '+10', description: `Direct digital inquiry via ${lead.source}` });
+  }
+
+  // Budget & Inventory Match
+  if (lead.budget_max && minAvailablePrice && Number(lead.budget_max) >= Number(minAvailablePrice)) {
+    score += 10;
+    factors.push({ factor: 'Budget Alignment', impact: '+10', description: `Budget (₹${Number(lead.budget_max).toLocaleString()}) matches available inventory in ${lead.project_name || 'project'}` });
+  } else if (matchingUnitsCount > 0) {
+    score += 5;
+    factors.push({ factor: 'Inventory Available', impact: '+5', description: `${matchingUnitsCount} available units in preferred project ${lead.project_name || ''}` });
+  }
+
+  // Visit Engagement History
+  const completedVisits = visits.filter(v => v.status === 'COMPLETED');
+  if (completedVisits.length > 0) {
+    score += 10;
+    factors.push({ factor: 'Physical Verification', impact: '+10', description: `Completed ${completedVisits.length} site walkthrough(s)` });
+  }
+
+  // Recency Check
+  const daysSinceUpdate = Math.floor((Date.now() - new Date(lead.updated_at || lead.created_at).getTime()) / (1000 * 60 * 60 * 24));
+  if (daysSinceUpdate > 7 && !['WON', 'LOST'].includes(lead.stage)) {
+    score -= 10;
+    factors.push({ factor: 'Follow-up Velocity Delay', impact: '-10', description: `No CRM updates in the last ${daysSinceUpdate} days` });
+  }
+
+  // Clamp score
+  score = Math.max(5, Math.min(99, score));
+
+  // Temperature Tag
+  let temperature = 'WARM';
+  let tempEmoji = '⚡';
+  if (score >= 75) {
+    temperature = 'HOT';
+    tempEmoji = '🔥';
+  } else if (score < 45) {
+    temperature = 'COLD';
+    tempEmoji = '❄️';
+  }
+
+  // 4. Strategic Next Action
+  let recommendedAction = '';
+  if (lead.stage === 'INCOMING') {
+    recommendedAction = `Dispatch introductory WhatsApp overview of ${lead.project_name || 'the project'} and propose an on-site property walkthrough.`;
+  } else if (lead.stage === 'CONTACTED') {
+    recommendedAction = `Confirm preferred site visit date & time slot for ${lead.project_name || 'project'} this weekend.`;
+  } else if (lead.stage === 'VISIT_SCHEDULED') {
+    recommendedAction = `Send Google Calendar reminder & location pin to client ahead of their scheduled site visit.`;
+  } else if (lead.stage === 'VISIT_COMPLETED') {
+    recommendedAction = `Share tailored Unit Cost Sheet & payment milestone plan for their favorite unit.`;
+  } else if (lead.stage === 'NEGOTIATION') {
+    recommendedAction = `Schedule closing call with Senior Sales Director to finalize booking token deposit.`;
+  } else {
+    recommendedAction = `Keep lead engaged with new phase launch brochures and quarterly price appreciation updates.`;
+  }
+
+  // 5. Intelligent Site Visit Slot Recommendations
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowDateStr = tomorrow.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  const saturday = new Date();
+  const daysUntilSaturday = (6 - saturday.getDay() + 7) % 7 || 7;
+  saturday.setDate(saturday.getDate() + daysUntilSaturday);
+  const saturdayDateStr = saturday.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  const suggestedSlots = [
+    { label: `${tomorrowDateStr} @ 11:00 AM`, iso: new Date(new Date(tomorrow).setHours(11, 0, 0, 0)).toISOString() },
+    { label: `${tomorrowDateStr} @ 04:00 PM`, iso: new Date(new Date(tomorrow).setHours(16, 0, 0, 0)).toISOString() },
+    { label: `Upcoming Saturday (${saturdayDateStr}) @ 11:30 AM`, iso: new Date(new Date(saturday).setHours(11, 30, 0, 0)).toISOString() }
+  ];
+
+  // 6. Pre-composed Personalized Communication Drafts
+  const projectDisplay = lead.project_name || 'Nexora Estates';
+  const locationDisplay = lead.project_location ? `at ${lead.project_location}` : '';
+
+  const whatsappMessage = `Hello ${lead.first_name || 'Sir/Ma\'am'}! 👋
+
+Thank you for your interest in *${projectDisplay}* ${locationDisplay}.
+
+We currently have premium units available with modern lifestyle amenities. I would love to arrange a personalized on-site property walkthrough for you.
+
+📅 *Suggested Visit Slots:*
+1️⃣ ${suggestedSlots[0].label}
+2️⃣ ${suggestedSlots[1].label}
+3️⃣ ${suggestedSlots[2].label}
+
+Which of these timings works best for you? Looking forward to assisting you.
+
+Best regards,
+*${agentFullName}*
+Nexora Estates CRM`;
+
+  const emailSubject = `Exclusive Tour Invitation: ${projectDisplay} | Nexora Estates`;
+  const emailBody = `Dear ${clientFullName},
+
+Thank you for reaching out regarding ${projectDisplay}.
+
+We have curated exclusive property options matching your preferences, featuring world-class architecture, expansive green spaces, and high ROI potential.
+
+Would you be available for a 30-minute private tour of our show apartments?
+- Option A: ${suggestedSlots[0].label}
+- Option B: ${suggestedSlots[1].label}
+- Option C: ${suggestedSlots[2].label}
+
+Please let us know your preferred slot and we will send a confirmed Google Calendar invitation.
+
+Warm regards,
+${agentFullName}
+Nexora Estates Development Team`;
+
+  const smsMessage = `Hi ${lead.first_name || 'there'}, thanks for inquiring about ${projectDisplay}. Premium units are now open for site visits. Reply YES to schedule a tour this weekend or call ${lead.agent_phone || '+91-9876543210'}. - Nexora Estates`;
+
+  const cleanPhone = String(lead.phone || '').replace(/\D/g, '');
+  const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(whatsappMessage)}`;
+
+  return {
+    leadId: lead.id,
+    clientName: clientFullName,
+    clientPhone: lead.phone,
+    clientEmail: lead.email,
+    projectName: projectDisplay,
+    stage: lead.stage,
+    score,
+    temperature,
+    tempEmoji,
+    factors,
+    recommendedAction,
+    matchingUnitsCount,
+    suggestedSlots,
+    communication: {
+      whatsapp: {
+        message: whatsappMessage,
+        url: whatsappUrl
+      },
+      email: {
+        subject: emailSubject,
+        body: emailBody
+      },
+      sms: {
+        message: smsMessage
+      }
+    }
+  };
+}
+
+/**
+ * Smart Property Matcher & Comparison Engine:
+ * Analyzes natural language buyer criteria, scores matching available units,
+ * and generates side-by-side comparison analytics & WhatsApp pitch.
+ */
+async function matchPropertyInventory(rawQuery = '', explicitFilters = {}) {
+  const queryStr = (rawQuery || '').toLowerCase();
+
+  // 1. Natural Language Entity Extraction
+  let extractedCity = explicitFilters.city || null;
+  let extractedUnitType = explicitFilters.unit_type || null;
+  let extractedMaxPrice = explicitFilters.max_price ? Number(explicitFilters.max_price) : null;
+  let extractedMinPrice = explicitFilters.min_price ? Number(explicitFilters.min_price) : null;
+  let extractedFacing = explicitFilters.facing || null;
+  let preferCorner = explicitFilters.is_corner === true;
+
+  // Extract City
+  if (!extractedCity) {
+    if (queryStr.includes('bangalore') || queryStr.includes('bengaluru') || queryStr.includes('blr')) extractedCity = 'Bangalore';
+    else if (queryStr.includes('mumbai') || queryStr.includes('bkc') || queryStr.includes('mum')) extractedCity = 'Mumbai';
+    else if (queryStr.includes('hyderabad') || queryStr.includes('hyd') || queryStr.includes('gachibowli')) extractedCity = 'Hyderabad';
+  }
+
+  // Extract Unit Type
+  if (!extractedUnitType) {
+    if (queryStr.includes('1bhk') || queryStr.includes('1 bhk')) extractedUnitType = '1BHK';
+    else if (queryStr.includes('2bhk') || queryStr.includes('2 bhk')) extractedUnitType = '2BHK';
+    else if (queryStr.includes('3bhk') || queryStr.includes('3 bhk')) extractedUnitType = '3BHK';
+    else if (queryStr.includes('4bhk') || queryStr.includes('4 bhk')) extractedUnitType = '4BHK';
+    else if (queryStr.includes('plot')) extractedUnitType = 'PLOT';
+    else if (queryStr.includes('villa')) extractedUnitType = 'VILLA';
+    else if (queryStr.includes('commercial') || queryStr.includes('office')) extractedUnitType = 'COMMERCIAL';
+  }
+
+  // Extract Facing
+  if (!extractedFacing) {
+    if (queryStr.includes('north-east') || queryStr.includes('northeast')) extractedFacing = 'NORTH_EAST';
+    else if (queryStr.includes('east')) extractedFacing = 'EAST';
+    else if (queryStr.includes('north')) extractedFacing = 'NORTH';
+    else if (queryStr.includes('west')) extractedFacing = 'WEST';
+    else if (queryStr.includes('south')) extractedFacing = 'SOUTH';
+  }
+
+  if (queryStr.includes('corner')) preferCorner = true;
+
+  // Extract Price from strings like "under 1.2 cr", "below 90L", "within 1.5 crore"
+  if (!extractedMaxPrice) {
+    const crMatch = queryStr.match(/(?:under|below|within|upto|max|around)\s*(\d+(?:\.\d+)?)\s*(?:cr|crore)/i);
+    if (crMatch) {
+      extractedMaxPrice = parseFloat(crMatch[1]) * 10000000;
+    } else {
+      const lakhMatch = queryStr.match(/(?:under|below|within|upto|max|around)\s*(\d+(?:\.\d+)?)\s*(?:l|lac|lakh)/i);
+      if (lakhMatch) {
+        extractedMaxPrice = parseFloat(lakhMatch[1]) * 100000;
+      }
+    }
+  }
+
+  // 2. Query available inventory
+  const [units] = await pool.query(`
+    SELECT u.*, p.name AS project_name, p.code AS project_code, p.location AS project_location,
+           p.city AS project_city, p.project_type, p.builder_developer, b.name AS building_name
+    FROM units u
+    JOIN projects p ON u.project_id = p.id
+    LEFT JOIN buildings b ON u.building_id = b.id
+    WHERE u.status = 'AVAILABLE'
+    ORDER BY u.base_price ASC
+  `);
+
+  if (!units || units.length === 0) {
+    return {
+      query: rawQuery,
+      extractedCriteria: { city: extractedCity, unitType: extractedUnitType, maxPrice: extractedMaxPrice, facing: extractedFacing, isCorner: preferCorner },
+      totalMatches: 0,
+      matches: [],
+      summary: 'No available units currently in inventory.'
+    };
+  }
+
+  // Check if any unit directly matches the raw query string (fuzzy matching across city, name, location, etc.)
+  const queryTerms = queryStr.split(/\s+/).filter(t => t.length > 2);
+  let hasDirectLocationMatch = false;
+
+  const scoredUnits = units.map(u => {
+    let score = 50;
+    const matchReasons = [];
+
+    const basePrice = Number(u.base_price || 0);
+    const superArea = Number(u.super_area_sqft || u.plot_area_sqft || 1200);
+    const carpetArea = Number(u.carpet_area_sqft || (superArea * 0.75));
+    const pricePerSqft = Math.round(basePrice / superArea);
+
+    const projectText = `${u.project_name || ''} ${u.project_location || ''} ${u.project_city || ''} ${u.builder_developer || ''} ${u.unit_type || ''}`.toLowerCase();
+
+    // Word Match Boost
+    queryTerms.forEach(term => {
+      if (projectText.includes(term)) {
+        score += 20;
+        matchReasons.push(`Matches keyword "${term}"`);
+        hasDirectLocationMatch = true;
+      }
+    });
+
+    // City Match
+    if (extractedCity) {
+      if (u.project_city && u.project_city.toLowerCase().includes(extractedCity.toLowerCase())) {
+        score += 25;
+        matchReasons.push(`City match (${u.project_city})`);
+        hasDirectLocationMatch = true;
+      } else {
+        score -= 10;
+      }
+    }
+
+    // Unit Type Match
+    if (extractedUnitType) {
+      if (u.unit_type && u.unit_type.toUpperCase() === extractedUnitType.toUpperCase()) {
+        score += 25;
+        matchReasons.push(`Exact unit type (${u.unit_type})`);
+      } else {
+        score -= 10;
+      }
+    }
+
+    // Budget Match
+    if (extractedMaxPrice) {
+      if (basePrice <= extractedMaxPrice) {
+        score += 20;
+        matchReasons.push(`Within budget limit (₹${(basePrice / 100000).toFixed(1)}L <= ₹${(extractedMaxPrice / 100000).toFixed(1)}L)`);
+      } else if (basePrice <= extractedMaxPrice * 1.1) {
+        score += 5;
+        matchReasons.push(`Close to budget (₹${(basePrice / 100000).toFixed(1)}L)`);
+      } else {
+        score -= 15;
+      }
+    }
+
+    // Facing Match
+    if (extractedFacing) {
+      if (u.facing && u.facing.toUpperCase() === extractedFacing.toUpperCase()) {
+        score += 10;
+        matchReasons.push(`Preferred ${u.facing} facing`);
+      }
+    }
+
+    // Corner Match
+    if (preferCorner) {
+      if (u.is_corner) {
+        score += 10;
+        matchReasons.push('Corner unit with dual ventilation');
+      }
+    }
+
+    if (matchReasons.length === 0) {
+      matchReasons.push('Featured available inventory');
+    }
+
+    const estimatedGst = Math.round(basePrice * 0.05);
+    const estimatedStampDuty = Math.round(basePrice * 0.056);
+    const estimatedAllInclusive = basePrice + Number(u.plc_charges || 0) + estimatedGst + estimatedStampDuty + 350000;
+
+    return {
+      id: u.id,
+      unitNumber: u.unit_number,
+      unitType: u.unit_type,
+      floorNumber: u.floor_number,
+      facing: u.facing || 'East',
+      isCorner: !!u.is_corner,
+      projectName: u.project_name,
+      projectLocation: u.project_location,
+      projectCity: u.project_city,
+      buildingName: u.building_name || 'Main Tower',
+      carpetAreaSqft: carpetArea,
+      superAreaSqft: superArea,
+      basePrice,
+      plcCharges: Number(u.plc_charges || 0),
+      pricePerSqft,
+      estimatedAllInclusive,
+      matchScore: Math.max(15, Math.min(99, score)),
+      matchReasons
+    };
+  });
+
+  // Sort by matchScore descending
+  scoredUnits.sort((a, b) => b.matchScore - a.matchScore);
+
+  const topMatches = scoredUnits.slice(0, 4);
+
+  let notice = null;
+  if (rawQuery && !hasDirectLocationMatch && queryTerms.length > 0) {
+    notice = `No active developments currently registered for "${rawQuery}". Displaying top featured available properties across primary markets.`;
+  }
+
+  // Generate Comparison Summary Text for WhatsApp
+  let comparisonText = `🏡 *NEXORA ESTATES - CURATED PROPERTY COMPARISON*
+Matching criteria: "${rawQuery || `${extractedUnitType || ''} in ${extractedCity || 'all cities'}`}"
+${notice ? `ℹ️ _${notice}_\n` : ''}
+`;
+
+  topMatches.forEach((m, idx) => {
+    comparisonText += `🔹 *Option ${idx + 1}: ${m.projectName} - Unit ${m.unitNumber}* (${m.matchScore}% Match)
+• Config: ${m.unitType} | Floor ${m.floorNumber} | ${m.facing} Facing${m.isCorner ? ' | Corner' : ''}
+• Location: ${m.projectLocation || ''}, ${m.projectCity || ''}
+• Area: ${m.superAreaSqft} sq.ft (${m.carpetAreaSqft} sq.ft carpet)
+• Agreement Value: ₹${(m.basePrice / 100000).toFixed(2)} Lakhs (₹${m.pricePerSqft}/sq.ft)
+• All-Inclusive Est.: ₹${(m.estimatedAllInclusive / 100000).toFixed(2)} Lakhs
+• Highlights: ${m.matchReasons.join(', ')}
+
+`;
+  });
+
+  comparisonText += `Would you like to schedule a site tour to view these units?
+Generated by Nexora Estates Smart Property Matcher`;
+
+  return {
+    query: rawQuery,
+    notice,
+    extractedCriteria: {
+      city: extractedCity,
+      unitType: extractedUnitType,
+      maxPrice: extractedMaxPrice,
+      facing: extractedFacing,
+      isCorner: preferCorner
+    },
+    totalMatches: topMatches.length,
+    matches: topMatches,
+    whatsappComparisonText: comparisonText
+  };
+}
+
 module.exports = {
   processChatMessage,
   classifyUserIntent,
@@ -806,5 +1253,7 @@ module.exports = {
   fetchSiteVisits,
   fetchLiveLeadSummary,
   fetchLiveRevenueStats,
-  fetchSupportTicketsSummary
+  fetchSupportTicketsSummary,
+  analyzeLeadCopilot,
+  matchPropertyInventory
 };

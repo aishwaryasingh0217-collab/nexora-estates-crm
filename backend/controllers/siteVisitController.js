@@ -167,11 +167,12 @@ const createSiteVisit = async (req, res, next) => {
     );
 
     let googleEventId = null;
+    let googleSyncError = null;
     
-    // Sync to Google Calendar if enabled
-    if (googleCalendar.isCalendarEnabled() && visitDetails.length > 0) {
+    // Sync to Google Calendar
+    if (visitDetails.length > 0) {
       const visit = visitDetails[0];
-      googleEventId = await googleCalendar.createCalendarEvent({
+      const calRes = await googleCalendar.createCalendarEvent({
         clientName: `${visit.client_first_name} ${visit.client_last_name}`.trim(),
         clientEmail: visit.client_email,
         clientPhone: visit.client_phone,
@@ -184,12 +185,14 @@ const createSiteVisit = async (req, res, next) => {
         notes: notes
       });
 
-      // Update with Google event ID if created
-      if (googleEventId) {
+      if (calRes && calRes.success && calRes.id) {
+        googleEventId = calRes.id;
         await pool.query(
           `UPDATE site_visits SET google_event_id = ? WHERE id = ?`,
           [googleEventId, visitId]
         );
+      } else if (calRes && calRes.error) {
+        googleSyncError = calRes.error;
       }
     }
 
@@ -229,14 +232,19 @@ const createSiteVisit = async (req, res, next) => {
 
     res.status(201).json({
       status: 'success',
-      message: 'Site visit appointment scheduled successfully.',
+      message: googleEventId
+        ? 'Site visit scheduled and Google Calendar invite sent to client!'
+        : (googleSyncError 
+            ? `Site visit scheduled, but Google Calendar sync failed: ${googleSyncError}`
+            : 'Site visit appointment scheduled successfully.'),
       data: {
         id: visitId,
         project_id,
         assigned_agent_id,
         scheduled_time,
         status: 'SCHEDULED',
-        google_synced: !!googleEventId
+        google_synced: !!googleEventId,
+        google_error: googleSyncError
       }
     });
   } catch (error) {
@@ -318,27 +326,11 @@ const updateSiteVisit = async (req, res, next) => {
     }
 
     // Sync to Google Calendar
-    if (googleCalendar.isCalendarEnabled()) {
-      if (visit.google_event_id) {
-        if (status === 'CANCELLED') {
-          await googleCalendar.cancelCalendarEvent(visit.google_event_id);
-        } else if (scheduled_time || (status && status !== 'CANCELLED') || client_feedback !== undefined) {
-          await googleCalendar.updateCalendarEvent(visit.google_event_id, {
-            clientName: `${visit.client_first_name} ${visit.client_last_name}`.trim(),
-            clientEmail: visit.client_email,
-            clientPhone: visit.client_phone,
-            projectName: visit.project_name,
-            projectLocation: visit.project_location,
-            projectCity: visit.project_city,
-            agentName: `${visit.agent_first_name} ${visit.agent_last_name}`.trim(),
-            agentEmail: visit.agent_email,
-            scheduledTime: scheduled_time || visit.scheduled_time,
-            notes: client_feedback !== undefined ? client_feedback : visit.client_feedback
-          });
-        }
-      } else if (status !== 'CANCELLED') {
-        // Event was not created before; create it now
-        const newGoogleEventId = await googleCalendar.createCalendarEvent({
+    if (visit.google_event_id) {
+      if (status === 'CANCELLED') {
+        await googleCalendar.cancelCalendarEvent(visit.google_event_id);
+      } else if (scheduled_time || (status && status !== 'CANCELLED') || client_feedback !== undefined) {
+        await googleCalendar.updateCalendarEvent(visit.google_event_id, {
           clientName: `${visit.client_first_name} ${visit.client_last_name}`.trim(),
           clientEmail: visit.client_email,
           clientPhone: visit.client_phone,
@@ -350,13 +342,27 @@ const updateSiteVisit = async (req, res, next) => {
           scheduledTime: scheduled_time || visit.scheduled_time,
           notes: client_feedback !== undefined ? client_feedback : visit.client_feedback
         });
+      }
+    } else if (status !== 'CANCELLED') {
+      // Event was not created before; create it now
+      const calRes = await googleCalendar.createCalendarEvent({
+        clientName: `${visit.client_first_name} ${visit.client_last_name}`.trim(),
+        clientEmail: visit.client_email,
+        clientPhone: visit.client_phone,
+        projectName: visit.project_name,
+        projectLocation: visit.project_location,
+        projectCity: visit.project_city,
+        agentName: `${visit.agent_first_name} ${visit.agent_last_name}`.trim(),
+        agentEmail: visit.agent_email,
+        scheduledTime: scheduled_time || visit.scheduled_time,
+        notes: client_feedback !== undefined ? client_feedback : visit.client_feedback
+      });
 
-        if (newGoogleEventId) {
-          await pool.query(
-            `UPDATE site_visits SET google_event_id = ? WHERE id = ?`,
-            [newGoogleEventId, req.params.id]
-          );
-        }
+      if (calRes && calRes.success && calRes.id) {
+        await pool.query(
+          `UPDATE site_visits SET google_event_id = ? WHERE id = ?`,
+          [calRes.id, req.params.id]
+        );
       }
     }
 

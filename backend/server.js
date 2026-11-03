@@ -24,6 +24,9 @@ const calendarRoutes = require('./routes/calendarRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const channelPartnerRoutes = require('./routes/channelPartnerRoutes');
+const marketplaceRoutes = require('./routes/marketplaceRoutes');
+const rentalNewsRoutes = require('./routes/rentalNewsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -33,15 +36,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static frontend assets if built
-app.use(express.static(path.join(__dirname, '../public')));
-app.use(express.static(path.join(__dirname, '../dist')));
+// Create centralized API Router
+const apiRouter = express.Router();
 
 // Health Check Endpoint
-app.get('/api/health', async (req, res, next) => {
+apiRouter.get('/health', async (req, res, next) => {
   try {
     const [result] = await pool.query('SELECT 1 + 1 AS db_check, NOW() AS server_time');
-    
+
     res.status(200).json({
       status: 'healthy',
       server: 'Node.js Express Server',
@@ -67,28 +69,49 @@ app.get('/api/health', async (req, res, next) => {
   }
 });
 
-// API Routes Mounting
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/buildings', buildingRoutes);
-app.use('/api/units', unitRoutes);
-app.use('/api/leads', leadRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/site-visits', siteVisitRoutes);
-app.use('/api/deals', dealRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/calendar', calendarRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/support', supportRoutes);
-app.use('/api/notifications', notificationRoutes);
+// API Routes Mounting on apiRouter
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/projects', projectRoutes);
+apiRouter.use('/buildings', buildingRoutes);
+apiRouter.use('/units', unitRoutes);
+apiRouter.use('/leads', leadRoutes);
+apiRouter.use('/customers', customerRoutes);
+apiRouter.use('/site-visits', siteVisitRoutes);
+apiRouter.use('/deals', dealRoutes);
+apiRouter.use('/payments', paymentRoutes);
+apiRouter.use('/dashboard', dashboardRoutes);
+apiRouter.use('/reports', reportRoutes);
+apiRouter.use('/ai', aiRoutes);
+apiRouter.use('/calendar', calendarRoutes);
+apiRouter.use('/whatsapp', whatsappRoutes);
+apiRouter.use('/support', supportRoutes);
+apiRouter.use('/notifications', notificationRoutes);
+apiRouter.use('/channel-partners', channelPartnerRoutes);
+apiRouter.use('/marketplace', marketplaceRoutes);
+apiRouter.use('/rental-news', rentalNewsRoutes);
+
+// Mount API Router for standard /api, cPanel subpath /nexora-crm/api, and custom APP_BASE_PATH
+app.use('/api', apiRouter);
+app.use('/nexora-crm/api', apiRouter);
+if (process.env.APP_BASE_PATH) {
+  const customBase = process.env.APP_BASE_PATH.replace(/\/+$/, '');
+  if (customBase && customBase !== '/nexora-crm') {
+    app.use(`${customBase}/api`, apiRouter);
+  }
+}
+
+// Serve static frontend assets for both root and /nexora-crm subpath
+const publicDir = path.join(__dirname, '../public');
+const distDir = path.join(__dirname, '../dist');
+app.use(express.static(publicDir));
+app.use('/nexora-crm', express.static(publicDir));
+app.use(express.static(distDir));
+app.use('/nexora-crm', express.static(distDir));
 
 // Fallback to SPA index.html for non-API requests
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.includes('/api/')) {
     return next();
   }
   const publicIndex = path.join(__dirname, '../public/index.html');

@@ -8342,7 +8342,23 @@ function renderPublicWebsite(root) {
         <div class="eh-hero-video-overlay"></div>
         <div class="eh-hero-container">
           <div class="eh-hero-left-col">
+            <div class="eh-hero-tag-pill">
+              <span class="eh-tag-sparkle">✦</span>
+              <span>CURATED LUXURY RESIDENCES</span>
+            </div>
             <h1 class="eh-hero-title">Find a Home You'll Love</h1>
+            <p class="eh-hero-slogan">Where architectural excellence meets 100% verified living.</p>
+            <div class="eh-hero-glass-stats">
+              <span class="eh-stat-glass-chip">
+                <span style="color:#38bdf8; font-weight:700;">✓</span> 100% Verified Only
+              </span>
+              <span class="eh-stat-glass-chip">
+                <span style="color:#10b981; font-weight:700;">✦</span> 0% Brokerage Direct
+              </span>
+              <span class="eh-stat-glass-chip">
+                <span style="color:#f59e0b; font-weight:700;">★</span> Prime Corridors
+              </span>
+            </div>
           </div>
         </div>
       </section>

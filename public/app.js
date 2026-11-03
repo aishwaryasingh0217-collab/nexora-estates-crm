@@ -124,14 +124,27 @@ function setViewMode(mode) {
 // 1-Click Role Demo Login Helper
 async function quickLoginAs(roleName) {
   const creds = {
-    SUPER_ADMIN: { u: 'admin', p: 'AdminPassword123!' },
-    ADMIN: { u: 'admin_ops', p: 'AdminPassword123!' },
-    INSIDE_SALES: { u: 'telecaller', p: 'Telecaller123!' },
-    OUTSIDE_SALES: { u: 'siteagent', p: 'Siteagent123!' },
-    CHANNEL_PARTNER: { u: 'partner', p: 'Partner123!' },
-    BUYER: { u: 'customer', p: 'Customer123!' }
+    SUPER_ADMIN: { u: 'admin', p: 'AdminPassword123!', r: 'Super Admin' },
+    ADMIN: { u: 'admin_ops', p: 'AdminPassword123!', r: 'Admin' },
+    INSIDE_SALES: { u: 'telecaller', p: 'Telecaller123!', r: 'Inside Sales' },
+    OUTSIDE_SALES: { u: 'siteagent', p: 'Siteagent123!', r: 'Outside Sales' },
+    CHANNEL_PARTNER: { u: 'partner', p: 'Partner123!', r: 'Channel Partner' },
+    BUYER: { u: 'customer', p: 'Customer123!', r: 'Buyer' }
   };
   const target = creds[roleName] || creds.SUPER_ADMIN;
+
+  const idInput = document.getElementById('login-identifier');
+  const passInput = document.getElementById('login-password');
+  const roleSelect = document.getElementById('login-role');
+  const submitBtn = document.getElementById('btn-login-submit');
+  if (idInput) idInput.value = target.u;
+  if (passInput) passInput.value = target.p;
+  if (roleSelect) roleSelect.value = target.r;
+  if (submitBtn) {
+    submitBtn.innerText = 'Signing in as ' + target.r + '...';
+    submitBtn.disabled = true;
+  }
+
   try {
     const res = await apiFetch('/auth/login', {
       method: 'POST',
@@ -157,7 +170,7 @@ async function quickLoginAs(roleName) {
       role: roleName,
       first_name: target.u.toUpperCase(),
       last_name: 'User',
-      email: `${target.u}@nexoraestates.com`
+      email: target.u + '@nexoraestates.com'
     };
     login('mock-jwt-token-role', mockUser);
   }
@@ -224,6 +237,9 @@ function login(token, user) {
   localStorage.setItem('crm_token', token);
   localStorage.setItem('crm_user', JSON.stringify(user));
   localStorage.setItem('crm_view_mode', 'crm');
+  if (window.location.hash === '#/login' || !window.location.hash) {
+    window.location.hash = '#/crm';
+  }
   renderApp();
 }
 
@@ -234,6 +250,9 @@ function logout() {
   localStorage.removeItem('crm_token');
   localStorage.removeItem('crm_user');
   localStorage.setItem('crm_view_mode', 'website');
+  if (window.location.hash === '#/crm' || window.location.hash === '#/login') {
+    window.location.hash = '';
+  }
   renderApp();
 }
 
@@ -256,7 +275,7 @@ function renderApp() {
   }
 
   // 0C. Dedicated Authentication & Staff Portal View
-  if (state.viewMode === 'login' || window.location.hash === '#/login') {
+  if ((state.viewMode === 'login' || window.location.hash === '#/login') && (!state.token || !state.user)) {
     state.viewMode = 'login';
     renderLoginView(root);
     return;
@@ -7213,7 +7232,11 @@ window.addEventListener('hashchange', () => {
   } else if (hash === '#/login' || hash.startsWith('#/login')) {
     state.selectedCustomerProjectId = null;
     state.customerView = null;
-    state.viewMode = 'login';
+    if (!state.token || !state.user) {
+      state.viewMode = 'login';
+    } else {
+      state.viewMode = 'crm';
+    }
     renderApp();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } else if (hash === '#/crm' || hash.startsWith('#/crm')) {
@@ -8922,78 +8945,6 @@ function renderPublicWebsite(root) {
 }
 
 
-// ============================================================================
-// 1. DEDICATED AUTHENTICATION & LOGIN VIEW (CLEAN, SPACIOUS, WEBSITE-MATCHED)
-// ============================================================================
-
-window.AUTH_ROLES_CONFIG = {
-  SUPER_ADMIN: {
-    name: 'Super Admin',
-    sub: 'Director / Full Control',
-    icon: '👑',
-    user: 'admin',
-    pass: 'AdminPassword123!',
-    roleLabel: 'Super Admin'
-  },
-  ADMIN: {
-    name: 'Sales Manager',
-    sub: 'Admin / Approvals',
-    icon: '💼',
-    user: 'admin_ops',
-    pass: 'AdminPassword123!',
-    roleLabel: 'Admin'
-  },
-  INSIDE_SALES: {
-    name: 'Inside Sales',
-    sub: 'Telecaller / Leads',
-    icon: '📞',
-    user: 'telecaller',
-    pass: 'Telecaller123!',
-    roleLabel: 'Inside Sales'
-  },
-  OUTSIDE_SALES: {
-    name: 'Site Agent',
-    sub: 'Outside / Units',
-    icon: '📍',
-    user: 'siteagent',
-    pass: 'Siteagent123!',
-    roleLabel: 'Outside Sales'
-  },
-  CHANNEL_PARTNER: {
-    name: 'Broker Desk',
-    sub: 'Channel Partner',
-    icon: '🤝',
-    user: 'partner',
-    pass: 'Partner123!',
-    roleLabel: 'Channel Partner'
-  }
-};
-
-window.selectAuthRole = function(roleKey) {
-  const cfg = window.AUTH_ROLES_CONFIG[roleKey] || window.AUTH_ROLES_CONFIG.SUPER_ADMIN;
-  document.querySelectorAll('.nx-auth-role-pill').forEach(el => el.classList.remove('active'));
-  const activePill = document.getElementById('auth-role-pill-' + roleKey);
-  if (activePill) activePill.classList.add('active');
-
-  const idInput = document.getElementById('login-identifier');
-  if (idInput) idInput.value = cfg.user;
-
-  const passInput = document.getElementById('login-password');
-  if (passInput) passInput.value = cfg.pass;
-
-  const roleSelect = document.getElementById('login-role');
-  if (roleSelect) roleSelect.value = cfg.roleLabel;
-
-  const quickRoleName = document.getElementById('nx-quick-role-name');
-  if (quickRoleName) quickRoleName.innerText = cfg.name;
-
-  const quickBtn = document.getElementById('nx-quick-login-btn');
-  if (quickBtn) {
-    quickBtn.onclick = () => quickLoginAs(roleKey);
-    quickBtn.innerText = `1-Click Sign In →`;
-  }
-};
-
 function renderLoginView(root) {
   root.innerHTML = `
     <div style="width: 100vw; height: 100vh; display: flex; background-color: var(--bg-main); overflow: hidden;">
@@ -9122,6 +9073,16 @@ function renderLoginView(root) {
         body: JSON.stringify({ identifier, password, selectedRole })
       });
 
+      if (res.user && res.user.role === 'INSIDE_SALES') {
+        state.currentView = 'leads';
+      } else if (res.user && res.user.role === 'OUTSIDE_SALES') {
+        state.currentView = 'calendar';
+      } else if (res.user && res.user.role === 'CHANNEL_PARTNER') {
+        state.currentView = 'channel-partners';
+      } else {
+        state.currentView = 'dashboard';
+      }
+
       login(res.token, res.user);
     } catch (err) {
       errDiv.innerText = err.message || 'Authentication failed.';
@@ -9131,7 +9092,6 @@ function renderLoginView(root) {
     }
   });
 }
-
 function toggleShowPassword() {
   state.showPassword = !state.showPassword;
   renderApp();

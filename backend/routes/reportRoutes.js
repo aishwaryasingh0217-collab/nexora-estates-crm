@@ -23,7 +23,7 @@ router.get('/inventory-status', getInventoryReport);
 router.get('/site-visits', getSiteVisitsReport);
 router.get('/deals-bookings', getDealsReport);
 router.get('/payments-collections', getPaymentsReport);
-router.get('/staff-performance', getStaffPerformanceReport);
+router.get(['/staff-performance', '/agent-performance'], getStaffPerformanceReport);
 
 // Legacy aliases for backward compatibility
 router.get('/leads-stage', getSalesFunnelReport);

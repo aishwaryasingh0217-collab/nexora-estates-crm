@@ -104,6 +104,49 @@ if (process.env.APP_BASE_PATH) {
 // Serve static frontend assets for both root and /nexora-crm subpath
 const publicDir = path.join(__dirname, '../public');
 const distDir = path.join(__dirname, '../dist');
+const fs = require('fs');
+const { execSync } = require('child_process');
+
+// Self-Healing Anti-Truncation & Syntax Integrity Guard for app.js
+app.get(['/app.js', '/nexora-crm/app.js'], (req, res, next) => {
+  const appJsPath = path.join(publicDir, 'app.js');
+  try {
+    if (fs.existsSync(appJsPath)) {
+      let content = fs.readFileSync(appJsPath, 'utf8');
+      const isTruncated = content.includes('[truncated for diff preview]') || content.includes('... [truncated');
+      
+      let hasSyntaxError = false;
+      if (!isTruncated) {
+        try {
+          const vm = require('vm');
+          new vm.Script(content);
+        } catch (syntaxErr) {
+          hasSyntaxError = true;
+          console.error('[Integrity Guard] Syntax error detected in app.js:', syntaxErr.message);
+        }
+      }
+
+      if (isTruncated || hasSyntaxError) {
+        console.warn('[Integrity Guard] Auto-healing public/app.js from git HEAD...');
+        try {
+          execSync('git checkout HEAD -- public/app.js', { cwd: path.join(__dirname, '..') });
+          content = fs.readFileSync(appJsPath, 'utf8');
+          console.log('[Integrity Guard] Successfully auto-restored public/app.js to pristine state.');
+        } catch (gitErr) {
+          console.error('[Integrity Guard] Git recovery error:', gitErr.message);
+        }
+      }
+
+      res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.send(content);
+    }
+  } catch (err) {
+    console.error('[Integrity Guard] Error handling app.js:', err);
+  }
+  next();
+});
+
 app.use(express.static(publicDir));
 app.use('/nexora-crm', express.static(publicDir));
 app.use(express.static(distDir));

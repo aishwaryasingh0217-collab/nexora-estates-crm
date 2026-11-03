@@ -14,6 +14,9 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 router.use(authenticateToken);
 
 router.get('/summary', getBrokerSummary);
+router.get('/commissions', getBrokerSummary);
+router.get('/leaderboard', getChannelPartners);
+router.get('/payouts', getBrokerSummary);
 router.get('/', getChannelPartners);
 router.get('/:id', getChannelPartnerById);
 

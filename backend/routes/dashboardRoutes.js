@@ -5,6 +5,6 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 
 router.use(authenticateToken);
 
-router.get('/stats', getDashboardStats);
+router.get(['/', '/stats', '/summary'], getDashboardStats);
 
 module.exports = router;

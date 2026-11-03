@@ -28,8 +28,8 @@ router.post('/group-pools', createGroupPool);
 router.post('/group-pools/:id/join', joinGroupPool);
 
 // 4. 7-Day Resale Deal Rooms (Transparent Offers)
-router.get('/deal-rooms', getResaleDealRooms);
-router.post('/deal-rooms/:id/bid', placeResaleBid);
+router.get(['/deal-rooms', '/resale-deal-rooms'], getResaleDealRooms);
+router.post(['/deal-rooms/:id/bid', '/resale-deal-rooms/:id/bid'], placeResaleBid);
 
 // 5. Channel Partner 60-Day Client Lead Locks
 router.get('/cp-lead-locks', getCPLeadLocks);

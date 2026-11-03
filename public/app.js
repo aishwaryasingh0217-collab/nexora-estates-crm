@@ -8463,67 +8463,21 @@ function renderPublicWebsite(root) {
         </div>
       </div>
 
-      <!-- 4. "GET STARTED WITH EXPLORING REAL ESTATE OPTIONS" (7 HORIZONTAL STRIP CARDS) -->
-      <section class="eh-explore-options-container">
-        <div class="eh-explore-title">GET STARTED WITH EXPLORING REAL ESTATE OPTIONS</div>
-        <div class="eh-explore-cards-strip">
-          <!-- 1. Buying a home -->
-          <div class="eh-explore-card" onclick="selectExploreOption('buy')">
-            <div class="eh-explore-card-img-wrap">
-              <img src="/assets/buy_home_showcase.jpg" alt="Buying a home" />
-            </div>
-            <div class="eh-explore-card-title">Buying a home</div>
+      <!-- 4. 99ACRES STYLE: APARTMENTS, VILLAS AND MORE (7 CARDS CAROUSEL) -->
+      <section class="avm-section" id="apartments-villas-section">
+        <div class="avm-header">
+          <div>
+            <h2 class="avm-title">Apartments, Villas and more</h2>
+            <p class="avm-subtitle">in Bangalore East, Delhi / NCR &amp; Top Metropolitan Cities</p>
           </div>
+        </div>
 
-          <!-- 2. Renting a home -->
-          <div class="eh-explore-card" onclick="selectExploreOption('rent')">
-            <div class="eh-explore-card-img-wrap">
-              <img src="/assets/rental_showcase.jpg" alt="Renting a home" />
-            </div>
-            <div class="eh-explore-card-title">Renting a home</div>
+        <div class="avm-track-wrapper">
+          <button class="avm-nav-arrow prev" onclick="scrollApartmentsVillas('left')" title="Previous Categories" aria-label="Previous">‹</button>
+          <div class="avm-track" id="avm-carousel-track">
+            <!-- 7 Cards populated by renderApartmentsVillasCarousel() -->
           </div>
-
-          <!-- 3. Invest in Real Estate -->
-          <div class="eh-explore-card" onclick="selectExploreOption('invest')">
-            <div class="eh-explore-card-img-wrap">
-              <span class="eh-card-sub-badge">NEW</span>
-              <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=400&q=80" alt="Invest in Real Estate" />
-            </div>
-            <div class="eh-explore-card-title">Invest in Real Estate</div>
-          </div>
-
-          <!-- 4. Sell/Rent your property -->
-          <div class="eh-explore-card" onclick="openPostPropertyPage()">
-            <div class="eh-explore-card-img-wrap">
-              <img src="/assets/owner_showcase.jpg" alt="Sell/Rent your property" />
-            </div>
-            <div class="eh-explore-card-title">Sell/Rent your property</div>
-          </div>
-
-          <!-- 5. Plots/Land -->
-          <div class="eh-explore-card" onclick="selectExploreOption('plots')">
-            <div class="eh-explore-card-img-wrap">
-              <img src="/assets/plot_showcase.jpg" alt="Plots/Land" />
-            </div>
-            <div class="eh-explore-card-title">Plots/Land</div>
-          </div>
-
-          <!-- 6. Explore Insights -->
-          <div class="eh-explore-card" onclick="openInsightsModal()">
-            <div class="eh-explore-card-img-wrap">
-              <span class="eh-card-sub-badge">NEW</span>
-              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80" alt="Explore Insights" />
-            </div>
-            <div class="eh-explore-card-title">Explore Insights</div>
-          </div>
-
-          <!-- 7. PG / Co-living -->
-          <div class="eh-explore-card" onclick="selectExploreOption('pg')">
-            <div class="eh-explore-card-img-wrap">
-              <img src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80" alt="PG / Co-living" />
-            </div>
-            <div class="eh-explore-card-title">PG / Co-living</div>
-          </div>
+          <button class="avm-nav-arrow next" onclick="scrollApartmentsVillas('right')" title="Next Categories" aria-label="Next">›</button>
         </div>
       </section>
 
@@ -8786,21 +8740,67 @@ function renderPublicWebsite(root) {
         </div>
       </section>
 
-      <!-- 11A. 99ACRES STYLE: APARTMENTS, VILLAS AND MORE (7 CARDS CAROUSEL) -->
-      <section class="avm-section" id="apartments-villas-section">
-        <div class="avm-header">
-          <div>
-            <h2 class="avm-title">Apartments, Villas and more</h2>
-            <p class="avm-subtitle">in Bangalore East, Delhi / NCR &amp; Top Metropolitan Cities</p>
+      <!-- 11A. "GET STARTED WITH EXPLORING REAL ESTATE OPTIONS" (7 HORIZONTAL STRIP CARDS) -->
+      <section class="eh-explore-options-container" style="margin: 3.5rem auto 4.5rem;">
+        <div class="eh-explore-title">GET STARTED WITH EXPLORING REAL ESTATE OPTIONS</div>
+        <div class="eh-explore-cards-strip">
+          <!-- 1. Buying a home -->
+          <div class="eh-explore-card" onclick="selectExploreOption('buy')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/buy_home_showcase.jpg" alt="Buying a home" />
+            </div>
+            <div class="eh-explore-card-title">Buying a home</div>
           </div>
-        </div>
 
-        <div class="avm-track-wrapper">
-          <button class="avm-nav-arrow prev" onclick="scrollApartmentsVillas('left')" title="Previous Categories" aria-label="Previous">‹</button>
-          <div class="avm-track" id="avm-carousel-track">
-            <!-- 7 Cards populated by renderApartmentsVillasCarousel() -->
+          <!-- 2. Renting a home -->
+          <div class="eh-explore-card" onclick="selectExploreOption('rent')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/rental_showcase.jpg" alt="Renting a home" />
+            </div>
+            <div class="eh-explore-card-title">Renting a home</div>
           </div>
-          <button class="avm-nav-arrow next" onclick="scrollApartmentsVillas('right')" title="Next Categories" aria-label="Next">›</button>
+
+          <!-- 3. Invest in Real Estate -->
+          <div class="eh-explore-card" onclick="selectExploreOption('invest')">
+            <div class="eh-explore-card-img-wrap">
+              <span class="eh-card-sub-badge">NEW</span>
+              <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=400&q=80" alt="Invest in Real Estate" />
+            </div>
+            <div class="eh-explore-card-title">Invest in Real Estate</div>
+          </div>
+
+          <!-- 4. Sell/Rent your property -->
+          <div class="eh-explore-card" onclick="openPostPropertyPage()">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/owner_showcase.jpg" alt="Sell/Rent your property" />
+            </div>
+            <div class="eh-explore-card-title">Sell/Rent your property</div>
+          </div>
+
+          <!-- 5. Plots/Land -->
+          <div class="eh-explore-card" onclick="selectExploreOption('plots')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="/assets/plot_showcase.jpg" alt="Plots/Land" />
+            </div>
+            <div class="eh-explore-card-title">Plots/Land</div>
+          </div>
+
+          <!-- 6. Explore Insights -->
+          <div class="eh-explore-card" onclick="openInsightsModal()">
+            <div class="eh-explore-card-img-wrap">
+              <span class="eh-card-sub-badge">NEW</span>
+              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80" alt="Explore Insights" />
+            </div>
+            <div class="eh-explore-card-title">Explore Insights</div>
+          </div>
+
+          <!-- 7. PG / Co-living -->
+          <div class="eh-explore-card" onclick="selectExploreOption('pg')">
+            <div class="eh-explore-card-img-wrap">
+              <img src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80" alt="PG / Co-living" />
+            </div>
+            <div class="eh-explore-card-title">PG / Co-living</div>
+          </div>
         </div>
       </section>
 

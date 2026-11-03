@@ -2099,16 +2099,17 @@ tr:hover td {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(9, 30, 66, 0.72);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0.75rem 2.5rem;
+  background: linear-gradient(180deg, rgba(6, 17, 36, 0.85) 0%, rgba(6, 17, 36, 0.5) 60%, rgba(6, 17, 36, 0.08) 100%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.8rem 2.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", -apple-system, sans-serif;
+  transition: all 0.3s ease;
 }
 
 .eh-logo-group {
@@ -2287,21 +2288,46 @@ tr:hover td {
   color: #0078db;
 }
 
-/* ── HERO BANNER ── */
+/* ── HERO BANNER WITH VIDEO BACKGROUND ── */
 .eh-hero-section {
   position: relative;
-  min-height: 390px;
+  min-height: 580px;
+  height: clamp(560px, 52vw, 720px);
   width: 100%;
-  background: 
-    linear-gradient(90deg, rgba(9, 30, 66, 0.65) 0%, rgba(9, 30, 66, 0.45) 45%, rgba(9, 30, 66, 0.2) 75%),
-    url('/assets/hero-bg.png') right center / cover no-repeat;
+  margin-top: -65px;
+  padding: calc(65px + 4rem) 2.5rem 6.5rem;
   display: flex;
-  align-items: center;
-  padding: 3rem 2.5rem 6.5rem;
+  align-items: flex-start;
   box-sizing: border-box;
+  overflow: hidden;
+  background-color: #061124;
+}
+
+.eh-hero-video-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.eh-hero-video-overlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    linear-gradient(180deg, rgba(6, 17, 36, 0.75) 0%, rgba(6, 17, 36, 0.2) 28%, rgba(6, 17, 36, 0.1) 55%, rgba(6, 17, 36, 0.7) 100%),
+    linear-gradient(90deg, rgba(6, 17, 36, 0.75) 0%, rgba(6, 17, 36, 0.45) 45%, rgba(6, 17, 36, 0.05) 80%);
+  z-index: 2;
+  pointer-events: none;
 }
 
 .eh-hero-container {
+  position: relative;
+  z-index: 3;
   max-width: 1180px;
   width: 100%;
   margin: 0 auto;

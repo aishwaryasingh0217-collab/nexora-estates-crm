@@ -7720,8 +7720,12 @@ function renderPublicWebsite(root) {
         </div>
       </header>
 
-      <!-- 2. HERO SECTION -->
+      <!-- 2. HERO SECTION WITH CINEMATIC VIDEO BACKGROUND -->
       <section class="eh-hero-section">
+        <video class="eh-hero-video-bg" autoplay loop muted playsinline poster="/assets/hero-bg.png">
+          <source src="/assets/hero_video.mp4" type="video/mp4" />
+        </video>
+        <div class="eh-hero-video-overlay"></div>
         <div class="eh-hero-container">
           <div class="eh-hero-left-col">
             <h1 class="eh-hero-title">Find a Home You'll Love</h1>

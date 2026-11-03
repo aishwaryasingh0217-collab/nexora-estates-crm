@@ -1597,118 +1597,6 @@ window.handleShieldedCallSubmit = function(e) {
 };
 
 // ----------------------------------------------------
-// CHANNEL PARTNER ON-SITE CLIENT REGISTRATION & PROTECTION DESK
-// ----------------------------------------------------
-window.openCPOnsiteRegistrationModal = function() {
-  renderModal('🤝 Channel Partner On-Site Client Check-In & Protection Desk', `
-    <form onsubmit="handleCPOnsiteRegistrationSubmit(event)" style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 520px;">
-      <div style="background: rgba(0, 120, 219, 0.08); border: 1px solid rgba(0, 120, 219, 0.25); border-radius: 10px; padding: 0.85rem;">
-        <div style="font-size: 0.78rem; font-weight: 800; color: #0078db; text-transform: uppercase; letter-spacing: 0.05em;">
-          🛡️ RERA 60-Day Anti-Theft Lead Protection Window
-        </div>
-        <p style="margin: 0.25rem 0 0; font-size: 0.82rem; color: var(--text-main); line-height: 1.5;">
-          When an authorized Channel Partner registers a prospective client at the site sales lounge, the client's phone number is verified against the database. If fresh, a <b>60-day commission protection tag</b> is locked to the partner.
-        </p>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-        <div class="form-group">
-          <label style="font-size: 0.8rem; font-weight: 700;">Client Full Name *</label>
-          <input type="text" id="cp-client-name" class="form-control" placeholder="e.g. Ramesh Sharma" required />
-        </div>
-        <div class="form-group">
-          <label style="font-size: 0.8rem; font-weight: 700;">Client Mobile Number *</label>
-          <input type="tel" id="cp-client-phone" class="form-control" placeholder="+91 98450 12345" required />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label style="font-size: 0.8rem; font-weight: 700;">Project Being Visited *</label>
-        <select id="cp-project-id" class="form-control" required>
-          <option value="proj-1">Lodha Crown Skyline (Thane West)</option>
-          <option value="proj-2">My Home Sayuk (Tellapur, Hyderabad)</option>
-          <option value="up-mahindra-aquavista">Mahindra Aquavista (Bannerghatta, Bangalore)</option>
-          <option value="proj-godrej-woods">Godrej Woods (Sector 43, Noida)</option>
-        </select>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-        <div class="form-group">
-          <label style="font-size: 0.8rem; font-weight: 700;">Channel Partner Firm *</label>
-          <input type="text" id="cp-firm-name" class="form-control" placeholder="e.g. Apex Realty Advisors" value="Apex Realty Advisors" required />
-        </div>
-        <div class="form-group">
-          <label style="font-size: 0.8rem; font-weight: 700;">Partner RERA ID *</label>
-          <input type="text" id="cp-rera-id" class="form-control" placeholder="A51800029381" value="A51800029381" required />
-        </div>
-      </div>
-
-      <div id="cp-reg-status" style="display: none; padding: 0.75rem; border-radius: 8px; font-size: 0.82rem;"></div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; pt-2; border-top: 1px solid var(--border-color);">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
-        <div style="display: flex; gap: 0.5rem;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal(); setViewMode('login');" title="Login to Super Admin CRM">
-            👑 Super Admin CRM
-          </button>
-          <button type="submit" id="btn-cp-submit" class="btn btn-primary" style="font-weight: 750; background: #0078db;">
-            ✔ Register & Lock Client
-          </button>
-        </div>
-      </div>
-    </form>
-  `);
-};
-
-window.handleCPOnsiteRegistrationSubmit = async function(e) {
-  e.preventDefault();
-  const clientName = document.getElementById('cp-client-name').value.trim();
-  const clientPhone = document.getElementById('cp-client-phone').value.trim();
-  const projectId = document.getElementById('cp-project-id').value;
-  const firmName = document.getElementById('cp-firm-name').value.trim();
-  const reraId = document.getElementById('cp-rera-id').value.trim();
-  const statusEl = document.getElementById('cp-reg-status');
-  const btn = document.getElementById('btn-cp-submit');
-
-  statusEl.style.display = 'none';
-  btn.innerText = 'Checking Duplication...';
-  btn.disabled = true;
-
-  try {
-    const res = await apiFetch('/marketplace/cp-lead-locks', {
-      method: 'POST',
-      body: JSON.stringify({
-        channel_partner_id: 'cp-apex-' + Date.now(),
-        client_name: clientName,
-        client_phone: clientPhone,
-        project_id: projectId
-      })
-    });
-
-    statusEl.className = '';
-    statusEl.style.display = 'block';
-    statusEl.style.background = 'rgba(16, 185, 129, 0.1)';
-    statusEl.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-    statusEl.style.color = '#059669';
-    statusEl.innerHTML = `
-      <b>✅ Registration Approved & Locked!</b><br/>
-      Client <b>${clientName}</b> (+${clientPhone}) has been attributed to <b>${firmName}</b>.
-      <br/>🛡️ Active 60-Day RERA Commission Protection is now in effect. Data is stored in Super Admin CRM.
-    `;
-    btn.innerText = '✔ Registered';
-  } catch (err) {
-    statusEl.className = '';
-    statusEl.style.display = 'block';
-    statusEl.style.background = 'rgba(239, 68, 68, 0.1)';
-    statusEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-    statusEl.style.color = '#dc2626';
-    statusEl.innerHTML = `<b>⚠️ Duplication Conflict:</b><br/>${err.message || 'Client is already registered by another partner or direct builder walk-in.'}`;
-    btn.innerText = 'Register & Lock Client';
-    btn.disabled = false;
-  }
-};
-
-// ----------------------------------------------------
 // 7-POINT LEGAL TITLE & RERA DOSSIER MODAL
 // ----------------------------------------------------
 window.openReraDossierModal = function(propId) {
@@ -8403,23 +8291,49 @@ function renderPublicWebsite(root) {
           </div>
         </div>
 
-        <!-- Nexora B2B Enterprise Navigation -->
+        <!-- Nexora Navigation Links with Rich Dropdowns -->
         <nav class="eh-nav">
-          <div class="eh-nav-item">
-            <a class="eh-nav-link" onclick="openCustomerAllProjectsView()" style="font-weight: 600; color: #ffffff;">🏢 Projects & Inventory</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('buyers')" onmouseleave="hideEhDropdown('buyers')">
+            <a class="eh-nav-link" onclick="openExpandedSearchModal('buy')">For Buyers <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-buyers" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="openCustomerAllProjectsView()">🏗️ All Projects & Launches</a>
+              <a onclick="openExpandedSearchModal('buy')">🏢 Buy a Home (Direct Developer)</a>
+              <a onclick="openExpandedSearchModal('commercial')">🏬 Commercial Office & Retail</a>
+              <a onclick="openExpandedSearchModal('plots')">🏞️ Plots / Land</a>
+              <a onclick="openExpandedSearchModal('projects')">🏗️ Upcoming RERA Launches</a>
+              <a onclick="openShieldedCallModal()">🛡️ 0-Spam Shielded Direct Call</a>
+            </div>
           </div>
 
-          <div class="eh-nav-item">
-            <a class="eh-nav-link" onclick="openCPOnsiteRegistrationModal()" style="font-weight: 600; color: #ffffff;">🤝 Channel Partner Desk</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('tenants')" onmouseleave="hideEhDropdown('tenants')">
+            <a class="eh-nav-link" onclick="openExpandedSearchModal('rent')">For Tenants <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-tenants" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="openExpandedSearchModal('rent')">🔑 Rent a Home (Verified Flats)</a>
+              <a onclick="openExpandedSearchModal('commercial')">🏢 Commercial Lease</a>
+              <a onclick="openExpandedSearchModal('pg')">🛏️ PG & Co-living Spaces</a>
+            </div>
           </div>
 
-          <div class="eh-nav-item">
-            <a class="eh-nav-link" onclick="setViewMode('login')" style="font-weight: 600; color: #ffffff;">⚙️ Developer Suite</a>
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('owners')" onmouseleave="hideEhDropdown('owners')">
+            <a class="eh-nav-link" onclick="openPostPropertyPage()">For Owners <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-owners" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="openPostPropertyPage()">📢 Post Property FREE (0% Brokerage)</a>
+              <a onclick="openPostPropertyPage()">📋 Owner Verification & Shield</a>
+              <a onclick="openInsightsModal()">📊 Rental Yield Calculator</a>
+            </div>
+          </div>
+
+          <div class="eh-nav-item" style="position: relative;" onmouseenter="showEhDropdown('dealers')" onmouseleave="hideEhDropdown('dealers')">
+            <a class="eh-nav-link" onclick="setViewMode('login')">For Dealers / Builders <span style="font-size: 0.65rem;">▾</span></a>
+            <div id="eh-dropdown-dealers" class="eh-dropdown-menu" style="display: none; left: 0; right: auto;">
+              <a onclick="setViewMode('login')">🤝 Channel Partner RERA Registry</a>
+              <a onclick="setViewMode('login'); setRoleFilter('ADMIN')">🏢 Developer Project Manager Portal</a>
+            </div>
           </div>
         </nav>
 
         <div class="eh-nav-actions" style="display: flex; align-items: center; gap: 0.75rem;">
-          <button class="eh-btn-signin" onclick="setViewMode('login')" title="Sign In to Nexora CRM Command Center" style="display: inline-flex; align-items: center; gap: 0.55rem; background: linear-gradient(135deg, #0078db, #0052cc); color: #ffffff; padding: 0.55rem 1.35rem; font-size: 0.92rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; box-shadow: 0 4px 14px rgba(0, 120, 219, 0.4); transition: all 0.2s ease;">
+          <button class="eh-btn-signin" onclick="setViewMode('login')" title="Sign In to Nexora CRM Command Center" style="display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #0078db, #0052cc); color: #ffffff; padding: 0.55rem 1.35rem; font-size: 0.92rem; font-weight: 700; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; box-shadow: 0 4px 14px rgba(0, 120, 219, 0.4); transition: all 0.2s ease;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
               <polyline points="10 17 15 12 10 7"></polyline>
@@ -8581,17 +8495,264 @@ function renderPublicWebsite(root) {
         </div>
       </section>
 
-      <!-- Backward Compatibility Anchors (Cleaned for B2B Developer Showcase) -->
-      <div id="pub-curated-container" style="display: none;"></div>
-      <div id="pub-buy-container" style="display: none;"></div>
-      <div id="pub-rent-container" style="display: none;"></div>
-      <div id="pub-invest-container" style="display: none;"></div>
-      <div id="nl-cards-track" style="display: none;"></div>
-      <div id="up-billboard-track" style="display: none;"></div>
-      <div id="hrp-cards-track" style="display: none;"></div>
-      <div id="nx-news-grid-container" style="display: none;"></div>
-      <div id="rna-articles-grid" style="display: none;"></div>
-      <div id="pna-articles-grid" style="display: none;"></div>
+      <!-- 5. SHOWCASE 1: BUY A HOME (LIVING ROOM + TOP ARTICLES ON HOME BUYING) -->
+      <section class="bah-showcase-section" id="buy-home-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Square Living Room Image -->
+          <div class="bah-square-box">
+            <img src="/assets/buy_home_showcase.jpg" alt="Luxury Living Room Interior" class="bah-square-img" loading="eager" />
+          </div>
+
+          <!-- Right Column: Editorial Title Added Beside The Image -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Top articles on<br/>home buying</h2>
+            <p class="bah-beside-sub">Read from Beginners check-list to Pro Tips</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOP ARTICLES ON HOME BUYING (FULL-WIDTH GLASS CARD) -->
+      <section class="nx-news-section" id="nexora-news-section">
+        <div class="nx-news-card">
+          <div class="nx-news-tabs-bar">
+            <button class="nx-news-tab active" id="nx-ntab-news" onclick="switchNexoraNewsTab('news')">News</button>
+            <button class="nx-news-tab" id="nx-ntab-legal" onclick="switchNexoraNewsTab('legal')">Tax & Legal</button>
+            <button class="nx-news-tab" id="nx-ntab-guides" onclick="switchNexoraNewsTab('guides')">Help Guides</button>
+            <button class="nx-news-tab" id="nx-ntab-investment" onclick="switchNexoraNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="nx-news-grid" id="nx-news-grid-container">
+            <!-- Dynamically populated by renderNexoraNewsGrid() -->
+          </div>
+
+          <div class="nx-news-bottom-row">
+            <a class="nx-news-read-more-link" onclick="openAllNewsModal()">
+              Read realty news, guides & articles →
+            </a>
+            <button class="nx-news-nav-arrow" onclick="rotateNexoraNewsNext()" title="Next Articles">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. NEWLY LAUNCHED PROJECTS (CENTERED HEADING WITH LEFT & RIGHT CAROUSEL CONTROLS) -->
+      <section class="nl-showcase-section" id="newly-launched-section">
+        <div class="nl-outer-box">
+          <div class="nl-header-row centered">
+            <div class="nl-title-group">
+              <div class="nl-icon-badge">
+                🏢
+              </div>
+              <div style="text-align: left;">
+                <h2 class="nl-heading">Newly launched projects</h2>
+                <p class="nl-subheading">Bigger home in the same budget</p>
+              </div>
+            </div>
+            <div class="nl-sync-badge-pill">
+              <span class="nx-pulse-dot" style="background:#0284c7; width:6px; height:6px;"></span>
+              <span>Live CRM Synced</span>
+            </div>
+          </div>
+
+          <div class="nl-carousel-container">
+            <button class="nl-carousel-nav-btn prev" onclick="scrollNewlyLaunched('left')" title="Previous Newly Launched Projects" aria-label="Previous">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+
+            <div class="nl-cards-track" id="nl-cards-track">
+              <!-- Dynamically populated by loadNewlyLaunchedProjects() -->
+            </div>
+
+            <button class="nl-carousel-nav-btn next" onclick="scrollNewlyLaunched('right')" title="Next Newly Launched Projects" aria-label="Next">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. UPCOMING PROJECTS (BILLBOARD HERO CAROUSEL WITH EARLY BIRD BENEFITS) -->
+      <section class="up-section" id="upcoming-projects-section">
+        <div class="up-header">
+          <h2 class="up-heading">Upcoming Projects</h2>
+          <p class="up-subheading">Visit these projects and get early bird benefits</p>
+        </div>
+
+        <div class="up-carousel-wrapper">
+          <button class="up-nav-btn prev" onclick="scrollUpcomingProjects('prev')" title="Previous Upcoming Project" aria-label="Previous">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+
+          <div class="up-billboard-track" id="up-billboard-track">
+            <!-- Dynamically populated by loadUpcomingProjects() -->
+          </div>
+
+          <button class="up-nav-btn next" onclick="scrollUpcomingProjects('next')" title="Next Upcoming Project" aria-label="Next">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <div class="up-dots-container" id="up-dots-container"></div>
+      </section>
+
+      <!-- 8. SHOWCASE 2: RENTAL ADVICE SHOWCASE (RED ARMCHAIR & TREE + BEST RENTING ADVICE) -->
+      <section class="bah-showcase-section" id="rent-home-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Rental Showcase Image -->
+          <div class="bah-square-box">
+            <img src="/assets/rental_showcase.jpg" alt="Luxury Rental Interior" class="bah-square-img" style="object-position: center 50%;" loading="eager" />
+          </div>
+
+          <!-- Right Column: Editorial Title Added Beside The Image -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Best Renting<br/>Advice by Our Top<br/>Editors</h2>
+            <p class="bah-beside-sub">Read from Beginners check-list to Pro Tips</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEST RENTING ADVICE & LIVE RENTAL NEWS -->
+      <section class="rna-section" id="rental-news-section">
+        <div class="rna-card">
+          <div class="rna-tabs-row">
+            <button class="rna-tab-btn active" id="rna-tab-news" onclick="switchRentalNewsTab('news')">News</button>
+            <button class="rna-tab-btn" id="rna-tab-tax-legal" onclick="switchRentalNewsTab('tax-legal')">Tax & Legal</button>
+            <button class="rna-tab-btn" id="rna-tab-help-guides" onclick="switchRentalNewsTab('help-guides')">Help Guides</button>
+            <button class="rna-tab-btn" id="rna-tab-investment" onclick="switchRentalNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="rna-grid-wrapper">
+            <button class="rna-arrow-btn prev" id="rna-arrow-prev" onclick="prevRentalNewsPage()" title="Previous Articles" style="display: none;">
+              ‹
+            </button>
+
+            <div class="rna-articles-grid" id="rna-articles-grid">
+              <!-- Dynamically populated by renderRentalNewsGrid() -->
+            </div>
+
+            <button class="rna-arrow-btn next" id="rna-arrow-next" onclick="nextRentalNewsPage()" title="Next Articles">
+              ›
+            </button>
+          </div>
+
+          <div class="rna-footer-link-row">
+            <a class="rna-footer-link" onclick="openAllRentalNewsModal()">
+              <span>Read realty news, guides & articles</span>
+              <span>→</span>
+            </a>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;" id="rna-page-indicator">
+              Page 1 of 2
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. HANDPICKED RESIDENTIAL PROJECTS (FEATURED ACROSS INDIA) -->
+      <section class="hrp-section" id="curated-section">
+        <div class="hrp-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h2 class="hrp-title">Handpicked Residential Projects</h2>
+              <p class="hrp-subheading">Featured Residential projects across India</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <span style="font-size: 0.78rem; font-weight: 750; color: #7e22ce; background: #f3e8ff; padding: 0.25rem 0.75rem; border-radius: 9999px;">
+                ⭐ Nexora Handpicked
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hrp-carousel-container">
+          <button class="hrp-carousel-btn prev" onclick="scrollHandpickedProjects('left')" title="Previous Projects" aria-label="Previous">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+
+          <div class="hrp-cards-track" id="hrp-cards-track">
+            <!-- Dynamically populated by renderHandpickedResidentialProjects() -->
+          </div>
+
+          <button class="hrp-carousel-btn next" onclick="scrollHandpickedProjects('right')" title="Next Projects" aria-label="Next">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <!-- Backward Compatibility Anchors -->
+        <div id="pub-curated-container" style="display: none;"></div>
+        <div id="pub-buy-container" style="display: none;"></div>
+        <div id="pub-rent-container" style="display: none;"></div>
+        <div id="pub-invest-container" style="display: none;"></div>
+      </section>
+
+      <!-- 10. SHOWCASE 3: PLOTS & LAND SHOWCASE (4 WHITE SQUARE PINS VISIBLE: OBJECT-POSITION 50% 58%) -->
+      <section class="bah-showcase-section" id="plot-land-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Land Plot Showcase Image (600px x 440px) -->
+          <div class="bah-square-box">
+            <img src="/assets/plot_showcase.jpg" alt="Residential and Commercial Land Plots" class="bah-square-img" style="object-position: 50% 58%;" loading="eager" />
+          </div>
+
+          <!-- Right Column: Editorial Title Added Beside The Image -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Best articles on<br/>Plots/Land</h2>
+            <p class="bah-beside-sub">Read from Beginners check-list to Pro Tips</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BEST ARTICLES ON PLOTS/LAND -->
+      <section class="pna-section" id="plot-news-section">
+        <div class="pna-card">
+          <div class="pna-tabs-row">
+            <button class="pna-tab-btn active" id="pna-tab-news" onclick="switchPlotNewsTab('news')">News</button>
+            <button class="pna-tab-btn" id="pna-tab-legal" onclick="switchPlotNewsTab('legal')">Tax & Legal</button>
+            <button class="pna-tab-btn" id="pna-tab-guides" onclick="switchPlotNewsTab('guides')">Help Guides</button>
+            <button class="pna-tab-btn" id="pna-tab-investment" onclick="switchPlotNewsTab('investment')">Investment</button>
+          </div>
+
+          <div class="pna-grid-wrapper">
+            <button class="pna-arrow-btn prev" id="pna-arrow-prev" onclick="prevPlotNewsPage()" title="Previous Articles" style="display: none;">‹</button>
+            <div class="pna-articles-grid" id="pna-articles-grid">
+              <!-- Dynamically populated by renderPlotNewsGrid() -->
+            </div>
+            <button class="pna-arrow-btn next" id="pna-arrow-next" onclick="nextPlotNewsPage()" title="Next Articles">›</button>
+          </div>
+
+          <div class="pna-footer-link-row">
+            <a class="pna-footer-link" onclick="openAllPlotNewsModal()">
+              <span>Read realty news, guides & articles</span>
+              <span>→</span>
+            </a>
+            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;" id="pna-page-indicator">Page 1 of 2</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11. SHOWCASE 4: PROPERTY OWNERS SHOWCASE (BEAUTIFUL BUSINESSWOMAN HOLDING PHONE + POST PROPERTY FREE) -->
+      <section class="bah-showcase-section" id="owner-showcase-section">
+        <div class="bah-banner-container">
+          <!-- Left Column: Beautiful Indian Businesswoman Holding Smartphone (600px x 440px) -->
+          <div class="bah-square-box" style="background: #e8f5e9;">
+            <img src="/assets/owner_showcase.jpg" alt="Sell or Rent Faster with Nexora" class="bah-square-img" style="object-position: center 20%;" loading="eager" />
+          </div>
+
+          <!-- Right Column: Sell or Rent Faster CTAs -->
+          <div class="bah-beside-col">
+            <h2 class="bah-beside-title">Sell or rent faster at the<br/>right price!</h2>
+            <p class="bah-beside-sub">List your property now</p>
+
+            <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; align-items: flex-start;">
+              <button class="btn btn-primary" onclick="openPostPropertyPage()" style="background: #0078db; color: #ffffff; padding: 0.85rem 2.25rem; font-size: 1rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 120, 219, 0.35); transition: all 0.15s ease;">
+                Post Property, It's FREE
+              </button>
+              <a href="https://wa.me/919876543210?text=Hi%20Nexora,%20I%20want%20to%20post%20my%20property%20for%20free" target="_blank" style="color: #059669; font-weight: 600; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.45rem;">
+                <span>Post via <span style="font-weight: 700;">WhatsApp</span></span>
+                <span>→</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- 11A. "GET STARTED WITH EXPLORING REAL ESTATE OPTIONS" (7 HORIZONTAL STRIP CARDS) -->
       <section class="eh-explore-options-container" style="margin: 3.5rem auto 4.5rem;">

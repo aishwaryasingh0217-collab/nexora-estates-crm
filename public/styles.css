@@ -113,7 +113,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-main);
   line-height: 1.47059;
@@ -127,10 +127,16 @@ body {
 
 #app {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
-  overflow: hidden;
   background-color: var(--bg-app);
+}
+
+/* CRM Mode locks viewport */
+#app:has(.sidebar),
+#app.crm-mode {
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ── APPLE SIDEBAR ── */
@@ -4611,77 +4617,94 @@ tr:hover td {
   }
 }
 
-/* ── CUSTOMER PROJECT DETAIL PAGE (NEXORA LUXURY PATTERN WITH BROCHURE DOWNLOAD) ── */
+/* ── CUSTOMER PROJECT DETAIL PAGE (NEXORA LUXURY GLASSMORPHISM & SMOOTH SCROLL) ── */
 .cpd-page {
-  background: #f8fafc;
-  min-height: 100vh;
-  color: #091e42;
-  font-family: inherit;
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(2, 132, 199, 0.035) 0%, transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(99, 102, 241, 0.03) 0%, transparent 40%),
+    #F8FAFC;
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  letter-spacing: -0.015em;
 }
 
 .cpd-top-nav {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 0.75rem 2rem;
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  padding: 0.85rem 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(9, 30, 66, 0.04);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
 }
 
 .cpd-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  background: #f1f5f9;
-  color: #091e42;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0.45rem 0.95rem;
-  font-size: 0.85rem;
-  font-weight: 750;
+  gap: 0.5rem;
+  background: rgba(241, 245, 249, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #0F172A;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  border-radius: 9999px;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cpd-back-btn:hover {
-  background: #e2e8f0;
-  color: #0078db;
+  background: #0F172A;
+  color: #FFFFFF;
+  border-color: #0F172A;
+  transform: translateX(-2px);
 }
 
 .cpd-container {
-  max-width: 1240px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 1.25rem 1.5rem 5rem;
+  padding: 1.5rem 2rem 6rem;
   box-sizing: border-box;
 }
 
 .cpd-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   font-size: 0.78rem;
-  color: #64748b;
-  margin-bottom: 1rem;
+  font-weight: 500;
+  color: #64748B;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
 }
 
 .cpd-breadcrumb a {
-  color: #64748b;
+  color: #64748B;
   text-decoration: none;
   cursor: pointer;
+  transition: color 0.2s;
 }
 
 .cpd-breadcrumb a:hover {
-  color: #0078db;
-  text-decoration: underline;
+  color: #0284C7;
 }
 
 .cpd-breadcrumb .sep {
-  color: #94a3b8;
+  color: #CBD5E1;
 }
 
 .cpd-hero-header {
@@ -4689,60 +4712,90 @@ tr:hover td {
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .cpd-title {
-  font-size: 2.1rem;
-  font-weight: 850;
-  color: #091e42;
-  margin: 0 0 0.35rem;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-size: 2.35rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 
 .cpd-subtitle {
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   color: #475569;
-  margin: 0 0 0.65rem;
+  margin: 0 0 0.85rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .cpd-badges-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
 }
 
 .cpd-rera-pill {
   font-size: 0.74rem;
-  font-weight: 800;
-  color: #15803d;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  font-weight: 700;
+  color: #047857;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  backdrop-filter: blur(6px);
   border-radius: 9999px;
-  padding: 0.25rem 0.75rem;
+  padding: 0.28rem 0.85rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .cpd-rating-pill {
   font-size: 0.74rem;
-  font-weight: 800;
-  color: #b45309;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
+  font-weight: 700;
+  color: #B45309;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  backdrop-filter: blur(6px);
   border-radius: 9999px;
-  padding: 0.25rem 0.75rem;
+  padding: 0.28rem 0.85rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
+}
+
+.cpd-status-pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #0284C7;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  backdrop-filter: blur(6px);
+  border-radius: 9999px;
+  padding: 0.28rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cpd-brokerage-pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #334155;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  backdrop-filter: blur(6px);
+  border-radius: 9999px;
+  padding: 0.28rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .cpd-price-box {
@@ -4750,37 +4803,39 @@ tr:hover td {
 }
 
 .cpd-price-val {
-  font-size: 1.95rem;
-  font-weight: 900;
-  color: #0078db;
+  font-size: 2.15rem;
+  font-weight: 850;
+  color: #0F172A;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .cpd-price-sub {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #64748B;
+  margin: 0.25rem 0 0;
 }
 
-/* Nexora Master 5-Photo Gallery Collage */
+/* Luxury 5-Photo Architectural Gallery */
 .cpd-gallery-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: 210px 210px;
-  gap: 0.5rem;
-  border-radius: 14px;
+  grid-template-columns: 2.1fr 1fr 1fr;
+  grid-template-rows: 220px 220px;
+  gap: 0.65rem;
+  border-radius: 24px;
   overflow: hidden;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
   position: relative;
-  box-shadow: 0 6px 20px rgba(9, 30, 66, 0.08);
+  box-shadow: 0 16px 40px -12px rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 .cpd-gallery-item {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  background: #091e42;
+  background: #0F172A;
 }
 
 .cpd-gallery-item.main {
@@ -4793,215 +4848,259 @@ tr:hover td {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.4s ease;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cpd-gallery-item:hover .cpd-gallery-img {
-  transform: scale(1.035);
+  transform: scale(1.04);
 }
 
 .cpd-gallery-label {
   position: absolute;
-  bottom: 0.75rem;
-  left: 0.75rem;
-  background: rgba(9, 20, 38, 0.8);
-  backdrop-filter: blur(4px);
-  color: #ffffff;
+  bottom: 0.85rem;
+  left: 0.85rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #FFFFFF;
   font-size: 0.74rem;
-  font-weight: 750;
-  padding: 0.25rem 0.65rem;
-  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .cpd-view-all-photos-btn {
   position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(6px);
-  color: #091e42;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  padding: 0.55rem 1.1rem;
+  bottom: 1.15rem;
+  right: 1.15rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #0F172A;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.65rem 1.35rem;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 5;
 }
 
 .cpd-view-all-photos-btn:hover {
-  background: #0078db;
-  color: #ffffff;
-  border-color: #0078db;
+  background: #0F172A;
+  color: #FFFFFF;
+  border-color: #0F172A;
+  transform: translateY(-2px);
 }
 
-/* Sticky Navigation Tabs */
+/* Floating Glass Sticky Navigation Tabs */
 .cpd-sticky-tabs {
   position: sticky;
-  top: 55px;
-  z-index: 80;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.25rem 0.5rem;
-  margin-bottom: 2rem;
+  top: 66px;
+  z-index: 90;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 9999px;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 2.25rem;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   overflow-x: auto;
-  box-shadow: 0 4px 12px rgba(9, 30, 66, 0.05);
+  box-shadow: 0 12px 36px -8px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.cpd-sticky-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .cpd-tab-btn {
-  padding: 0.7rem 1.1rem;
-  font-size: 0.86rem;
-  font-weight: 750;
-  color: #64748b;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #64748B;
   background: transparent;
   border: none;
+  border-radius: 9999px;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
   white-space: nowrap;
-  transition: all 0.2s;
-  border-radius: 4px 4px 0 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.cpd-tab-btn.active,
 .cpd-tab-btn:hover {
-  color: #0078db;
-  border-bottom-color: #0078db;
-  background: #f0f9ff;
+  color: #0F172A;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.cpd-tab-btn.active {
+  color: #FFFFFF !important;
+  background: #0F172A !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
 }
 
 /* Two-column layout */
 .cpd-main-layout {
   display: grid;
-  grid-template-columns: 1fr 370px;
-  gap: 2rem;
+  grid-template-columns: 1fr 380px;
+  gap: 2.25rem;
   align-items: start;
 }
 
 .cpd-left-col {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.25rem;
 }
 
 .cpd-section-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 1.75rem 2rem;
-  box-shadow: 0 2px 10px rgba(9, 30, 66, 0.04);
+  scroll-margin-top: 140px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  padding: 2.25rem 2.5rem;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 1);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.cpd-section-card:hover {
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 .cpd-card-title {
-  font-size: 1.3rem;
-  font-weight: 850;
-  color: #091e42;
-  margin: 0 0 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 750;
+  color: #0F172A;
+  margin: 0 0 1.5rem;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  letter-spacing: -0.01em;
+  gap: 0.75rem;
+  letter-spacing: -0.02em;
 }
 
 /* Snapshot KPI Grid */
 .cpd-snapshot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.15rem;
+  margin-bottom: 1.75rem;
 }
 
 .cpd-snapshot-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
+  background: rgba(248, 250, 252, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem;
+  transition: all 0.25s ease;
+}
+
+.cpd-snapshot-item:hover {
+  background: #FFFFFF;
+  border-color: rgba(2, 132, 199, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.06);
 }
 
 .cpd-snapshot-label {
   font-size: 0.72rem;
-  font-weight: 750;
-  color: #64748b;
+  font-weight: 700;
+  color: #64748B;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .cpd-snapshot-val {
-  font-size: 1.05rem;
-  font-weight: 850;
-  color: #091e42;
-  margin-top: 0.25rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin-top: 0.4rem;
 }
 
 /* Floor Plans Component */
 .cpd-floorplan-tab-nav {
   display: flex;
-  gap: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
-  margin-bottom: 1.25rem;
+  gap: 0.65rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.5rem;
 }
 
 .cpd-fp-tab-btn {
-  padding: 0.65rem 1.1rem;
-  font-size: 0.85rem;
-  font-weight: 750;
-  color: #64748b;
-  border: none;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #64748B;
+  border: 1px solid transparent;
   background: transparent;
+  border-radius: 9999px;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+}
+
+.cpd-fp-tab-btn:hover {
+  background: rgba(241, 245, 249, 0.8);
+  color: #0F172A;
 }
 
 .cpd-fp-tab-btn.active {
-  color: #0078db;
-  border-bottom-color: #0078db;
+  background: #0284C7;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
 }
 
 .cpd-floorplan-details-box {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 2rem;
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: rgba(248, 250, 252, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 20px;
+  padding: 2rem;
 }
 
 /* Amenities Grid */
 .cpd-amenities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1rem;
 }
 
 .cpd-amenity-card {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 1rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.86rem;
-  font-weight: 650;
-  color: #1e293b;
-  transition: all 0.2s;
+  gap: 0.85rem;
+  padding: 0.95rem 1.25rem;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.75);
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1E293B;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cpd-amenity-card:hover {
-  background: #f0f9ff;
-  border-color: #bae6fd;
-  color: #0369a1;
+  background: #FFFFFF;
+  border-color: #0284C7;
+  color: #0284C7;
   transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(2, 132, 199, 0.12);
 }
 
 .cpd-amenity-icon {
@@ -5015,123 +5114,151 @@ tr:hover td {
 }
 
 .cpd-location-table tr {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.9);
 }
 
 .cpd-location-table td {
-  padding: 0.85rem 0.5rem;
-  font-size: 0.88rem;
+  padding: 1rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 .cpd-location-table td:first-child {
-  font-weight: 700;
-  color: #091e42;
+  font-weight: 650;
+  color: #0F172A;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .cpd-location-table td:last-child {
   text-align: right;
-  font-weight: 750;
-  color: #0078db;
+  font-weight: 700;
+  color: #0284C7;
 }
 
-/* Right Sticky Sidebar */
+/* Right Sticky Sidebar Concierge */
 .cpd-right-col {
   position: sticky;
-  top: 120px;
+  top: 80px;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .cpd-sticky-action-card {
-  background: #ffffff;
-  border: 1px solid #dbeafe;
-  border-radius: 14px;
-  padding: 1.75rem;
-  box-shadow: 0 10px 30px rgba(0, 120, 219, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 .cpd-btn-brochure-main {
-  background: linear-gradient(135deg, #0078db, #0284c7);
-  color: #ffffff;
-  font-size: 1rem;
-  font-weight: 800;
-  border: none;
-  border-radius: 8px;
-  padding: 0.95rem 1.25rem;
+  background: #0F172A;
+  color: #FFFFFF;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 1rem 1.35rem;
   width: 100%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  box-shadow: 0 4px 14px rgba(0, 120, 219, 0.35);
-  transition: all 0.2s ease;
-  margin-bottom: 1rem;
+  gap: 0.65rem;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 1.25rem;
 }
 
 .cpd-btn-brochure-main:hover {
-  background: linear-gradient(135deg, #0066cc, #0369a1);
+  background: #0284C7;
+  border-color: #0284C7;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 120, 219, 0.5);
+  box-shadow: 0 12px 28px -4px rgba(2, 132, 199, 0.4);
 }
 
 .cpd-call-desk-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1rem;
+  background: rgba(248, 250, 252, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem;
   text-align: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .cpd-lead-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .cpd-lead-form input,
 .cpd-lead-form select {
   width: 100%;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  border-radius: 12px;
   font-size: 0.86rem;
+  font-family: inherit;
+  color: #0F172A;
   box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.cpd-lead-form input:focus,
+.cpd-lead-form select:focus {
+  outline: none;
+  border-color: #0284C7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  background: #FFFFFF;
 }
 
 .cpd-lead-form button {
-  background: #091e42;
-  color: #ffffff;
-  font-weight: 800;
+  background: linear-gradient(135deg, #0284C7, #0369A1);
+  color: #FFFFFF;
+  font-weight: 700;
   border: none;
-  border-radius: 8px;
-  padding: 0.85rem;
+  border-radius: 12px;
+  padding: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 0.25rem;
+  transition: all 0.25s ease;
+  margin-top: 0.35rem;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.3);
 }
 
 .cpd-lead-form button:hover {
-  background: #0078db;
+  background: linear-gradient(135deg, #0369A1, #075985);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45);
 }
 
 /* Reviews List */
 .cpd-reviews-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.15rem;
 }
 
 .cpd-review-item {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
+  background: rgba(248, 250, 252, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.cpd-review-item:hover {
+  background: #FFFFFF;
+  box-shadow: 0 6px 20px -4px rgba(15, 23, 42, 0.05);
 }
 
 /* Digital Brochure Modal Viewer */
@@ -5141,8 +5268,9 @@ tr:hover td {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(9, 20, 38, 0.85);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
   display: none;
   align-items: center;
@@ -5151,21 +5279,22 @@ tr:hover td {
 }
 
 .cpd-brochure-modal-content {
-  background: #ffffff;
-  border-radius: 16px;
+  background: #FFFFFF;
+  border-radius: 24px;
   width: 100%;
-  max-width: 860px;
+  max-width: 880px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
 }
 
 .cpd-brochure-modal-header {
-  background: linear-gradient(135deg, #091426, #0078db);
-  color: #ffffff;
-  padding: 1.25rem 1.75rem;
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 1.35rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5174,27 +5303,29 @@ tr:hover td {
   z-index: 10;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .cpd-main-layout {
     grid-template-columns: 1fr;
   }
-
   .cpd-right-col {
     position: static;
   }
-
   .cpd-gallery-grid {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 200px 140px;
+    grid-template-rows: 220px 150px;
   }
-
   .cpd-gallery-item.main {
     grid-column: 1 / 3;
     grid-row: 1 / 2;
   }
-
   .cpd-floorplan-details-box {
     grid-template-columns: 1fr;
+  }
+  .cpd-top-nav {
+    padding: 0.75rem 1.25rem;
+  }
+  .cpd-container {
+    padding: 1.25rem 1.25rem 5rem;
   }
 }
 

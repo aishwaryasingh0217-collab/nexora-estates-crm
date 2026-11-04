@@ -5659,7 +5659,7 @@ window.loadNewlyLaunchedProjects = async function() {
   try {
     const raw = localStorage.getItem('nexora_crm_new_launches');
     if (raw) {
-      crmLaunches = JSON.parse(raw);
+      crmLaunches = JSON.parse(raw).filter(item => item && item.id && !item.id.startsWith("crm-nl-"));
     }
   } catch (e) {
     crmLaunches = [];
@@ -6923,9 +6923,49 @@ window.submitCustomerProjectInquiry = function(projectName) {
 };
 
 // Main Customer Project Detail Renderer
+window.scrollToCpdSection = function(sectionId, btn) {
+  const target = document.getElementById(sectionId);
+  const container = document.querySelector('.cpd-page');
+
+  if (btn) {
+    document.querySelectorAll('.cpd-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  if (target) {
+    if (container) {
+      const targetTop = target.offsetTop - 120;
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    } else {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+};
+
 window.renderCustomerProjectDetail = function(root, projectId) {
   window._projectDetailsDbCache = window._projectDetailsDbCache || {};
-  if (projectId && (projectId.length > 20 || projectId.includes('-')) && !window._projectDetailsDbCache[projectId]) {
+
+  // Auto-resolve any legacy dummy crm-nl- ID to real database project
+  if (projectId && projectId.startsWith('crm-nl-')) {
+    try {
+      const raw = localStorage.getItem('nexora_crm_new_launches');
+      const arr = JSON.parse(raw || '[]');
+      const dummyObj = arr.find(x => x.id === projectId);
+      if (dummyObj) {
+        const dbList = window._nexoraNewlyLaunchedProjectsCache || state.projects || [];
+        const match = dbList.find(p => p && p.name && p.name.toLowerCase() === dummyObj.name.toLowerCase());
+        if (match && match.id && !match.id.startsWith('crm-nl-')) {
+          projectId = match.id;
+          state.selectedCustomerProjectId = match.id;
+          window.location.hash = '#/project/' + match.id;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Only call /api/projects/:id if it is a valid UUID
+  const isValidDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
+  if (isValidDbUuid && !window._projectDetailsDbCache[projectId]) {
     apiFetch('/projects/' + projectId).then(res => {
       if (res && res.data) {
         window._projectDetailsDbCache[projectId] = res.data;
@@ -6987,13 +7027,21 @@ window.renderCustomerProjectDetail = function(root, projectId) {
               <span>📍 ${p.location}</span>
             </div>
             <div class="cpd-badges-row">
-              <span class="cpd-rera-pill">✔ RERA: ${p.rera}</span>
-              <span class="cpd-rating-pill">★ ${p.rating} / 5 (${p.reviewCount} Verified Reviews)</span>
-              <span style="background: #e0f2fe; color: #0284c7; font-size: 0.74rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 9999px;">
-                🟢 ${p.status}
+              <span class="cpd-rera-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>${p.rera && p.rera.includes('RERA') ? p.rera : 'RERA Approved: ' + (p.rera || 'Verified')}</span>
               </span>
-              <span style="background: #f1f5f9; color: #334155; font-size: 0.74rem; font-weight: 750; padding: 0.25rem 0.75rem; border-radius: 9999px;">
-                🏷️ 0% Brokerage Guaranteed
+              <span class="cpd-rating-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>${p.rating} / 5 (${p.reviewCount} Ratings)</span>
+              </span>
+              <span class="cpd-status-pill">
+                <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+                <span>${p.status}</span>
+              </span>
+              <span class="cpd-brokerage-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>0% Brokerage Guaranteed</span>
               </span>
             </div>
           </div>
@@ -7035,13 +7083,13 @@ window.renderCustomerProjectDetail = function(root, projectId) {
 
         <!-- 5. STICKY IN-PAGE SECTION TABS -->
         <nav class="cpd-sticky-tabs">
-          <button class="cpd-tab-btn active" onclick="document.getElementById('sec-overview').scrollIntoView({behavior: 'smooth'})">Overview</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-plans').scrollIntoView({behavior: 'smooth'})">Price & Floor Plans</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-amenities').scrollIntoView({behavior: 'smooth'})">Amenities</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-specs').scrollIntoView({behavior: 'smooth'})">Master Plan & Specs</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-location').scrollIntoView({behavior: 'smooth'})">Location & Connectivity</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-developer').scrollIntoView({behavior: 'smooth'})">About Developer</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-reviews').scrollIntoView({behavior: 'smooth'})">Customer Reviews</button>
+          <button class="cpd-tab-btn active" data-target="sec-overview" onclick="scrollToCpdSection('sec-overview', this)">Overview</button>
+          <button class="cpd-tab-btn" data-target="sec-plans" onclick="scrollToCpdSection('sec-plans', this)">Price & Floor Plans</button>
+          <button class="cpd-tab-btn" data-target="sec-amenities" onclick="scrollToCpdSection('sec-amenities', this)">Amenities</button>
+          <button class="cpd-tab-btn" data-target="sec-specs" onclick="scrollToCpdSection('sec-specs', this)">Master Plan & Specs</button>
+          <button class="cpd-tab-btn" data-target="sec-location" onclick="scrollToCpdSection('sec-location', this)">Location & Connectivity</button>
+          <button class="cpd-tab-btn" data-target="sec-developer" onclick="scrollToCpdSection('sec-developer', this)">About Developer</button>
+          <button class="cpd-tab-btn" data-target="sec-reviews" onclick="scrollToCpdSection('sec-reviews', this)">Customer Reviews</button>
         </nav>
 
         <!-- 6. MAIN TWO-COLUMN LAYOUT -->
@@ -7299,6 +7347,31 @@ window.renderCustomerProjectDetail = function(root, projectId) {
 
   // Initialize floor plan tab
   switchCpdFloorPlan(0);
+
+  // Active Scroll Spy for sticky tabs
+  const pageContainer = root.querySelector('.cpd-page');
+  if (pageContainer) {
+    pageContainer.addEventListener('scroll', () => {
+      const sections = ['sec-overview', 'sec-plans', 'sec-amenities', 'sec-specs', 'sec-location', 'sec-developer', 'sec-reviews'];
+      let currentSec = sections[0];
+      const scrollPos = pageContainer.scrollTop + 160;
+
+      for (const secId of sections) {
+        const el = document.getElementById(secId);
+        if (el && el.offsetTop <= scrollPos) {
+          currentSec = secId;
+        }
+      }
+
+      document.querySelectorAll('.cpd-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-target') === currentSec) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }, { passive: true });
+  }
 };
 
 // Listen to Hash Changes to support deep-linking (e.g. #/project/up-mahindra-aquavista or #/projects)
@@ -10809,30 +10882,6 @@ function openCreateProjectModal() {
       const imgVal = document.getElementById('p-img')?.value?.trim() || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80';
       const reraVal = document.getElementById('p-rera')?.value?.trim() || '✔ RERA';
 
-      // Live CRM Local Sync Object
-      const newLaunchObj = {
-        id: 'crm-nl-' + Date.now(),
-        name: projectName,
-        location: `${loc}, ${city}`,
-        price: priceVal,
-        config: configVal,
-        highlightText: highlightVal,
-        highlightType: highlightVal.includes('%') ? 'growth' : 'completion',
-        phone: phoneVal,
-        img: imgVal,
-        rera: '✔ RERA',
-        developer: builder,
-        fromAdmin: true,
-        created_at: new Date().toISOString()
-      };
-
-      // Instantly prepend to local storage so homepage reflects immediately
-      const savedLaunches = JSON.parse(localStorage.getItem('nexora_crm_new_launches') || '[]');
-      // Remove any existing with same name then prepend new
-      const filtered = savedLaunches.filter(item => item.name && item.name.toLowerCase() !== projectName.toLowerCase());
-      filtered.unshift(newLaunchObj);
-      localStorage.setItem('nexora_crm_new_launches', JSON.stringify(filtered));
-
       // Build formData for backend
       const formData = new FormData();
       formData.append('name', projectName);
@@ -10840,7 +10889,6 @@ function openCreateProjectModal() {
       formData.append('builder_name', builder);
       formData.append('location', loc);
       formData.append('city', city);
-      // Map NEW_LAUNCH to UNDER_CONSTRUCTION for database ENUM compatibility
       formData.append('status', isNewLaunch ? 'UNDER_CONSTRUCTION' : document.getElementById('p-status').value);
       formData.append('total_units', parseInt(document.getElementById('p-units').value, 10));
       formData.append('possession_date', document.getElementById('p-possession').value);
@@ -10864,10 +10912,37 @@ function openCreateProjectModal() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(data.message || 'Failed to create project');
       }
+
+      // Use REAL database UUID from MySQL response
+      const realProjectId = (data.data && data.data.id) ? data.data.id : crypto.randomUUID();
+
+      const newLaunchObj = {
+        id: realProjectId,
+        name: projectName,
+        location: `${loc}, ${city}`,
+        price: priceVal,
+        config: configVal,
+        highlightText: highlightVal,
+        highlightType: highlightVal.includes('%') ? 'growth' : 'completion',
+        phone: phoneVal,
+        img: imgVal,
+        rera: reraVal,
+        developer: builder,
+        brochureUrl: (data.data && data.data.brochure_url) || null,
+        fromAdmin: true,
+        created_at: new Date().toISOString()
+      };
+
+      // Save to localStorage with clean real DB UUIDs and purge legacy crm-nl-
+      try {
+        const savedLaunches = (JSON.parse(localStorage.getItem('nexora_crm_new_launches') || '[]'))
+          .filter(item => item && item.id && !item.id.startsWith('crm-nl-') && item.name && item.name.toLowerCase() !== projectName.toLowerCase());
+        savedLaunches.unshift(newLaunchObj);
+        localStorage.setItem('nexora_crm_new_launches', JSON.stringify(savedLaunches));
+      } catch (e) {}
 
       closeModal();
       

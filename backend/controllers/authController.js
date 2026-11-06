@@ -54,25 +54,6 @@ const login = async (req, res, next) => {
       console.warn('[Auth DB Fallback]:', dbErr.message);
     }
 
-    // Role demo fallback accounts for resilient cross-role testing
-    const DEMO_ACCOUNTS = {
-      admin: { id: 'a1b2c3d4-0000-4000-8000-000000000001', role_id: 1, username: 'admin', email: 'admin@realestatecrm.com', pass: 'AdminPassword123!', first_name: 'Super', last_name: 'Admin', phone: '+91 98765 43210', status: 'ACTIVE', role: 'SUPER_ADMIN' },
-      admin_ops: { id: 'a1b2c3d4-0000-4000-8000-000000000002', role_id: 2, username: 'admin_ops', email: 'ops@realestatecrm.com', pass: 'AdminPassword123!', first_name: 'Ops', last_name: 'Manager', phone: '+91 98765 43211', status: 'ACTIVE', role: 'ADMIN' },
-      telecaller: { id: 'a1b2c3d4-0000-4000-8000-000000000003', role_id: 3, username: 'telecaller', email: 'telecaller@realestatecrm.com', pass: 'Telecaller123!', first_name: 'Pooja', last_name: 'Sharma', phone: '+91 98765 43212', status: 'ACTIVE', role: 'INSIDE_SALES' },
-      siteagent: { id: 'a1b2c3d4-0000-4000-8000-000000000004', role_id: 4, username: 'siteagent', email: 'siteagent@realestatecrm.com', pass: 'Siteagent123!', first_name: 'Vikram', last_name: 'Rathore', phone: '+91 98765 43213', status: 'ACTIVE', role: 'OUTSIDE_SALES' },
-      partner: { id: 'a1b2c3d4-0000-4000-8000-000000000005', role_id: 5, username: 'partner', email: 'partner@realestatecrm.com', pass: 'Partner123!', first_name: 'Rahul', last_name: 'Mehta', phone: '+91 98765 43214', status: 'ACTIVE', role: 'CHANNEL_PARTNER' },
-      customer: { id: 'a1b2c3d4-0000-4000-8000-000000000006', role_id: 6, username: 'customer', email: 'customer@realestatecrm.com', pass: 'Customer123!', first_name: 'Aarav', last_name: 'Kapoor', phone: '+91 98765 43215', status: 'ACTIVE', role: 'BUYER' }
-    };
-
-    const idKey = identifier.trim().toLowerCase();
-    const demoMatch = DEMO_ACCOUNTS[idKey];
-    if ((!users || users.length === 0) && demoMatch && (password === demoMatch.pass || password === 'AdminPassword123!')) {
-      users = [{
-        ...demoMatch,
-        password_hash: await bcrypt.hash(demoMatch.pass, 10)
-      }];
-    }
-
     if (!users || users.length === 0) {
       // Record failed audit log for unauthenticated non-existent user attempt
       await recordAuditLog(null, null, 'LOGIN_FAILED', ipAddress, {
@@ -117,7 +98,9 @@ const login = async (req, res, next) => {
 
     // 4. Selected Access Level Role Validation
     const selectedRole = req.body.selectedRole || req.body.accessLevel || req.body.role;
-    if (selectedRole && user.role.toUpperCase() !== selectedRole.toUpperCase().replace(/\s+/g, '_')) {
+    const ROLE_LABEL_ALIASES = { SALES_MANAGER: 'ADMIN', SALES_AGENT: 'INSIDE_SALES', FIELD_AGENT: 'OUTSIDE_SALES', SITE_AGENT: 'OUTSIDE_SALES' };
+    const normalizedSelected = selectedRole ? selectedRole.toUpperCase().trim().replace(/\s+/g, '_') : null;
+    if (normalizedSelected && user.role.toUpperCase() !== (ROLE_LABEL_ALIASES[normalizedSelected] || normalizedSelected)) {
       await recordAuditLog(user.id, user.id, 'LOGIN_FAILED', ipAddress, {
         reason: 'Access level role mismatch',
         identifier,

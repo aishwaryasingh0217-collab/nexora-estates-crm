@@ -8362,3 +8362,41 @@ tr:hover td {
     padding: 2rem 1rem;
   }
 }
+
+/* ==========================================================================
+   CRM on phones & small tablets: the sidebar becomes a slide-out menu
+   (menu button + scrim are injected by public/js/platform.js)
+   ========================================================================== */
+.nx-menu-btn, .nx-nav-scrim { display: none; }
+@media (max-width: 900px) {
+  #app:has(.sidebar) { width: 100%; }
+  #app .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0;
+    width: min(84vw, 300px) !important; height: 100% !important; height: 100dvh !important;
+    transform: translateX(-102%); transition: transform 0.22s ease; z-index: 1100;
+  }
+  body.nx-nav-open #app .sidebar { transform: none; box-shadow: 0 0 40px rgba(0, 0, 0, 0.25); }
+  .nx-nav-scrim {
+    display: block; position: fixed; inset: 0; z-index: 1090;
+    background: rgba(8, 18, 34, 0.4); opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  body.nx-nav-open .nx-nav-scrim { opacity: 1; pointer-events: auto; }
+  .nx-menu-btn {
+    display: inline-grid; place-items: center; flex: none;
+    width: 40px; height: 40px; margin-right: 10px; padding: 0;
+    border: 1px solid var(--border-color); border-radius: 10px;
+    background: var(--bg-card); color: var(--text-main); cursor: pointer;
+  }
+  .nx-menu-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+  .main-wrapper { width: 100%; min-width: 0; }
+  .top-bar { height: auto; min-height: 58px; padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+  .top-bar > div:first-of-type { display: flex; align-items: center; min-width: 0; flex: 1; }
+  .top-bar .breadcrumb { display: none; }
+  .top-bar .page-title { font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-bar .header-actions { flex-wrap: wrap; }
+  /* Wide tables scroll inside their card instead of being cut off; filters wrap */
+  .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .leads-filter-row { flex-wrap: wrap; padding: 0.6rem 0.75rem; }
+  .leads-filter-row > * { min-width: 0 !important; flex: 1 1 140px !important; }
+}
+@media (prefers-reduced-motion: reduce) { #app .sidebar { transition: none; } }

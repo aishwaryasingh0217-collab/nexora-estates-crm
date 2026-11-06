@@ -3,5 +3,5 @@
 ALTER TABLE projects 
   MODIFY COLUMN project_type ENUM('RESIDENTIAL', 'COMMERCIAL', 'INDEPENDENT', 'VILLA', 'PLOTTED', 'MIXED') NOT NULL DEFAULT 'RESIDENTIAL';
 
--- Add hero_image_url if not exists
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR(500) DEFAULT NULL;
+-- Add hero_image_url (MySQL has no ADD COLUMN IF NOT EXISTS; the runner applies each file once)
+ALTER TABLE projects ADD COLUMN hero_image_url VARCHAR(500) DEFAULT NULL;

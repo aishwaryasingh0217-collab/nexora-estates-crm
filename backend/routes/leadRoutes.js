@@ -11,9 +11,10 @@ const {
 } = require('../controllers/leadController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
+const { enquirySpamGuard } = require('../middleware/spamGuard');
 
-// Public Webhook for Meta Ads, 99acres, MagicBricks, Google Ads, Zapier
-router.post('/webhook', handleLeadWebhook);
+// Public intake: website forms + Meta Ads, 99acres, MagicBricks, Google Ads, Zapier
+router.post('/webhook', enquirySpamGuard, handleLeadWebhook);
 
 // Protected CRM routes
 router.use(authenticateToken);

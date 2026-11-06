@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const pool = require('../config/db');
+const { captureQuietly } = require('../services/enquiryService');
 
 /**
  * 🏢 NEXORA MARKETPLACE & GROWTH ENGINE CONTROLLER
@@ -360,6 +361,9 @@ const createPriorityPass = async (req, res, next) => {
     }
 
     memoryStore.priorityPasses.unshift(newPass);
+    // A buyer who paid a token is the hottest lead there is — put them in front of the sales team now
+    captureQuietly({ full_name: buyer_name, phone: buyer_phone, email: buyer_email, project_id, source: 'PRIORITY_PASS', temperature: 'HOT',
+      message: `Took priority pass ${passNumber} (token ₹${token.toLocaleString('en-IN')})` });
 
     res.status(201).json({
       status: 'success',
@@ -429,7 +433,18 @@ const createGroupPool = async (req, res, next) => {
       created_at: new Date()
     };
 
-    memoryStore.groupPools.unshift(newPool);
+    try {
+      // The pool list reads the database, so a pool that only lived in memory never appeared
+      await pool.query(
+        `INSERT INTO group_buying_pools (id, project_id, pool_title, target_buyers, current_buyers, discount_percentage,
+                                         flat_discount_amount, deadline, status, share_code)
+         VALUES (?, ?, ?, ?, 1, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 'OPEN', ?)`,
+        [newPool.id, project_id, String(pool_title).slice(0, 150), newPool.target_buyers, newPool.discount_percentage, newPool.flat_discount_amount, shareCode]
+      );
+    } catch (dbErr) {
+      console.warn('[Create GroupPool DB Fallback]:', dbErr.message);
+      memoryStore.groupPools.unshift(newPool);
+    }
 
     res.status(201).json({
       status: 'success',
@@ -444,25 +459,61 @@ const createGroupPool = async (req, res, next) => {
 const joinGroupPool = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { buyer_name, buyer_phone } = req.body;
+    const { buyer_name, buyer_phone, unit_type_preference } = req.body || {};
+    if (!buyer_name || String(buyer_phone || '').replace(/\D/g, '').length < 10) {
+      return res.status(400).json({ status: 'error', message: 'Name and a valid 10-digit mobile number are required to join.' });
+    }
+    const phoneKey = String(buyer_phone).replace(/\D/g, '').slice(-10);
 
-    const poolData = memoryStore.groupPools.find(p => p.id === id) || memoryStore.groupPools[0];
-    if (poolData) {
-      poolData.current_buyers += 1;
-      poolData.spots_remaining = Math.max(0, poolData.target_buyers - poolData.current_buyers);
-      poolData.progress_percentage = Math.min(100, Math.round((poolData.current_buyers / poolData.target_buyers) * 100));
-      if (poolData.current_buyers >= poolData.target_buyers) {
-        poolData.status = 'DISCOUNT_UNLOCKED';
+    let gp = null;
+    try { [[gp]] = await pool.query('SELECT * FROM group_buying_pools WHERE id = ?', [id]); } catch (dbErr) { console.warn('[GroupPool DB]', dbErr.message); }
+
+    if (gp) {
+      if (!['OPEN', 'DISCOUNT_UNLOCKED'].includes(gp.status) || new Date(gp.deadline) < new Date()) {
+        return res.status(400).json({ status: 'error', message: 'This pool has closed.' });
       }
+      const [[already]] = await pool.query(
+        `SELECT id FROM group_pool_members WHERE pool_id = ? AND RIGHT(REGEXP_REPLACE(buyer_phone, '[^0-9]', ''), 10) = ? LIMIT 1`,
+        [gp.id, phoneKey]
+      );
+      if (!already) {
+        await pool.query(
+          `INSERT INTO group_pool_members (id, pool_id, buyer_name, buyer_phone, unit_type_preference) VALUES (?, ?, ?, ?, ?)`,
+          [crypto.randomUUID(), gp.id, String(buyer_name).slice(0, 100), String(buyer_phone).slice(0, 20), unit_type_preference || '3BHK']
+        );
+        await pool.query(
+          `UPDATE group_buying_pools SET current_buyers = current_buyers + 1,
+                  status = IF(current_buyers >= target_buyers, 'DISCOUNT_UNLOCKED', status) WHERE id = ?`,
+          [gp.id]
+        );
+        captureQuietly({ full_name: buyer_name, phone: buyer_phone, project_id: gp.project_id, source: 'GROUP_BUY', temperature: 'HOT', message: `Joined group-buy pool "${gp.pool_title}"` });
+      }
+      const [[fresh]] = await pool.query(
+        `SELECT gbp.*, ROUND((gbp.current_buyers / gbp.target_buyers) * 100, 1) AS progress_percentage,
+                GREATEST(gbp.target_buyers - gbp.current_buyers, 0) AS spots_remaining
+           FROM group_buying_pools gbp WHERE gbp.id = ?`,
+        [gp.id]
+      );
+      return res.status(already ? 200 : 201).json({
+        status: 'success',
+        message: already
+          ? "You're already in this pool — we'll keep you posted."
+          : fresh.status === 'DISCOUNT_UNLOCKED'
+            ? `Group discount of ₹${Number(fresh.flat_discount_amount).toLocaleString('en-IN')} is unlocked for all members!`
+            : `You're in! ${fresh.spots_remaining} more buyer${Number(fresh.spots_remaining) === 1 ? '' : 's'} needed to unlock the discount.`,
+        data: fresh
+      });
     }
 
-    res.status(200).json({
-      status: 'success',
-      message: poolData?.status === 'DISCOUNT_UNLOCKED'
-        ? `Congratulations! Group discount of ₹${poolData.flat_discount_amount.toLocaleString('en-IN')} is now UNLOCKED for all members!`
-        : `Joined pool successfully! ${poolData?.spots_remaining || 1} more buyers needed to unlock full discount.`,
-      data: poolData
-    });
+    // Demo data without a database row (development fallback)
+    const poolData = memoryStore.groupPools.find((x) => x.id === id);
+    if (!poolData) return res.status(404).json({ status: 'error', message: 'Pool not found.' });
+    poolData.current_buyers += 1;
+    poolData.spots_remaining = Math.max(0, poolData.target_buyers - poolData.current_buyers);
+    poolData.progress_percentage = Math.min(100, Math.round((poolData.current_buyers / poolData.target_buyers) * 100));
+    if (poolData.current_buyers >= poolData.target_buyers) poolData.status = 'DISCOUNT_UNLOCKED';
+    captureQuietly({ full_name: buyer_name, phone: buyer_phone, project_id: poolData.project_id, source: 'GROUP_BUY', temperature: 'HOT', message: `Joined group-buy pool "${poolData.pool_title}"` });
+    res.status(201).json({ status: 'success', message: `You're in! ${poolData.spots_remaining} more buyers needed to unlock the discount.`, data: poolData });
   } catch (error) {
     next(error);
   }
@@ -499,33 +550,65 @@ const getResaleDealRooms = async (req, res, next) => {
 };
 
 const placeResaleBid = async (req, res, next) => {
+  const { id } = req.params;
+  const { bidder_name, bidder_phone, bid_amount, is_preapproved_loan } = req.body || {};
+  const amount = parseFloat(bid_amount);
+  if (!bidder_name || String(bidder_phone || '').replace(/\D/g, '').length < 10 || !(amount > 0)) {
+    return res.status(400).json({ status: 'error', message: 'Name, a valid mobile number and an offer amount are required.' });
+  }
+
+  let conn;
   try {
-    const { id } = req.params;
-    const { bidder_name, bidder_phone, bid_amount } = req.body;
-
-    const room = memoryStore.dealRooms.find(r => r.id === id) || memoryStore.dealRooms[0];
-    const amount = parseFloat(bid_amount);
-
-    if (amount <= room.current_highest_bid) {
-      return res.status(400).json({
-        status: 'error',
-        message: `Your offer must be higher than current top offer of ₹${room.current_highest_bid.toLocaleString('en-IN')}.`
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+    const [[room]] = await conn.query(
+      `SELECT rdr.*, u.unit_number, u.project_id FROM resale_deal_rooms rdr LEFT JOIN units u ON u.id = rdr.unit_id WHERE rdr.id = ? FOR UPDATE`,
+      [id]
+    );
+    if (room) {
+      if (room.status !== 'ACTIVE' || new Date(room.ends_at) < new Date()) {
+        await conn.rollback();
+        return res.status(400).json({ status: 'error', message: 'This deal room is closed for offers.' });
+      }
+      const floor = Math.max(Number(room.current_highest_bid) || 0, Number(room.reserve_price) || 0);
+      if (amount <= Number(room.current_highest_bid)) {
+        await conn.rollback();
+        return res.status(400).json({ status: 'error', message: `Your offer must be higher than the current top offer of ₹${Number(room.current_highest_bid).toLocaleString('en-IN')}.` });
+      }
+      await conn.query(`UPDATE resale_bids SET status = 'OUTBID' WHERE deal_room_id = ? AND status = 'SUBMITTED'`, [room.id]);
+      await conn.query(
+        `INSERT INTO resale_bids (id, deal_room_id, bidder_name, bidder_phone, bid_amount, is_preapproved_loan) VALUES (?, ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), room.id, String(bidder_name).slice(0, 100), String(bidder_phone).slice(0, 20), amount, Boolean(is_preapproved_loan)]
+      );
+      await conn.query('UPDATE resale_deal_rooms SET current_highest_bid = ?, bid_count = bid_count + 1 WHERE id = ?', [amount, room.id]);
+      await conn.commit();
+      captureQuietly({ full_name: bidder_name, phone: bidder_phone, project_id: room.project_id, source: 'RESALE_OFFER', temperature: 'HOT',
+        message: `Made an offer of ₹${amount.toLocaleString('en-IN')} on resale unit ${room.unit_number || room.unit_id}${amount < floor ? ' (below the seller\'s reserve)' : ''}` });
+      return res.status(201).json({
+        status: 'success',
+        message: amount < Number(room.reserve_price)
+          ? "Offer recorded. It's below the seller's reserve price, so our advisor will call you to discuss."
+          : 'Offer placed — you are the top bidder. Our advisor will call you shortly.',
+        data: { new_highest_bid: amount, bid_count: Number(room.bid_count) + 1 }
       });
     }
+    await conn.rollback();
 
-    room.current_highest_bid = amount;
-    room.bid_count += 1;
-
-    res.status(201).json({
-      status: 'success',
-      message: 'Offer placed successfully and logged on the transparent board.',
-      data: {
-        new_highest_bid: amount,
-        bid_count: room.bid_count
-      }
-    });
+    // Demo data without a database row (development fallback)
+    const mem = memoryStore.dealRooms.find((r) => r.id === id);
+    if (!mem) return res.status(404).json({ status: 'error', message: 'Deal room not found.' });
+    if (amount <= mem.current_highest_bid) {
+      return res.status(400).json({ status: 'error', message: `Your offer must be higher than the current top offer of ₹${mem.current_highest_bid.toLocaleString('en-IN')}.` });
+    }
+    mem.current_highest_bid = amount;
+    mem.bid_count += 1;
+    captureQuietly({ full_name: bidder_name, phone: bidder_phone, source: 'RESALE_OFFER', temperature: 'HOT', message: `Made an offer of ₹${amount.toLocaleString('en-IN')} on resale unit ${mem.unit_number || id}` });
+    res.status(201).json({ status: 'success', message: 'Offer placed. Our advisor will call you shortly.', data: { new_highest_bid: amount, bid_count: mem.bid_count } });
   } catch (error) {
+    if (conn) await conn.rollback().catch(() => {});
     next(error);
+  } finally {
+    if (conn) conn.release();
   }
 };
 

@@ -25,7 +25,7 @@ const recordAuditLog = async (performedBy, targetUserId, action, ipAddress, meta
 const getUsers = async (req, res, next) => {
   try {
     const [users] = await pool.query(
-      `SELECT u.id, u.role_id, u.username, u.email, u.first_name, u.last_name, u.phone, u.status, u.last_login, u.created_at, r.name AS role
+      `SELECT u.id, u.role_id, u.username, u.email, u.first_name, u.last_name, u.phone, u.status, u.last_login, u.created_at, u.channel_partner_id, u.is_available, r.name AS role
        FROM users u
        JOIN roles r ON u.role_id = r.id
        ORDER BY u.created_at DESC`
@@ -48,7 +48,7 @@ const getUsers = async (req, res, next) => {
 const getUserById = async (req, res, next) => {
   try {
     const [users] = await pool.query(
-      `SELECT u.id, u.role_id, u.username, u.email, u.first_name, u.last_name, u.phone, u.status, u.last_login, u.created_at, r.name AS role
+      `SELECT u.id, u.role_id, u.username, u.email, u.first_name, u.last_name, u.phone, u.status, u.last_login, u.created_at, u.channel_partner_id, u.is_available, r.name AS role
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ?`,
@@ -72,24 +72,62 @@ const getUserById = async (req, res, next) => {
 };
 
 /**
+ * Resolves a role from the admin UI. Accepts real role names plus friendly aliases;
+ * "AGENT" was what the old Add User modal sent and should never silently become ADMIN.
+ */
+const ROLE_ALIASES = {
+  AGENT: 'INSIDE_SALES',
+  SALES_AGENT: 'INSIDE_SALES',
+  TELECALLER: 'INSIDE_SALES',
+  FIELD_AGENT: 'OUTSIDE_SALES',
+  SITE_AGENT: 'OUTSIDE_SALES',
+  SALES_MANAGER: 'ADMIN',
+  MANAGER: 'ADMIN',
+  PARTNER: 'CHANNEL_PARTNER',
+  BROKER: 'CHANNEL_PARTNER'
+};
+
+async function resolveRole(input) {
+  if (!input) return null;
+  const key = String(input).trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const name = ROLE_ALIASES[key] || key;
+  const [rows] = await pool.query('SELECT id, name FROM roles WHERE name = ?', [name]);
+  return rows[0] || null;
+}
+
+async function validatePartnerLink(roleName, channelPartnerId) {
+  if (roleName !== 'CHANNEL_PARTNER') return { ok: true, value: null };
+  if (!channelPartnerId) return { ok: false, message: 'Choose the partner firm this login belongs to.' };
+  const [rows] = await pool.query('SELECT id FROM channel_partners WHERE id = ?', [channelPartnerId]);
+  return rows[0] ? { ok: true, value: rows[0].id } : { ok: false, message: 'Partner firm not found.' };
+}
+
+/**
  * POST /api/users
- * SUPER_ADMIN only: Provision new Admin / Super Admin user
+ * SUPER_ADMIN only: provision any team member — manager, agent, or channel-partner login
  */
 const createUser = async (req, res, next) => {
   try {
-    const { username, email, password, first_name, last_name, phone, role_name } = req.body;
+    const { username, email, password, first_name, last_name, phone } = req.body;
+    const roleInput = req.body.role_name || req.body.role;
 
-    if (!username || !email || !password || !first_name || !last_name) {
+    if (!username || !email || !password || !first_name) {
       return res.status(400).json({
         status: 'error',
-        message: 'Username, email, password, first_name, and last_name are required.'
+        message: 'Username, email, password and first name are required.'
       });
     }
+    if (String(password).length < 8) {
+      return res.status(400).json({ status: 'error', message: 'Password must be at least 8 characters.' });
+    }
 
-    // Determine role_id (default to ADMIN = 2 if not specified)
-    let roleId = 2; // ADMIN
-    if (role_name && role_name.toUpperCase() === 'SUPER_ADMIN') {
-      roleId = 1;
+    const role = (await resolveRole(roleInput)) || (await resolveRole('INSIDE_SALES'));
+    if (!role) {
+      return res.status(400).json({ status: 'error', message: 'Unknown role. Run database migrations first.' });
+    }
+    const partnerLink = await validatePartnerLink(role.name, req.body.channel_partner_id);
+    if (!partnerLink.ok) {
+      return res.status(400).json({ status: 'error', message: partnerLink.message });
     }
 
     // Check existing username or email
@@ -109,19 +147,19 @@ const createUser = async (req, res, next) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     await pool.query(
-      `INSERT INTO users (id, role_id, username, email, password_hash, first_name, last_name, phone, status, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)`,
-      [userId, roleId, username.trim(), email.trim().toLowerCase(), passwordHash, first_name.trim(), last_name.trim(), phone || null, req.user.id]
+      `INSERT INTO users (id, role_id, username, email, password_hash, first_name, last_name, phone, status, created_by, channel_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)`,
+      [userId, role.id, username.trim(), email.trim().toLowerCase(), passwordHash, first_name.trim(), (last_name || '').trim(), phone || null, req.user.id, partnerLink.value]
     );
 
     const ipAddress = req.ip || req.socket.remoteAddress || '127.0.0.1';
     await recordAuditLog(req.user.id, userId, 'USER_CREATED', ipAddress, {
       username,
       email,
-      role: roleId === 1 ? 'SUPER_ADMIN' : 'ADMIN'
+      role: role.name
     });
 
-    res.status(210 || 201).json({
+    res.status(201).json({
       status: 'success',
       message: 'User account created successfully.',
       data: {
@@ -130,7 +168,8 @@ const createUser = async (req, res, next) => {
         email,
         firstName: first_name,
         lastName: last_name,
-        role: roleId === 1 ? 'SUPER_ADMIN' : 'ADMIN',
+        role: role.name,
+        channelPartnerId: partnerLink.value,
         status: 'ACTIVE'
       }
     });
@@ -145,9 +184,13 @@ const createUser = async (req, res, next) => {
  */
 const updateUser = async (req, res, next) => {
   try {
-    const { first_name, last_name, phone, role_name } = req.body;
+    const { first_name, last_name, phone } = req.body;
+    const roleInput = req.body.role_name || req.body.role;
 
-    const [users] = await pool.query('SELECT id, role_id FROM users WHERE id = ?', [req.params.id]);
+    const [users] = await pool.query(
+      'SELECT u.id, u.role_id, u.channel_partner_id, r.name AS role FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = ?',
+      [req.params.id]
+    );
     if (users.length === 0) {
       return res.status(404).json({
         status: 'error',
@@ -156,8 +199,16 @@ const updateUser = async (req, res, next) => {
     }
 
     let roleId = users[0].role_id;
-    if (role_name) {
-      roleId = role_name.toUpperCase() === 'SUPER_ADMIN' ? 1 : 2;
+    let roleName = users[0].role;
+    if (roleInput) {
+      const role = await resolveRole(roleInput);
+      if (!role) return res.status(400).json({ status: 'error', message: 'Unknown role.' });
+      roleId = role.id;
+      roleName = role.name;
+    }
+    const partnerLink = await validatePartnerLink(roleName, req.body.channel_partner_id || users[0].channel_partner_id);
+    if (!partnerLink.ok) {
+      return res.status(400).json({ status: 'error', message: partnerLink.message });
     }
 
     await pool.query(
@@ -165,9 +216,10 @@ const updateUser = async (req, res, next) => {
        SET first_name = COALESCE(?, first_name),
            last_name = COALESCE(?, last_name),
            phone = COALESCE(?, phone),
-           role_id = ?
+           role_id = ?,
+           channel_partner_id = ?
        WHERE id = ?`,
-      [first_name, last_name, phone, roleId, req.params.id]
+      [first_name, last_name, phone, roleId, partnerLink.value, req.params.id]
     );
 
     const ipAddress = req.ip || req.socket.remoteAddress || '127.0.0.1';
@@ -175,7 +227,7 @@ const updateUser = async (req, res, next) => {
       first_name,
       last_name,
       phone,
-      roleId
+      role: roleName
     });
 
     res.status(200).json({

@@ -27,13 +27,18 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const channelPartnerRoutes = require('./routes/channelPartnerRoutes');
 const marketplaceRoutes = require('./routes/marketplaceRoutes');
 const rentalNewsRoutes = require('./routes/rentalNewsRoutes');
+const workspaceRoutes = require('./routes/workspaceRoutes');
+const { fieldRoleGate } = require('./middleware/accessGate');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Behind cPanel/Nginx the client IP arrives in X-Forwarded-For (used by the enquiry spam guard)
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+
 // Core Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // lead imports send up to 5,000 rows
 app.use(express.urlencoded({ extended: true }));
 
 // Create centralized API Router
@@ -69,7 +74,22 @@ apiRouter.get('/health', async (req, res, next) => {
   }
 });
 
+// Company branding for the website, app and install prompt (public)
+const { getSettings } = require('./services/settingsService');
+apiRouter.get('/settings/public', async (req, res, next) => {
+  try { res.json({ status: 'success', data: await getSettings() }); } catch (err) { next(err); }
+});
+
+// Signed calendar links (.ics) for iPhone/Google/Outlook — calendar apps can't send a login token
+const { visitIcs, userFeed } = require('./controllers/icsController');
+apiRouter.get('/ics/visit/:id', visitIcs);
+apiRouter.get('/ics/feed/:userId', userFeed);
+
+// Agents and channel partners may only reach their own workspace APIs (plus public reads).
+apiRouter.use(fieldRoleGate);
+
 // API Routes Mounting on apiRouter
+apiRouter.use('/workspace', workspaceRoutes);
 apiRouter.use('/auth', authRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/projects', projectRoutes);
@@ -105,46 +125,47 @@ if (process.env.APP_BASE_PATH) {
 const publicDir = path.join(__dirname, '../public');
 const distDir = path.join(__dirname, '../dist');
 const fs = require('fs');
-const { execSync } = require('child_process');
 
-// Self-Healing Anti-Truncation & Syntax Integrity Guard for app.js
+// Integrity check for app.js: logs loudly if the bundle is truncated or has a syntax error.
+// It intentionally does NOT touch git — an automatic `git checkout` here used to silently
+// discard uncommitted work (and could not help when the committed copy itself was broken).
 app.get(['/app.js', '/nexora-crm/app.js'], (req, res, next) => {
   const appJsPath = path.join(publicDir, 'app.js');
   try {
     if (fs.existsSync(appJsPath)) {
-      let content = fs.readFileSync(appJsPath, 'utf8');
-      const isTruncated = content.includes('[truncated for diff preview]') || content.includes('... [truncated');
-      
-      let hasSyntaxError = false;
-      if (!isTruncated) {
+      const content = fs.readFileSync(appJsPath, 'utf8');
+      if (content.includes('[truncated for diff preview]')) {
+        console.error('[Integrity Check] public/app.js contains a truncation marker — the file is incomplete.');
+      } else {
         try {
-          const vm = require('vm');
-          new vm.Script(content);
+          new (require('vm').Script)(content);
         } catch (syntaxErr) {
-          hasSyntaxError = true;
-          console.error('[Integrity Guard] Syntax error detected in app.js:', syntaxErr.message);
+          console.error('[Integrity Check] Syntax error in public/app.js:', syntaxErr.message);
         }
       }
-
-      if (isTruncated || hasSyntaxError) {
-        console.warn('[Integrity Guard] Auto-healing public/app.js from git HEAD...');
-        try {
-          execSync('git checkout HEAD -- public/app.js', { cwd: path.join(__dirname, '..') });
-          content = fs.readFileSync(appJsPath, 'utf8');
-          console.log('[Integrity Guard] Successfully auto-restored public/app.js to pristine state.');
-        } catch (gitErr) {
-          console.error('[Integrity Guard] Git recovery error:', gitErr.message);
-        }
-      }
-
       res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.send(content);
     }
   } catch (err) {
-    console.error('[Integrity Guard] Error handling app.js:', err);
+    console.error('[Integrity Check] Error handling app.js:', err);
   }
   next();
+});
+
+// Installable-app manifest carries the owner's brand (falls back to the static file's values)
+app.get(['/manifest.webmanifest', '/nexora-crm/manifest.webmanifest'], async (req, res, next) => {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(publicDir, 'manifest.webmanifest'), 'utf8'));
+    const { company_name: name, short_name: short } = await getSettings();
+    if (name) {
+      manifest.name = `${name} — Sales & Partner App`;
+      manifest.short_name = short || name.split(/\s+/)[0];
+    }
+    res.type('application/manifest+json').send(JSON.stringify(manifest));
+  } catch (err) {
+    next();
+  }
 });
 
 app.use(express.static(publicDir));

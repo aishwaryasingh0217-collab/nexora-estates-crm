@@ -17,7 +17,8 @@
     "test:reset": "node tests/reset-demo.js",
     "setup": "node database/setup.js",
     "demo:reset": "node database/demo_reset.js --yes",
-    "build": "node -e \"console.log('Nothing to build: plain Node.js server')\""
+    "build": "node -e \"console.log('Nothing to build: plain Node.js server')\"",
+    "deploy:hostinger": "node scripts/deploy-hostinger.js"
   },
   "keywords": [],
   "author": "",

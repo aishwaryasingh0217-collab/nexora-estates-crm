@@ -170,6 +170,12 @@ Test data is named `ZZ …` and removed by `npm run test:reset`, which refuses t
 - Set `NODE_ENV=production`, a strong `JWT_SECRET`, and change or delete the demo accounts.
 - Point Meta / Google / 99acres lead forms (directly or via Zapier/Pabbly) at `POST /api/leads/webhook`.
 
+### 8. Public sales demo
+A demo server lets prospects try every role with the one-click logins.
+- In its `.env`: `NODE_ENV=production` and `DEMO_MODE=true`.
+- Build it, and rebuild it every night from cron: `npm run demo:reset`. This wipes the database, re-runs the migrations and demo seeds (dates are relative to today), and deletes brochures visitors uploaded. It refuses to run unless `DEMO_MODE=true`.
+- In demo mode the shared demo logins can't be switched off or have their role changed; visitors can add their own users to try that.
+
 ---
 
 ## 🔐 Roles & Portals

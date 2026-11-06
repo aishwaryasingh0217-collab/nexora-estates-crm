@@ -8,36 +8,69 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure storage
+// Uploaded files are served straight from /uploads, so the name we save must never come from the
+// browser as-is: strip folders, keep only safe characters, and always end in .pdf so the server
+// can only ever hand the file back as a PDF (never as a web page).
+const safeName = (original) => {
+  const base = path.basename(String(original || ''), path.extname(String(original || '')));
+  const clean = base.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'brochure';
+  return `brochure_${Date.now()}_${clean}.pdf`;
+};
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename: brochure_timestamp_originalname
-    const uniqueName = `brochure_${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`;
-    cb(null, uniqueName);
-  }
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => cb(null, safeName(file.originalname))
 });
 
-// File filter - only PDF files
+// The browser's claimed type is only a first check; the file's own first bytes are checked after upload
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/pdf') {
     cb(null, true);
   } else {
-    cb(new Error('Only PDF files are allowed for project brochures'), false);
+    const err = new Error('Only PDF files are allowed for project brochures');
+    err.statusCode = 400;
+    cb(err, false);
   }
 };
 
-// Configure multer
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage,
+  fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB max file size
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+    files: 1
   }
 });
 
-module.exports = {
-  uploadBrochure: upload.single('brochure')
+const looksLikePdf = (filePath) => {
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const head = Buffer.alloc(5);
+    fs.readSync(fd, head, 0, 5, 0);
+    fs.closeSync(fd);
+    return head.toString('latin1') === '%PDF-';
+  } catch {
+    return false;
+  }
 };
+
+const uploadBrochure = (req, res, next) => {
+  upload.single('brochure')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        err.statusCode = 400;
+        if (err.code === 'LIMIT_FILE_SIZE') err.message = 'The brochure must be 10 MB or smaller';
+      }
+      return next(err);
+    }
+    if (req.file && !looksLikePdf(req.file.path)) {
+      fs.unlink(req.file.path, () => {});
+      const bad = new Error('That file is not a real PDF. Please upload the brochure as a PDF.');
+      bad.statusCode = 400;
+      return next(bad);
+    }
+    next();
+  });
+};
+
+module.exports = { uploadBrochure, safeName };

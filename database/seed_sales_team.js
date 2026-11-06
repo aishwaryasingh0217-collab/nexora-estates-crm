@@ -68,7 +68,9 @@ const LEADS = [
   ['d0000000-0000-4000-8000-000000000012', 'Deepak', 'Menon', '+91 90000 10012', 'REFERRAL', 'Site Visit Done', ID.greenfield, ID.siteagent, null, at(-200), laterToday(1), at(-20), 'HOT', null],
   ['d0000000-0000-4000-8000-000000000013', 'Ananya', 'Das', '+91 90000 10013', 'WEBSITE', 'In Negotiation', ID.greenfield, ID.siteagent, null, at(-300), tomorrowAt(12), at(-6), 'HOT', null],
   // Partner pipeline (Square Yards): one waiting for a call
-  ['d0000000-0000-4000-8000-000000000014', 'Priya', 'Malhotra', '+91 90000 10014', 'CHANNEL_PARTNER', 'Fresh Lead', ID.palm, ID.siteagent, ID.partnerFirm, at(-1.5), at(-1.5), null, null, 'Looking for a corner plot, budget ~₹95L']
+  ['d0000000-0000-4000-8000-000000000014', 'Priya', 'Malhotra', '+91 90000 10014', 'CHANNEL_PARTNER', 'Fresh Lead', ID.palm, ID.siteagent, ID.partnerFirm, at(-1.5), at(-1.5), null, null, 'Looking for a corner plot, budget ~₹95L'],
+  // …and one already booked, so the partner's Earnings page shows a real commission and payout
+  ['d0000000-0000-4000-8000-000000000015', 'Rakesh', 'Bansal', '+91 90000 10015', 'CHANNEL_PARTNER', 'Booking Done', ID.palm, ID.siteagent, ID.partnerFirm, at(-26 * 24), null, at(-12 * 24), 'HOT', 'Booked PLOT-44 (east facing corner)']
 ];
 
 // [leadId, userId, type, outcome, note, hoursAgo]
@@ -85,8 +87,23 @@ const ACTIVITIES = [
   ['d0000000-0000-4000-8000-000000000011', ID.siteagent, 'CALL', 'INTERESTED', 'Wants east-facing plot. Will visit with husband.', 27],
   ['d0000000-0000-4000-8000-000000000012', ID.siteagent, 'VISIT', 'COMPLETE', 'Visit done at Greenfield Heights — client is hot: loved the clubhouse, worried about loan EMI', 20],
   ['d0000000-0000-4000-8000-000000000013', ID.siteagent, 'CALL', 'NEGOTIATING', 'Asking ₹3L off on B-1502. Manager approval needed.', 6],
-  ['d0000000-0000-4000-8000-000000000014', ID.partnerUser, 'SYSTEM', 'CREATED', 'Registered by Square Yards Realty Partners — Looking for a corner plot, budget ~₹95L', 1.5]
+  ['d0000000-0000-4000-8000-000000000014', ID.partnerUser, 'SYSTEM', 'CREATED', 'Registered by Square Yards Realty Partners — Looking for a corner plot, budget ~₹95L', 1.5],
+  ['d0000000-0000-4000-8000-000000000015', ID.partnerUser, 'SYSTEM', 'CREATED', 'Registered by Square Yards Realty Partners', 26 * 24],
+  ['d0000000-0000-4000-8000-000000000015', ID.siteagent, 'VISIT', 'COMPLETE', 'Visit done at Palm Springs Estates — liked the corner plots near the clubhouse', 16 * 24],
+  ['d0000000-0000-4000-8000-000000000015', ID.siteagent, 'BOOKING', 'BOOKED', 'Booked PLOT-44 at ₹92 L. Token ₹9.2 L received.', 12 * 24]
 ];
+
+// A partner-sourced sale that has closed: plot booked, 3% commission earned, first half paid out
+const SALE = {
+  lead: 'd0000000-0000-4000-8000-000000000015',
+  unit: 'd2000000-0000-4000-8000-000000000007',
+  customer: 'c2000000-0000-4000-8000-000000000002',
+  deal: 'd4000000-0000-4000-8000-000000000001',
+  commission: 'd5000000-0000-4000-8000-000000000001',
+  payout: 'd6000000-0000-4000-8000-000000000001',
+  price: 9200000,
+  rate: 3
+};
 
 async function main() {
   const conn = await mysql.createConnection({
@@ -181,6 +198,40 @@ async function main() {
       [id, leadId, project, agent, when, status, feedback, status === 'COMPLETED' ? 5 : null]
     );
   }
+
+  // 5b. The closed partner sale (unit, customer, deal, commission, payout)
+  const commissionTotal = Math.round(SALE.price * SALE.rate) / 100;
+  const bookedOn = at(-12 * 24);
+  await conn.query(
+    `INSERT INTO units (id, project_id, unit_number, asset_category, unit_type, plot_area_sqft, plot_dimensions, facing, is_corner, base_price, plc_charges, status, listing_type)
+     VALUES (?, ?, 'PLOT-44', 'PLOT', 'PLOT', 2400, '40x60', 'EAST', 1, ?, 0, 'BOOKED', 'NEW_LAUNCH')
+     ON DUPLICATE KEY UPDATE status = 'BOOKED', base_price = VALUES(base_price)`,
+    [SALE.unit, ID.palm, SALE.price]
+  );
+  await conn.query(
+    `INSERT INTO customers (id, lead_id, first_name, last_name, phone, kyc_status, assigned_rep_id)
+     VALUES (?, ?, 'Rakesh', 'Bansal', '+91 90000 10015', 'VERIFIED', ?)
+     ON DUPLICATE KEY UPDATE lead_id = VALUES(lead_id)`,
+    [SALE.customer, SALE.lead, ID.siteagent]
+  );
+  await conn.query(
+    `INSERT INTO deals (id, deal_number, customer_id, lead_id, unit_id, base_price, agreed_total_amount, booking_token_amount, status, created_by, closing_date, channel_partner_id, created_at)
+     VALUES (?, 'DEAL-260417', ?, ?, ?, ?, ?, ?, 'BOOKED', ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE status = 'BOOKED', closing_date = VALUES(closing_date), created_at = VALUES(created_at)`,
+    [SALE.deal, SALE.customer, SALE.lead, SALE.unit, SALE.price, SALE.price, SALE.price / 10, ID.siteagent, bookedOn, ID.partnerFirm, bookedOn]
+  );
+  await conn.query(
+    `INSERT INTO broker_commissions (id, partner_id, deal_id, deal_amount, commission_rate, total_commission, paid_amount, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'PARTIALLY_PAID', ?)
+     ON DUPLICATE KEY UPDATE total_commission = VALUES(total_commission), paid_amount = VALUES(paid_amount), status = VALUES(status), created_at = VALUES(created_at)`,
+    [SALE.commission, ID.partnerFirm, SALE.deal, SALE.price, SALE.rate, commissionTotal, commissionTotal / 2, bookedOn]
+  );
+  await conn.query(
+    `INSERT INTO broker_payout_records (id, commission_id, partner_id, payout_amount, payment_mode, transaction_reference, payout_date, notes)
+     VALUES (?, ?, ?, ?, 'NEFT', 'NEFT-HDFC-260417', ?, 'First half, released on agreement signing')
+     ON DUPLICATE KEY UPDATE payout_amount = VALUES(payout_amount), payout_date = VALUES(payout_date)`,
+    [SALE.payout, SALE.commission, ID.partnerFirm, commissionTotal / 2, at(-5 * 24)]
+  );
 
   // 6. A couple of unread notifications so the bell isn't empty on first login
   const notes = [

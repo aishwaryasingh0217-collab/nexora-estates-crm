@@ -15,7 +15,8 @@
     "test:all": "node tests/run.js --ui",
     "test:ui": "node tests/ui.test.js",
     "test:reset": "node tests/reset-demo.js",
-    "setup": "node database/setup.js"
+    "setup": "node database/setup.js",
+    "demo:reset": "node database/demo_reset.js --yes"
   },
   "keywords": [],
   "author": "",
@@ -34,5 +35,8 @@
   },
   "devDependencies": {
     "puppeteer-core": "^23.11.1"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

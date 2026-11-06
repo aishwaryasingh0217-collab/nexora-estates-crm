@@ -66,25 +66,27 @@ const KEEP_SETTINGS = ['vapid_public', 'vapid_private'];
     console.log(`[demo-reset] ran ${script}`);
   }
 
-  if (kept.length) {
-    const db2 = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306', 10),
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME
-    });
-    try {
-      for (const row of kept) {
-        await db2.query(
-          `INSERT INTO company_settings (setting_key, setting_value) VALUES (?, ?)
-           ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
-          [row.setting_key, row.setting_value]
-        );
-      }
-    } finally {
-      await db2.end();
+  // Put the push keys back, and note today's date so the server's daily rebuild knows it's done
+  process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const db2 = await mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+  });
+  try {
+    for (const row of [...kept, { setting_key: 'demo_last_reset', setting_value: today }]) {
+      await db2.query(
+        `INSERT INTO company_settings (setting_key, setting_value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+        [row.setting_key, row.setting_value]
+      );
     }
+  } finally {
+    await db2.end();
   }
 
   // Seeds don't use uploaded brochures, so on the demo server anything here was uploaded by a visitor.

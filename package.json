@@ -16,7 +16,8 @@
     "test:ui": "node tests/ui.test.js",
     "test:reset": "node tests/reset-demo.js",
     "setup": "node database/setup.js",
-    "demo:reset": "node database/demo_reset.js --yes"
+    "demo:reset": "node database/demo_reset.js --yes",
+    "build": "node -e \"console.log('Nothing to build: plain Node.js server')\""
   },
   "keywords": [],
   "author": "",

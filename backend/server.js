@@ -195,6 +195,7 @@ app.use(errorHandler);
 // Start Server
 const server = app.listen(PORT, () => {
   console.log(`[Server] Real Estate CRM Backend listening on port ${PORT}`);
+  require('./services/bootTasks').startBootTasks();
   if (process.argv.includes('--open')) {
     const url = `http://localhost:${PORT}/`;
     const openCmd = process.platform === 'darwin' ? `open "${url}"` : process.platform === 'win32' ? `start "" "${url}"` : `xdg-open "${url}"`;

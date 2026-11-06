@@ -173,7 +173,9 @@ Test data is named `ZZ …` and removed by `npm run test:reset`, which refuses t
 ### 8. Public sales demo
 A demo server lets prospects try every role with the one-click logins.
 - In its `.env`: `NODE_ENV=production` and `DEMO_MODE=true`.
-- Build it, and rebuild it every night from cron: `npm run demo:reset`. This wipes the database, re-runs the migrations and demo seeds (dates are relative to today), and deletes brochures visitors uploaded. It refuses to run unless `DEMO_MODE=true`.
+- The server builds the demo itself on first start when the database is empty. After that it rebuilds it once a day after `DEMO_RESET_HOUR` (default `3`, in `APP_TIMEZONE`). If the app was asleep at that hour, it rebuilds when it next starts. No shell or cron is needed. To rebuild by hand, run `npm run demo:reset`.
+- A rebuild wipes the database, re-runs the migrations and demo seeds (dates are relative to today), and deletes brochures visitors uploaded. It refuses to run unless `DEMO_MODE=true`.
+- Hosts without a shell (such as Hostinger's Node.js apps) can set `AUTO_MIGRATE=true` on a real company install. The server then applies new database migrations on start. Create the owner account first with `npm run setup` from any machine that can reach the database.
 - In demo mode the shared demo logins can't be switched off or have their role changed; visitors can add their own users to try that.
 
 ---

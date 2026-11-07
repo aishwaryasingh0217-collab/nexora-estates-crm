@@ -219,4 +219,80 @@ async function markContacted(leadId, conn = pool) {
   );
 }
 
-module.exports = { assignLead, bulkAssign, assignmentHistory, findDuplicates, scorePriority, markContacted, loadAssignee, loadByAgent, ASSIGNABLE_ROLES };
+/**
+ * Smart distribution (data-driven, no AI service needed): proposes an owner for each lead.
+ * For every available agent it weighs, from the last 180 days of real records:
+ *   - conversion with this lead's source and project (bookings ÷ leads they were given)   50%
+ *   - current open workload (lighter is better)                                           30%
+ *   - speed of first contact (faster is better)                                           20%
+ * Proposals only — the manager reviews and confirms before anything is assigned.
+ */
+async function suggestDistribution({ leadIds = null, team = null, limit = 100 } = {}) {
+  const [leads] = await pool.query(
+    `SELECT l.id, l.first_name, l.last_name, l.source, l.preferred_project_id, p.name AS project_name, l.priority, l.created_at
+       FROM leads l LEFT JOIN projects p ON p.id = l.preferred_project_id
+      WHERE ${leadIds && leadIds.length ? 'l.id IN (?)' : `l.assigned_agent_id IS NULL AND ${OPEN_STAGE_SQL('l.stage')}`}
+      ORDER BY FIELD(l.priority, 'URGENT', 'HIGH', 'MEDIUM', 'LOW', NULL), l.created_at ASC
+      LIMIT ?`,
+    leadIds && leadIds.length ? [leadIds, limit] : [limit]
+  );
+  if (!leads.length) return { proposals: [], agents: [] };
+  // New enquiries go to telecallers first (as everywhere else in the app); field agents only if none is free
+  const loadAgents = async (roles) => (await pool.query(
+    `SELECT u.id, u.first_name, u.last_name, r.name AS role,
+            (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id = u.id AND ${OPEN_STAGE_SQL('l.stage')}) AS open_leads,
+            (SELECT AVG(TIMESTAMPDIFF(MINUTE, l.created_at, l.first_contacted_at)) FROM leads l
+              WHERE l.assigned_agent_id = u.id AND l.first_contacted_at >= l.created_at AND l.created_at > NOW() - INTERVAL 180 DAY) AS response_min
+       FROM users u JOIN roles r ON r.id = u.role_id
+      WHERE u.status = 'ACTIVE' AND u.is_available = 1 AND r.name IN (${sqlList(roles)}) ${team ? 'AND u.id IN (?)' : ''}`,
+    team ? [team] : []
+  ))[0];
+  let agents = await loadAgents(['INSIDE_SALES']);
+  if (!agents.length) agents = await loadAgents(AGENT_ROLES);
+  if (!agents.length) return { proposals: [], agents: [], message: 'No agents are available (everyone is inactive or on leave).' };
+  const [history] = await pool.query(
+    `SELECT la.to_user_id AS agent, l.source, l.preferred_project_id AS project,
+            COUNT(DISTINCT l.id) AS given,
+            COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM deals d WHERE d.lead_id = l.id AND d.status IN ('BOOKED', 'AGREEMENT_SIGNED', 'CLOSED_WON')) THEN l.id END) AS booked
+       FROM lead_assignments la JOIN leads l ON l.id = la.lead_id
+      WHERE la.created_at > NOW() - INTERVAL 180 DAY AND la.to_user_id IS NOT NULL
+      GROUP BY la.to_user_id, l.source, l.preferred_project_id`
+  );
+  const rate = (agentId, key, value) => {
+    const rows = history.filter((h) => h.agent === agentId && h[key] === value);
+    const given = rows.reduce((s, r) => s + Number(r.given), 0);
+    const booked = rows.reduce((s, r) => s + Number(r.booked), 0);
+    return given >= 2 ? booked / given : null; // too little history says nothing
+  };
+  const state = agents.map((a) => ({ ...a, open_leads: Number(a.open_leads), name: fullName(a.first_name, a.last_name), response_min: a.response_min == null ? null : Number(a.response_min) }));
+  const proposals = [];
+  for (const lead of leads) {
+    const maxLoad = Math.max(...state.map((a) => a.open_leads), 1);
+    const responses = state.map((a) => a.response_min).filter((v) => v != null);
+    const slowest = Math.max(...responses, 1);
+    let best = null;
+    for (const a of state) {
+      const bySource = rate(a.id, 'source', lead.source);
+      const byProject = lead.preferred_project_id ? rate(a.id, 'project', lead.preferred_project_id) : null;
+      const conv = [bySource, byProject].filter((v) => v != null);
+      const conversion = conv.length ? conv.reduce((s, v) => s + v, 0) / conv.length : 0.1;
+      const loadScore = 1 - a.open_leads / (maxLoad + 1);
+      const speed = a.response_min == null ? 0.5 : 1 - a.response_min / (slowest + 1);
+      const score = 0.5 * conversion + 0.3 * loadScore + 0.2 * speed;
+      const reasons = [];
+      if (bySource != null) reasons.push(`${Math.round(bySource * 100)}% conversion on ${String(lead.source || 'this source').toLowerCase().replace(/_/g, ' ')} leads`);
+      if (byProject != null) reasons.push(`${Math.round(byProject * 100)}% on ${lead.project_name}`);
+      reasons.push(`${a.open_leads} open leads`);
+      if (a.response_min != null) reasons.push(`first call in ~${Math.round(a.response_min)} min on average`);
+      if (!best || score > best.score) best = { agent: a, score, reasons };
+    }
+    best.agent.open_leads += 1; // spread the batch
+    proposals.push({
+      lead_id: lead.id, lead_name: fullName(lead.first_name, lead.last_name), source: lead.source, project: lead.project_name, priority: lead.priority,
+      to_user_id: best.agent.id, to_name: best.agent.name, score: Math.round(best.score * 100), reasons: best.reasons
+    });
+  }
+  return { proposals, agents: state.map((a) => ({ id: a.id, name: a.name, role: a.role, open_leads_after: a.open_leads })) };
+}
+
+module.exports = { assignLead, bulkAssign, assignmentHistory, findDuplicates, scorePriority, markContacted, loadAssignee, loadByAgent, suggestDistribution, ASSIGNABLE_ROLES };

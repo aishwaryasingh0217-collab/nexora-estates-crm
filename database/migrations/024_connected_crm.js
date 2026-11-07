@@ -545,6 +545,20 @@ async function up(c) {
     PRIMARY KEY (user_id, category)
   ) ${T}`);
 
+  // Actions the AI assistant prepared; they run only when the person confirms them
+  await c.query(`CREATE TABLE IF NOT EXISTS ai_actions (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    tool VARCHAR(60) NOT NULL,
+    input MEDIUMTEXT NOT NULL,
+    summary VARCHAR(500) NOT NULL,
+    status ENUM('PENDING','CONFIRMED','CANCELLED','FAILED') NOT NULL DEFAULT 'PENDING',
+    result TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decided_at DATETIME NULL,
+    INDEX idx_ai_actions_user (user_id, status)
+  ) ${T}`);
+
   // Background reminders/escalations remember what they already sent, so nobody is alerted twice
   await c.query(`CREATE TABLE IF NOT EXISTS workflow_job_marks (
     mark_key VARCHAR(191) PRIMARY KEY,

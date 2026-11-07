@@ -17,6 +17,7 @@ const mkt = require('../controllers/suite/marketingController');
 const crm = require('../controllers/suite/crmController');
 const owner = require('../controllers/suite/ownerController');
 const testing = require('../controllers/suite/testingController');
+const ai = require('../controllers/suite/aiController');
 
 router.use(authenticateToken);
 
@@ -169,6 +170,17 @@ router.post('/crm/possession', need('crm.manage'), crm.addPossession);
 router.get('/owner/dashboard', need('owner.dashboard'), owner.dashboard);
 router.get('/owner/drilldown/:metric', need('owner.dashboard'), owner.drilldown);
 router.get('/owner/employees', need('owner.dashboard'), owner.employees);
+
+// ------------------------------------------------------------------ AI (answers from live data; changes only on confirmation)
+router.get('/ai/status', need('ai.use'), ai.status);
+router.post('/ai/chat', need('ai.use'), ai.chat);
+router.post('/ai/actions/:id/confirm', need('ai.use'), ai.confirmAction);
+router.post('/ai/actions/:id/cancel', need('ai.use'), ai.cancelAction);
+router.post('/ai/extract-brochure', need('inventory.manage'), ai.extractBrochure);
+router.post('/ai/parse-leads', need('leads.import'), ai.parseLeads);
+router.post('/ai/leads/:id/assist', needAny('calls.make', 'leads.view.all'), ai.leadAssist);
+router.post('/ai/distribution/suggest', need('leads.assign'), ai.suggestDistribution);
+router.post('/ai/distribution/apply', need('leads.assign'), ai.applyDistribution);
 
 // ------------------------------------------------------------------ manual testing center (testing environment only)
 const tc = [need('testing.use'), testing.requireTestingEnv];

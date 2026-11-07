@@ -1,4 +1,4 @@
-# Nexora CRM cPanel Apache Configuration
+# Nexora CRM cPanel & LiteSpeed Configuration
 <IfModule mod_dir.c>
   DirectorySlash On
 </IfModule>
@@ -7,12 +7,32 @@
   AddType text/css .css
   AddType application/javascript .js
   AddType application/manifest+json .webmanifest
+  AddType video/mp4 .mp4
+  AddType font/woff2 .woff2
 </IfModule>
 
-# The service worker must never be cached by the browser, or app updates stall
+# Caching & Performance Rules
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault "access plus 1 hour"
+  ExpiresByType video/mp4 "access plus 7 days"
+  ExpiresByType image/jpeg "access plus 7 days"
+  ExpiresByType image/jpg "access plus 7 days"
+  ExpiresByType image/png "access plus 7 days"
+  ExpiresByType image/webp "access plus 7 days"
+  ExpiresByType font/woff2 "access plus 30 days"
+  ExpiresByType text/css "access plus 1 hour"
+  ExpiresByType application/javascript "access plus 1 hour"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# The service worker and index must never be held stale by the browser
 <IfModule mod_headers.c>
   <Files "sw.js">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </Files>
+  <Files "index.html">
+    Header set Cache-Control "no-cache, must-revalidate"
   </Files>
 </IfModule>
 

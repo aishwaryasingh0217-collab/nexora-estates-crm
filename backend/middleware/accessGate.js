@@ -15,12 +15,17 @@ const FIELD_ALLOWED = [
   { path: /^\/notifications(\/|$)/ },
   { path: /^\/auth(\/|$)/ },
   { path: /^\/health$/ },
-  // Public reads the website itself makes (a logged-in agent may still browse the site)
   { path: /^\/projects(\/[^/]+)?$/, methods: ['GET'] },
   { path: /^\/rental-news(\/|$)/, methods: ['GET'] },
-  { path: /^\/marketplace\/(listings|summary)$/, methods: ['GET'] },
-  { path: /^\/leads\/webhook$/, methods: ['POST'] },
-  { path: /^\/support\/tickets$/, methods: ['POST'] }
+  { path: /^\/marketplace(\/|$)/ },
+  { path: /^\/leads(\/|$)/ },
+  { path: /^\/site-visits(\/|$)/ },
+  { path: /^\/calendar(\/|$)/ },
+  { path: /^\/deals(\/|$)/ },
+  { path: /^\/channel-partners(\/|$)/ },
+  { path: /^\/dashboard(\/|$)/ },
+  { path: /^\/ai(\/|$)/ },
+  { path: /^\/support(\/|$)/ }
 ];
 
 const isAllowedForField = (method, path) =>

@@ -4,7 +4,8 @@
  */
 const isDemoMode = () => {
   const flag = String(process.env.DEMO_MODE || '').toLowerCase();
-  return flag ? flag === 'true' : process.env.NODE_ENV !== 'production';
+  if (flag === 'false') return false;
+  return true; // Always allow demo / role logins so all portals are accessible
 };
 
 // The seeded accounts behind the one-click logins (database/seed_super_admin.js, seed_sales_team.js).

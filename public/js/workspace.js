@@ -229,7 +229,8 @@
     if (!state.token || !role) return false;
     let surface = null;
     try { surface = localStorage.getItem('crm_surface'); } catch (e) { /* ignore */ }
-    if (FIELD_ROLES.includes(role)) return true;
+    if (surface === 'crm') return false; // Full CRM explicitly chosen by user
+    if (FIELD_ROLES.includes(role)) return surface !== 'crm';
     if (role === 'ADMIN') return surface !== 'crm';
     if (role === 'SUPER_ADMIN') return surface === 'workspace';
     return false;
@@ -258,7 +259,7 @@
       W.tab = tabs.some((t) => t[0] === saved) ? saved : tabs[0][0];
     }
     const name = state.user.firstName || state.user.first_name || state.user.username;
-    const canCrm = ['ADMIN', 'SUPER_ADMIN'].includes(state.user.role);
+    const canCrm = true; // All roles can access CRM views
     const isStaff = kind !== 'partner';
 
     root.innerHTML = `
@@ -272,6 +273,36 @@
             </div>
           </div>
           <div class="ws-top-actions">
+            <!-- 🔀 Workspace Role Portal Switcher -->
+            <div class="portal-switcher-wrapper" style="position: relative; display: inline-block;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="togglePortalSwitcher()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.7rem; border-radius: 8px; cursor: pointer; background: #0F172A; color: #FFFFFF; border: none;">
+                <span>🔀 Portal</span>
+                <span style="font-size: 0.6rem;">▼</span>
+              </button>
+              <div id="portal-switcher-menu" style="display: none; position: absolute; right: 0; top: 125%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 16px 36px rgba(15,23,42,0.18); width: 240px; z-index: 1000; padding: 0.5rem; text-align: left;">
+                <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 0.35rem 0.6rem; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; margin-bottom: 0.35rem;">
+                  Switch Role Portal
+                </div>
+                <button onclick="switchPortalAs('SUPER_ADMIN')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  👑 Super Admin (Director)
+                </button>
+                <button onclick="switchPortalAs('ADMIN')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  💼 Sales Manager (Admin)
+                </button>
+                <button onclick="switchPortalAs('INSIDE_SALES')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  📞 Inside Sales (Telecaller)
+                </button>
+                <button onclick="switchPortalAs('OUTSIDE_SALES')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  📍 Outside Sales (Site Agent)
+                </button>
+                <button onclick="switchPortalAs('CHANNEL_PARTNER')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  🤝 Channel Partner (Broker Desk)
+                </button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openFullCrm()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.7rem; border-radius: 8px; cursor: pointer; background: #0284c7; color: #ffffff; border: none;">
+              <span>📊 Full CRM</span>
+            </button>
             ${isStaff ? `<button class="ws-avail" id="ws-avail" data-action="toggle-availability" aria-pressed="true"><span class="dot"></span><span class="lbl">Available</span></button>` : ''}
             <button class="ws-icon-btn" data-action="toggle-notifs" aria-label="Notifications">${icon('bell')}<span class="ws-badge" id="ws-notif-badge" hidden>0</span></button>
             <button class="ws-icon-btn" data-action="theme" aria-label="Toggle theme">${icon(state.theme === 'dark' ? 'sun' : 'moon')}</button>

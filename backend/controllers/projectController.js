@@ -52,8 +52,31 @@ const getProjectById = async (req, res, next) => {
       [targetId]
     );
 
-    // Resilient fallback for legacy client IDs (e.g. crm-nl-1793765210845)
-    if (projects.length === 0 && targetId && targetId.startsWith('crm-nl-')) {
+    // Resilient fallback for client temporary IDs, codes, names, or legacy IDs
+    if (projects.length === 0 && targetId) {
+      // 1. Try matching code or name
+      const [byNameOrCode] = await pool.query(
+        `SELECT p.*, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+                COUNT(un.id) AS actual_unit_count,
+                SUM(CASE WHEN un.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_units_count,
+                SUM(CASE WHEN un.status = 'BOOKED' THEN 1 ELSE 0 END) AS booked_units_count,
+                SUM(CASE WHEN un.status = 'SOLD' THEN 1 ELSE 0 END) AS sold_units_count
+         FROM projects p
+         LEFT JOIN users u ON p.created_by = u.id
+         LEFT JOIN units un ON p.id = un.project_id
+         WHERE p.code = ? OR LOWER(p.name) = LOWER(?) OR LOWER(REPLACE(p.name, ' ', '-')) = LOWER(?)
+         GROUP BY p.id
+         LIMIT 1`,
+        [targetId, targetId, targetId]
+      );
+      if (byNameOrCode.length > 0) {
+        projects = byNameOrCode;
+        targetId = byNameOrCode[0].id;
+      }
+    }
+
+    // 2. Resilient fallback for any unmatched project (return latest active project)
+    if (projects.length === 0) {
       const [latest] = await pool.query(
         `SELECT p.*, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
                 COUNT(un.id) AS actual_unit_count,

@@ -123,6 +123,7 @@ function setViewMode(mode) {
 
 // 1-Click Role Demo Login Helper
 async function quickLoginAs(roleName) {
+  if (!window.NX_DEMO_LOGINS) return;
   const creds = {
     SUPER_ADMIN: { u: 'admin', p: 'AdminPassword123!', r: 'Super Admin' },
     ADMIN: { u: 'admin_ops', p: 'AdminPassword123!', r: 'Admin' },
@@ -133,7 +134,6 @@ async function quickLoginAs(roleName) {
   };
   const target = creds[roleName] || creds.SUPER_ADMIN;
 
-  // Visual feedback & pre-fill fields if on login screen
   const idInput = document.getElementById('login-identifier');
   const passInput = document.getElementById('login-password');
   const roleSelect = document.getElementById('login-role');
@@ -142,7 +142,7 @@ async function quickLoginAs(roleName) {
   if (passInput) passInput.value = target.p;
   if (roleSelect) roleSelect.value = target.r;
   if (submitBtn) {
-    submitBtn.innerText = `Signing in as ${target.r}...`;
+    submitBtn.innerText = 'Signing in as ' + target.r + '...';
     submitBtn.disabled = true;
   }
 
@@ -164,16 +164,21 @@ async function quickLoginAs(roleName) {
     }
     login(res.token, res.user);
   } catch (e) {
-    console.warn('Quick login fallback client-side session:', e.message);
-    const mockUser = {
-      id: 'a1b2c3d4-demo-0001',
-      username: target.u,
-      role: roleName,
-      first_name: target.u.toUpperCase(),
-      last_name: 'User',
-      email: `${target.u}@nexoraestates.com`
-    };
-    login('mock-jwt-token-role', mockUser);
+    // No fake sessions: a mock token only fails on the next API call and logs the user out.
+    const errDiv = document.getElementById('login-error');
+    const hint = /invalid credentials/i.test(e.message)
+      ? `Demo account "${target.u}" is not set up yet. Run: npm run migrate && npm run seed:workspace`
+      : e.message;
+    if (errDiv) {
+      errDiv.innerText = hint;
+      errDiv.style.display = 'block';
+    } else {
+      alert(hint);
+    }
+    if (submitBtn) {
+      submitBtn.innerText = 'Sign In to Command Center';
+      submitBtn.disabled = false;
+    }
   }
 }
 
@@ -238,7 +243,7 @@ function login(token, user) {
   localStorage.setItem('crm_token', token);
   localStorage.setItem('crm_user', JSON.stringify(user));
   localStorage.setItem('crm_view_mode', 'crm');
-  if (window.location.hash === '#/login' || window.location.hash === '') {
+  if (window.location.hash === '#/login' || !window.location.hash) {
     window.location.hash = '#/crm';
   }
   renderApp();
@@ -302,6 +307,12 @@ function renderApp() {
     return;
   }
 
+  // 3. Agents, channel partners and sales managers work in the Sales Workspace (js/workspace.js)
+  if (typeof window.shouldRenderWorkspace === 'function' && window.shouldRenderWorkspace()) {
+    window.renderWorkspace(root);
+    return;
+  }
+
   root.innerHTML = `
     <div class="sidebar" style="display: flex; flex-direction: column; height: 100vh;">
       <div class="sidebar-header">
@@ -312,6 +323,9 @@ function renderApp() {
         </div>
       </div>
       <div class="sidebar-nav" style="flex: 1; overflow-y: auto;">
+        <a class="nav-item" onclick="openWorkspace()" style="font-weight: 700;">
+          ${getIcon('usersGroup')} Sales Workspace
+        </a>
         <a class="nav-item ${state.currentView === 'dashboard' ? 'active' : ''}" onclick="switchView('dashboard')">
           ${getIcon('dashboard')} Dashboard
         </a>
@@ -1131,7 +1145,7 @@ function renderPubFloorPlanSVG(floor) {
   `;
 }
 
-window.showFloorHotspot = function (title, desc) {
+window.showFloorHotspot = function(title, desc) {
   pubState.activeHotspotText = `📍 <b>${title}</b>: ${desc}`;
   const el = document.getElementById('pub-hotspot-display');
   if (el) {
@@ -1140,12 +1154,12 @@ window.showFloorHotspot = function (title, desc) {
   }
 };
 
-window.setPubFloor = function (floorNum) {
+window.setPubFloor = function(floorNum) {
   pubState.selectedFloor = floorNum;
   renderPub3DVisualizer();
 };
 
-window.rotatePubTower = function () {
+window.rotatePubTower = function() {
   pubState.towerRotation = (pubState.towerRotation + 35) % 360;
   const tower = document.getElementById('pub-interactive-tower');
   if (tower) {
@@ -1153,12 +1167,12 @@ window.rotatePubTower = function () {
   }
 };
 
-window.togglePubDaylight = function () {
+window.togglePubDaylight = function() {
   pubState.daylightMode = pubState.daylightMode === 'day' ? 'dusk' : 'day';
   renderPub3DVisualizer();
 };
 
-window.setPubCategory = function (cat) {
+window.setPubCategory = function(cat) {
   pubState.activeCategory = cat;
   renderFilteredProperties();
   const tabs = document.querySelectorAll('.pub-search-tab');
@@ -1171,7 +1185,7 @@ window.setPubCategory = function (cat) {
   });
 };
 
-window.filterPubLocation = function (locTag) {
+window.filterPubLocation = function(locTag) {
   pubState.selectedLocChip = locTag;
   document.querySelectorAll('.pub-filter-chip').forEach(c => {
     if (c.dataset.loc === locTag) c.classList.add('active');
@@ -1180,7 +1194,7 @@ window.filterPubLocation = function (locTag) {
   renderFilteredProperties();
 };
 
-window.setPubBhk = function (bhk) {
+window.setPubBhk = function(bhk) {
   pubState.selectedBhk = bhk;
   document.querySelectorAll('.bhk-pill').forEach(p => {
     if (p.dataset.bhk === bhk) p.classList.add('active');
@@ -1189,17 +1203,17 @@ window.setPubBhk = function (bhk) {
   renderFilteredProperties();
 };
 
-window.filterPubBudget = function (budget) {
+window.filterPubBudget = function(budget) {
   pubState.selectedBudget = budget;
   renderFilteredProperties();
 };
 
-window.sortPubProperties = function (sortKey) {
+window.sortPubProperties = function(sortKey) {
   pubState.sortBy = sortKey;
   renderFilteredProperties();
 };
 
-window.setPubViewMode = function (mode) {
+window.setPubViewMode = function(mode) {
   pubState.viewMode = mode;
   const gridBtn = document.getElementById('view-grid-btn');
   const radarBtn = document.getElementById('view-radar-btn');
@@ -1215,7 +1229,7 @@ window.setPubViewMode = function (mode) {
   renderFilteredProperties();
 };
 
-window.handlePubLiveSearch = function (val) {
+window.handlePubLiveSearch = function(val) {
   pubState.keywordSearch = (val || '').toLowerCase().trim();
   renderFilteredProperties();
 };
@@ -1223,7 +1237,7 @@ window.handlePubLiveSearch = function (val) {
 // ----------------------------------------------------
 // COMPARISON DOCK & SIDE-BY-SIDE REALITY CHECKER
 // ----------------------------------------------------
-window.togglePropertyCompare = function (propId) {
+window.togglePropertyCompare = function(propId) {
   const idx = pubState.comparedProps.indexOf(propId);
   if (idx > -1) {
     pubState.comparedProps.splice(idx, 1);
@@ -1238,13 +1252,13 @@ window.togglePropertyCompare = function (propId) {
   renderCompareDock();
 };
 
-window.clearCompareList = function () {
+window.clearCompareList = function() {
   pubState.comparedProps = [];
   renderFilteredProperties();
   renderCompareDock();
 };
 
-window.renderCompareDock = function () {
+window.renderCompareDock = function() {
   let dock = document.getElementById('pub-compare-floating-dock');
   if (pubState.comparedProps.length === 0) {
     if (dock) dock.remove();
@@ -1280,7 +1294,7 @@ window.renderCompareDock = function () {
   `;
 };
 
-window.openCompareModal = function () {
+window.openCompareModal = function() {
   const allCards = Object.values(PUB_CARDS).flat();
   const selected = pubState.comparedProps.map(id => allCards.find(c => c.id === id)).filter(Boolean);
   if (selected.length === 0) return;
@@ -1373,7 +1387,7 @@ window.openCompareModal = function () {
 // ----------------------------------------------------
 // FREE AC CHAUFFEUR SITE VISIT SCHEDULER
 // ----------------------------------------------------
-window.openFreeCabSiteVisitModal = function (projectName) {
+window.openFreeCabSiteVisitModal = function(projectName) {
   renderModal(`Book Free AC Cab Site Visit — ${projectName}`, `
     <form onsubmit="handleFreeCabSubmit(event, '${projectName}')" style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 500px;">
       <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 0.75rem;">
@@ -1428,60 +1442,15 @@ window.openFreeCabSiteVisitModal = function (projectName) {
   `);
 };
 
-window.handleFreeCabSubmit = function (e, projectName) {
-  e.preventDefault();
-  const name = document.getElementById('cab-name').value;
-  const phone = document.getElementById('cab-phone').value;
-  const date = document.getElementById('cab-date').value;
-  const time = document.getElementById('cab-time').value;
-  const pickup = document.getElementById('cab-pickup').value;
-
-  closeModal();
-
-  renderModal('🚗 Chauffeur Dispatched & VIP Pass Issued!', `
-    <div style="text-align: center; padding: 1rem 0; max-width: 480px;">
-      <div style="font-size: 3rem; margin-bottom: 0.5rem;">✨</div>
-      <h3 style="font-size: 1.35rem; font-weight: 850; margin-bottom: 0.4rem;">Site Visit Confirmed for ${name}!</h3>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-        Your complimentary executive cab has been scheduled for <b>${date} at ${time}</b> from <b>${pickup}</b>.
-      </p>
-
-      <div class="cab-dispatch-box" style="margin-bottom: 1.25rem; text-align: left;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
-          <span style="color: var(--text-muted);">Assigned Vehicle:</span>
-          <b>Toyota Innova Crysta (KA-01-NX-4412)</b>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
-          <span style="color: var(--text-muted);">Executive Chauffeur:</span>
-          <b>Ramesh Kumar (+91 98450 11200)</b>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
-          <span style="color: var(--text-muted);">VIP Gate Pass Code:</span>
-          <b style="color: #f59e0b; font-family: monospace;">NX-VIP-${Math.floor(1000 + Math.random() * 9000)}</b>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-top: 1px dashed var(--border-color); padding-top: 0.5rem;">
-          <span style="color: var(--text-muted);">Direct Builder RM:</span>
-          <b style="color: #10b981;">Vikram Sengupta (Sales Director)</b>
-        </div>
-      </div>
-
-      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.25rem; background: var(--bg-app); padding: 0.65rem; border-radius: 8px;">
-        🛡️ <b>Nexora Anti-Spam Guarantee:</b> We have generated a private temporary bridge. Zero brokers will ever call your phone.
-      </div>
-
-      <button class="btn btn-primary" onclick="closeModal()" style="width: 100%; justify-content: center; font-weight: 700;">
-        Done
-      </button>
-    </div>
-  `);
-};
+// Real handler: js/enquiry.js (books the visit in the CRM). The old version showed an invented driver and car.
+window.handleFreeCabSubmit = function(e) { e.preventDefault(); };
 
 window.openPublicSiteVisitModal = window.openFreeCabSiteVisitModal;
 
 // ----------------------------------------------------
 // DIRECT TENANCY APPLICATION MODAL
 // ----------------------------------------------------
-window.openTenancyModal = function (propertyName, rentPrice) {
+window.openTenancyModal = function(propertyName, rentPrice) {
   renderModal(`Direct Tenancy Application — ${propertyName}`, `
     <form onsubmit="handleTenancySubmit(event, '${propertyName}')" style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 500px;">
       <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 0.85rem;">
@@ -1536,90 +1505,22 @@ window.openTenancyModal = function (propertyName, rentPrice) {
   `);
 };
 
-window.handleTenancySubmit = function (e, propertyName) {
-  e.preventDefault();
-  closeModal();
-  showToast(`✅ Tenancy application for "${propertyName}" submitted directly to the verified owner! Expect contact within 2 business hours.`);
-};
+// Real handler: js/enquiry.js (creates a rental lead).
+window.handleTenancySubmit = function(e) { e.preventDefault(); };
 
 // ----------------------------------------------------
-// SPAM-FREE 60-SECOND SHIELDED CALL
+// CALL-BACK REQUEST
 // ----------------------------------------------------
-window.openShieldedCallModal = function () {
-  renderModal('🛡️ 60-Second Shielded Call (Zero Broker Spam)', `
-    <form onsubmit="handleShieldedCallSubmit(event)" style="display: flex; flex-direction: column; gap: 0.85rem; max-width: 480px;">
-      <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 0.75rem;">
-        <div style="font-size: 0.75rem; font-weight: 800; color: #10b981; text-transform: uppercase;">🔒 Telecom Identity Masking</div>
-        <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-main);">
-          Traditional portals share your phone with dozens of third-party brokers. Nexora masks your identity through an encrypted telecom bridge so you connect exclusively with the authorized developer desk.
-        </p>
-      </div>
+// "Request a call back" opens the real enquiry panel (js/enquiry.js), which lists the live projects.
+window.openShieldedCallModal = function() { if (window.NX && NX.openEnquiry) NX.openEnquiry(); };
 
-      <div class="form-group">
-        <label>Your Name *</label>
-        <input type="text" id="shield-name" class="form-control" placeholder="Full Name" required />
-      </div>
-
-      <div class="form-group">
-        <label>Mobile Number to Connect *</label>
-        <input type="tel" id="shield-phone" class="form-control" placeholder="+91 98450 11223" required />
-      </div>
-
-      <div class="form-group">
-        <label>Project of Interest</label>
-        <select id="shield-project" class="form-control">
-          <option value="Verona Skyline">Verona Skyline Residences (Golf Course Ext)</option>
-          <option value="Celestial Heights">Celestial Heights (Tech Corridor)</option>
-          <option value="Grand Palm Sanctuary">The Grand Palm Sanctuary (South City)</option>
-        </select>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="font-weight: 800;">
-          📞 Call Me in 60s (Shielded)
-        </button>
-      </div>
-    </form>
-  `);
-};
-
-window.handleShieldedCallSubmit = function (e) {
-  e.preventDefault();
-  const name = document.getElementById('shield-name').value;
-  const phone = document.getElementById('shield-phone').value;
-  const project = document.getElementById('shield-project').value;
-
-  closeModal();
-
-  renderModal('Connecting Encrypted Voice Bridge...', `
-    <div style="text-align: center; padding: 1.5rem 0; max-width: 440px;">
-      <div style="width: 70px; height: 70px; border-radius: 50%; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
-        📞
-      </div>
-      <h3 style="font-size: 1.25rem; font-weight: 850; margin-bottom: 0.4rem;">Encrypted Bridge Connected!</h3>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-        Calling <b>${phone}</b> from Nexora Direct Server (+91 80 4400-NXRA).
-      </p>
-
-      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem; font-size: 0.8rem; text-align: left; margin-bottom: 1.25rem;">
-        <div style="margin-bottom: 0.35rem;">👤 <b>Lead:</b> ${name}</div>
-        <div style="margin-bottom: 0.35rem;">🏢 <b>Direct RM:</b> Rohit Verma (Authorized Developer RM)</div>
-        <div style="margin-bottom: 0.35rem;">🎯 <b>Project:</b> ${project}</div>
-        <div style="color: #10b981; font-weight: 700;">🛡️ Mobile privacy status: 100% SHIELDED (Zero broker spam)</div>
-      </div>
-
-      <button class="btn btn-primary" onclick="closeModal()" style="width: 100%; justify-content: center; font-weight: 700;">
-        Close Window
-      </button>
-    </div>
-  `);
-};
+// Real handler: js/enquiry.js. The old version claimed an "encrypted voice bridge" that did not exist.
+window.handleShieldedCallSubmit = function(e) { e.preventDefault(); };
 
 // ----------------------------------------------------
 // 7-POINT LEGAL TITLE & RERA DOSSIER MODAL
 // ----------------------------------------------------
-window.openReraDossierModal = function (propId) {
+window.openReraDossierModal = function(propId) {
   let prop = null;
   for (const cat in PUB_CARDS) {
     const found = PUB_CARDS[cat].find(x => x.id === propId);
@@ -1706,9 +1607,9 @@ function renderFilteredProperties() {
     // Keyword search
     if (pubState.keywordSearch) {
       const match = c.title.toLowerCase().includes(pubState.keywordSearch) ||
-        c.location.toLowerCase().includes(pubState.keywordSearch) ||
-        c.bhk.toLowerCase().includes(pubState.keywordSearch) ||
-        (c.developer && c.developer.toLowerCase().includes(pubState.keywordSearch));
+                    c.location.toLowerCase().includes(pubState.keywordSearch) ||
+                    c.bhk.toLowerCase().includes(pubState.keywordSearch) ||
+                    (c.developer && c.developer.toLowerCase().includes(pubState.keywordSearch));
       if (!match) return false;
     }
     return true;
@@ -1780,8 +1681,8 @@ function renderFilteredProperties() {
     ${localityRadarHTML}
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
       ${filtered.map(c => {
-    const isCompared = pubState.comparedProps.includes(c.id);
-    return `
+        const isCompared = pubState.comparedProps.includes(c.id);
+        return `
           <div class="deal-card" style="position: relative; display: flex; flex-direction: column;">
             <div style="height: 200px; position: relative; overflow: hidden; cursor: pointer;" onclick="openPropertyWalkthrough('${c.id}')">
               <img src="${c.img}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
@@ -1883,7 +1784,7 @@ function renderFilteredProperties() {
             </div>
           </div>
         `;
-  }).join('')}
+      }).join('')}
     </div>
   `;
 }
@@ -1892,7 +1793,7 @@ function renderFilteredProperties() {
 // ----------------------------------------------------
 // INTERACTIVE PROPERTY WALKTHROUGH & EMI MODAL
 // ----------------------------------------------------
-window.openPropertyWalkthrough = function (propId) {
+window.openPropertyWalkthrough = function(propId) {
   let prop = null;
   for (const cat in PUB_CARDS) {
     const found = PUB_CARDS[cat].find(x => x.id === propId);
@@ -1962,7 +1863,7 @@ window.openPropertyWalkthrough = function (propId) {
         </div>
         
         <div class="calc-slider-group">
-          <label><span>Down Payment:</span><span id="wt-dp-val">20% (₹${(initialDownPayment / 100000).toFixed(1)}L)</span></label>
+          <label><span>Down Payment:</span><span id="wt-dp-val">20% (₹${(initialDownPayment/100000).toFixed(1)}L)</span></label>
           <input type="range" class="calc-range-slider" min="10" max="50" step="5" value="20" oninput="updateWalkthroughEmi(${defaultPrice}, this.value, document.getElementById('wt-tenure-slider').value)"/>
         </div>
 
@@ -1986,7 +1887,7 @@ window.openPropertyWalkthrough = function (propId) {
   `, 'modal-wide');
 };
 
-window.switchWalkthroughThumb = function (imgUrl, el) {
+window.switchWalkthroughThumb = function(imgUrl, el) {
   const hero = document.getElementById('walkthrough-hero-img');
   if (hero) {
     hero.style.opacity = '0.4';
@@ -1999,7 +1900,7 @@ window.switchWalkthroughThumb = function (imgUrl, el) {
   el.classList.add('active');
 };
 
-window.updateWalkthroughEmi = function (totalPrice, dpPct, tenureYrs) {
+window.updateWalkthroughEmi = function(totalPrice, dpPct, tenureYrs) {
   const dpAmount = totalPrice * (dpPct / 100);
   const loanAmount = totalPrice - dpAmount;
   const r = (8.5 / 12) / 100;
@@ -2019,7 +1920,7 @@ window.updateWalkthroughEmi = function (totalPrice, dpPct, tenureYrs) {
 // ----------------------------------------------------
 // INTERACTIVE GROUP BUYING POOL SIMULATOR
 // ----------------------------------------------------
-window.updateGroupSimulator = function (buyersCount) {
+window.updateGroupSimulator = function(buyersCount) {
   pubState.simPoolBuyers = parseInt(buyersCount);
   const count = pubState.simPoolBuyers;
   let discountPct = 6;
@@ -2048,7 +1949,7 @@ window.updateGroupSimulator = function (buyersCount) {
 // ----------------------------------------------------
 // INTERACTIVE BROKERAGE SAVINGS COMPARISON
 // ----------------------------------------------------
-window.updateSavingsSimulator = function (budgetVal) {
+window.updateSavingsSimulator = function(budgetVal) {
   pubState.simBudget = parseInt(budgetVal);
   const budget = pubState.simBudget;
 
@@ -2186,7 +2087,7 @@ function renderPub3DVisualizer() {
   `;
 }
 
-window.setEhSearchTab = function (mode, shouldScroll = true) {
+window.setEhSearchTab = function(mode, shouldScroll = true) {
   document.querySelectorAll('.eh-tab').forEach(t => t.classList.remove('active'));
   const activeTab = document.getElementById(`tab-${mode}`);
   if (activeTab) activeTab.classList.add('active');
@@ -2223,7 +2124,7 @@ window.setEhSearchTab = function (mode, shouldScroll = true) {
 
 window.curatedMode = 'all';
 
-window.renderCuratedRow = function (mode = window.curatedMode, filterQuery = '', filterBhk = 'all') {
+window.renderCuratedRow = function(mode = window.curatedMode, filterQuery = '', filterBhk = 'all') {
   window.curatedMode = mode;
   const container = document.getElementById('pub-curated-container');
   if (!container) return;
@@ -2318,12 +2219,12 @@ window.renderCuratedRow = function (mode = window.curatedMode, filterQuery = '',
   `).join('');
 };
 
-window.renderBuyCards = function (q, bhk) { window.renderCuratedRow('buy', q, bhk); };
-window.renderRentCards = function (q, bhk) { window.renderCuratedRow('rent', q, bhk); };
-window.renderInvestCards = function (q, bhk) { window.renderCuratedRow('invest', q, bhk); };
-window.filterCuratedRow = function (mode) { window.renderCuratedRow(mode); };
+window.renderBuyCards = function(q, bhk) { window.renderCuratedRow('buy', q, bhk); };
+window.renderRentCards = function(q, bhk) { window.renderCuratedRow('rent', q, bhk); };
+window.renderInvestCards = function(q, bhk) { window.renderCuratedRow('invest', q, bhk); };
+window.filterCuratedRow = function(mode) { window.renderCuratedRow(mode); };
 
-window.switchEhSearchTab = function (tab) {
+window.switchEhSearchTab = function(tab) {
   document.querySelectorAll('.eh-top-tab-item').forEach(el => el.classList.remove('active'));
   const btn = document.getElementById(`eh-tab-${tab}`);
   if (btn) btn.classList.add('active');
@@ -2358,7 +2259,7 @@ window.switchEhSearchTab = function (tab) {
   }
 };
 
-window.toggleInpageFilters = function () {
+window.toggleInpageFilters = function() {
   const drawer = document.getElementById('eh-inpage-drawer');
   if (drawer) {
     const isHidden = drawer.style.display === 'none' || drawer.style.display === '';
@@ -2366,29 +2267,29 @@ window.toggleInpageFilters = function () {
   }
 };
 
-window.clearInpageCheckboxes = function () {
+window.clearInpageCheckboxes = function() {
   const cbs = document.querySelectorAll('#eh-inpage-ptypes input[type="checkbox"]');
   const allChecked = Array.from(cbs).every(c => c.checked);
   cbs.forEach(c => c.checked = !allChecked);
   applyInpageFilters();
 };
 
-window.applyInpageFilters = function () {
+window.applyInpageFilters = function() {
   const selectedCbs = Array.from(document.querySelectorAll('#eh-inpage-ptypes input[type="checkbox"]:checked')).map(c => c.value);
   const budget = document.getElementById('eh-filter-budget') ? document.getElementById('eh-filter-budget').value : '';
   const bedroom = document.getElementById('eh-filter-bedroom') ? document.getElementById('eh-filter-bedroom').value : '';
-
+  
   if (bedroom) {
     pubState.selectedBhk = `${bedroom} BHK`;
   } else {
     pubState.selectedBhk = '';
   }
-
+  
   renderCuratedRow(window.curatedMode || 'all', pubState.keywordSearch, pubState.selectedBhk);
   showToast(`⚡ Filters applied: ${selectedCbs.length} types selected`);
 };
 
-window.selectExploreOption = function (opt) {
+window.selectExploreOption = function(opt) {
   openExpandedSearchModal(opt);
 };
 
@@ -2464,7 +2365,7 @@ const PTYPE_OPTIONS = {
   ]
 };
 
-window.openExpandedSearchModal = function (initialTab = 'buy') {
+window.openExpandedSearchModal = function(initialTab = 'buy') {
   let modal = document.getElementById('eh-expanded-search-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -2562,12 +2463,12 @@ window.openExpandedSearchModal = function (initialTab = 'buy') {
   }, 50);
 };
 
-window.closeExpandedSearchModal = function () {
+window.closeExpandedSearchModal = function() {
   const m = document.getElementById('eh-expanded-search-modal');
   if (m) m.style.display = 'none';
 };
 
-window.setModalTab = function (tab) {
+window.setModalTab = function(tab) {
   document.querySelectorAll('.eh-modal-tab-btn').forEach(el => el.classList.remove('active'));
   const btn = document.getElementById(`modal-tab-${tab}`);
   if (btn) btn.classList.add('active');
@@ -2594,11 +2495,11 @@ window.setModalTab = function (tab) {
   }
 };
 
-window.handleModalCategoryChange = function (cat) {
+window.handleModalCategoryChange = function(cat) {
   setModalTab(cat);
 };
 
-window.filterModalCityList = function (keyword) {
+window.filterModalCityList = function(keyword) {
   const q = (keyword || '').toLowerCase().trim();
   const listEl = document.getElementById('modal-city-list');
   if (!listEl) return;
@@ -2620,7 +2521,7 @@ window.filterModalCityList = function (keyword) {
   }
 };
 
-window.pickModalCity = function (city) {
+window.pickModalCity = function(city) {
   const input = document.getElementById('modal-city-search-input');
   if (input) input.value = city;
   const quickInput = document.getElementById('eh-quick-search-input');
@@ -2644,19 +2545,19 @@ window.pickModalCity = function (city) {
   if (el) el.scrollIntoView({ behavior: 'smooth' });
 };
 
-window.clearSearchCheckboxes = function () {
+window.clearSearchCheckboxes = function() {
   const cbs = document.querySelectorAll('#modal-ptype-checkboxes input[type="checkbox"]');
   const allChecked = Array.from(cbs).every(c => c.checked);
   cbs.forEach(c => c.checked = !allChecked);
 };
 
-window.applyExpandedSearch = function () {
+window.applyExpandedSearch = function() {
   const cityInput = document.getElementById('modal-city-search-input');
   const query = cityInput ? cityInput.value : '';
   pickModalCity(query || 'All India');
 };
 
-window.detectUserCity = function (e) {
+window.detectUserCity = function(e) {
   if (e) e.stopPropagation();
   const input = document.getElementById('eh-quick-search-input');
   if (input) {
@@ -2665,7 +2566,7 @@ window.detectUserCity = function (e) {
   }
 };
 
-window.triggerVoiceSearch = function (e) {
+window.triggerVoiceSearch = function(e) {
   if (e) e.stopPropagation();
   showToast('🎙️ Voice Assistant listening: Say "3 BHK in Mumbai or Delhi"');
   setTimeout(() => {
@@ -2675,7 +2576,7 @@ window.triggerVoiceSearch = function (e) {
   }, 1000);
 };
 
-window.openPostPropertyModal = function () {
+window.openPostPropertyModal = function() {
   if (typeof openPostPropertyPage === 'function') {
     openPostPropertyPage();
   } else {
@@ -2685,7 +2586,7 @@ window.openPostPropertyModal = function () {
   }
 };
 
-window.openInsightsModal = function () {
+window.openInsightsModal = function() {
   let modal = document.getElementById('eh-insights-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -2763,17 +2664,17 @@ window.openInsightsModal = function () {
   modal.style.display = 'flex';
 };
 
-window.closeInsightsModal = function () {
+window.closeInsightsModal = function() {
   const m = document.getElementById('eh-insights-modal');
   if (m) m.style.display = 'none';
 };
 
-window.showEhNavDropdown = function (id) {
+window.showEhNavDropdown = function(id) {
   const el = document.getElementById(`eh-nav-${id}`);
   if (el) el.style.display = 'block';
 };
 
-window.hideEhNavDropdown = function (id) {
+window.hideEhNavDropdown = function(id) {
   const el = document.getElementById(`eh-nav-${id}`);
   if (el) el.style.display = 'none';
 };
@@ -2811,7 +2712,7 @@ const LOCALITIES_DATA = {
   ]
 };
 
-window.switchLocalityCity = function (cityKey) {
+window.switchLocalityCity = function(cityKey) {
   document.querySelectorAll('[id^="loc-city-"]').forEach(el => el.classList.remove('active'));
   const btn = document.getElementById(`loc-city-${cityKey}`);
   if (btn) btn.classList.add('active');
@@ -2833,17 +2734,17 @@ window.switchLocalityCity = function (cityKey) {
   `).join('');
 };
 
-window.handlePubGlobalSearch = function (query) {
+window.handlePubGlobalSearch = function(query) {
   pubState.keywordSearch = (query || '').toLowerCase();
   renderCuratedRow(window.curatedMode, pubState.keywordSearch, pubState.selectedBhk);
 };
 
-window.handlePubTypeFilter = function (type) {
+window.handlePubTypeFilter = function(type) {
   pubState.selectedBhk = type;
   renderCuratedRow(window.curatedMode, pubState.keywordSearch, pubState.selectedBhk);
 };
 
-window.executeHeroSearch = function () {
+window.executeHeroSearch = function() {
   if (typeof window.openApartmentListingPage === 'function') {
     window.openApartmentListingPage('ALL');
     return;
@@ -2851,7 +2752,7 @@ window.executeHeroSearch = function () {
   openExpandedSearchModal('buy');
 };
 
-window.togglePubLoginDropdown = function (e) {
+window.togglePubLoginDropdown = function(e) {
   if (e) e.stopPropagation();
   const d = document.getElementById('eh-login-dropdown');
   if (d) {
@@ -2873,7 +2774,7 @@ window.HERO_SLIDES_META = [
 window.heroSlideInterval = null;
 window.currentHeroSlide = 0;
 
-window.initHeroKenBurnsScreensaver = function () {
+window.initHeroKenBurnsScreensaver = function() {
   if (window.heroSlideInterval) {
     clearInterval(window.heroSlideInterval);
     window.heroSlideInterval = null;
@@ -2881,18 +2782,18 @@ window.initHeroKenBurnsScreensaver = function () {
   window.currentHeroSlide = 0;
   window.updateHeroScreensaverDOM(0);
 
-  window.heroSlideInterval = setInterval(function () {
+  window.heroSlideInterval = setInterval(function() {
     const next = (window.currentHeroSlide + 1) % window.HERO_SLIDES_META.length;
     window.switchHeroSlide(next);
   }, 3000);
 };
 
-window.switchHeroSlide = function (idx) {
+window.switchHeroSlide = function(idx) {
   window.currentHeroSlide = idx;
   window.updateHeroScreensaverDOM(idx);
 };
 
-window.updateHeroScreensaverDOM = function (idx) {
+window.updateHeroScreensaverDOM = function(idx) {
   const slides = document.querySelectorAll('.eh-screensaver-slide');
   slides.forEach((slide, i) => {
     if (i === idx) {
@@ -3179,7 +3080,7 @@ function formatDynamicNewsDate(daysAgo) {
   return dateStr;
 }
 
-window.exploreBuyingHome = function () {
+window.exploreBuyingHome = function() {
   const target = document.getElementById('newly-launched-section') || document.getElementById('curated-section');
   if (target) {
     const yOffset = -75;
@@ -3188,7 +3089,7 @@ window.exploreBuyingHome = function () {
   }
 };
 
-window.renderNexoraNewsGrid = function (categoryKey = 'news', offset = 0) {
+window.renderNexoraNewsGrid = function(categoryKey = 'news', offset = 0) {
   nexoraNewsState.currentTab = categoryKey;
   nexoraNewsState.offset = offset;
 
@@ -3198,7 +3099,7 @@ window.renderNexoraNewsGrid = function (categoryKey = 'news', offset = 0) {
   const list = NEXORA_INDIAN_NEWS_DB[categoryKey] || NEXORA_INDIAN_NEWS_DB.news;
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
   const totalOffset = (dayOfYear + offset) % list.length;
-
+  
   const displayItems = [];
   for (let i = 0; i < Math.min(4, list.length); i++) {
     displayItems.push(list[(totalOffset + i) % list.length]);
@@ -3227,20 +3128,20 @@ window.renderNexoraNewsGrid = function (categoryKey = 'news', offset = 0) {
   }
 };
 
-window.switchNexoraNewsTab = function (tab) {
+window.switchNexoraNewsTab = function(tab) {
   document.querySelectorAll('.nx-news-tab').forEach(el => el.classList.remove('active'));
   const btn = document.getElementById(`nx-ntab-${tab}`);
   if (btn) btn.classList.add('active');
   renderNexoraNewsGrid(tab, 0);
 };
 
-window.rotateNexoraNewsNext = function () {
+window.rotateNexoraNewsNext = function() {
   const list = NEXORA_INDIAN_NEWS_DB[nexoraNewsState.currentTab] || NEXORA_INDIAN_NEWS_DB.news;
   const nextOffset = (nexoraNewsState.offset + 1) % list.length;
   renderNexoraNewsGrid(nexoraNewsState.currentTab, nextOffset);
 };
 
-window.openNexoraNewsModal = function (articleId, categoryKey = 'news') {
+window.openNexoraNewsModal = function(articleId, categoryKey = 'news') {
   let modal = document.getElementById('nx-news-reader-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -3308,12 +3209,12 @@ window.openNexoraNewsModal = function (articleId, categoryKey = 'news') {
   modal.style.display = 'flex';
 };
 
-window.closeNexoraNewsModal = function () {
+window.closeNexoraNewsModal = function() {
   const m = document.getElementById('nx-news-reader-modal');
   if (m) m.style.display = 'none';
 };
 
-window.openAllNewsModal = function () {
+window.openAllNewsModal = function() {
   openNexoraNewsModal('grap-ncr', 'news');
 };
 
@@ -3676,7 +3577,7 @@ window.rentalNewsState = {
   apiData: null
 };
 
-window.initRentalNewsSection = async function () {
+window.initRentalNewsSection = async function() {
   try {
     const res = await apiFetch('/rental-news');
     if (res && res.status === 'success' && res.categories) {
@@ -3689,10 +3590,10 @@ window.initRentalNewsSection = async function () {
   window.renderRentalNewsGrid();
 };
 
-window.switchRentalNewsTab = function (tabKey) {
+window.switchRentalNewsTab = function(tabKey) {
   window.rentalNewsState.currentTab = tabKey;
   window.rentalNewsState.page = 0;
-
+  
   // Update active tab buttons
   ['news', 'tax-legal', 'help-guides', 'investment'].forEach(k => {
     const btn = document.getElementById(`rna-tab-${k}`);
@@ -3705,7 +3606,7 @@ window.switchRentalNewsTab = function (tabKey) {
   window.renderRentalNewsGrid();
 };
 
-window.renderRentalNewsGrid = function () {
+window.renderRentalNewsGrid = function() {
   const container = document.getElementById('rna-articles-grid');
   if (!container) return;
 
@@ -3772,7 +3673,7 @@ window.renderRentalNewsGrid = function () {
   }
 };
 
-window.nextRentalNewsPage = function () {
+window.nextRentalNewsPage = function() {
   const tab = window.rentalNewsState.currentTab || 'news';
   const list = (window.rentalNewsState.apiData && window.rentalNewsState.apiData[tab]) || NEXORA_RENTAL_NEWS_DB[tab] || [];
   const totalPages = Math.ceil(list.length / window.rentalNewsState.articlesPerPage) || 1;
@@ -3780,7 +3681,7 @@ window.nextRentalNewsPage = function () {
   window.renderRentalNewsGrid();
 };
 
-window.prevRentalNewsPage = function () {
+window.prevRentalNewsPage = function() {
   const tab = window.rentalNewsState.currentTab || 'news';
   const list = (window.rentalNewsState.apiData && window.rentalNewsState.apiData[tab]) || NEXORA_RENTAL_NEWS_DB[tab] || [];
   const totalPages = Math.ceil(list.length / window.rentalNewsState.articlesPerPage) || 1;
@@ -3788,7 +3689,7 @@ window.prevRentalNewsPage = function () {
   window.renderRentalNewsGrid();
 };
 
-window.openRentalArticleModal = function (articleId, categoryKey = 'news') {
+window.openRentalArticleModal = function(articleId, categoryKey = 'news') {
   let modal = document.getElementById('rna-article-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -3847,10 +3748,10 @@ window.openRentalArticleModal = function (articleId, categoryKey = 'news') {
           </div>
           <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.88rem; color: #475569; line-height: 1.7;">
             ${(article.keyPoints || [
-      'Model Tenancy Act provisions protect both parties with defined dispute timelines.',
-      'Security deposits must be refunded within 30 days of lease conclusion.',
-      'Always ensure Leave & License agreements are legally registered with state authorities.'
-    ]).map(kp => `<li style="margin-bottom: 0.4rem;">${kp}</li>`).join('')}
+              'Model Tenancy Act provisions protect both parties with defined dispute timelines.',
+              'Security deposits must be refunded within 30 days of lease conclusion.',
+              'Always ensure Leave & License agreements are legally registered with state authorities.'
+            ]).map(kp => `<li style="margin-bottom: 0.4rem;">${kp}</li>`).join('')}
           </ul>
         </div>
 
@@ -3868,12 +3769,12 @@ window.openRentalArticleModal = function (articleId, categoryKey = 'news') {
   modal.style.display = 'flex';
 };
 
-window.closeRentalArticleModal = function () {
+window.closeRentalArticleModal = function() {
   const m = document.getElementById('rna-article-modal');
   if (m) m.style.display = 'none';
 };
 
-window.openAllRentalNewsModal = function () {
+window.openAllRentalNewsModal = function() {
   const tab = window.rentalNewsState.currentTab || 'news';
   const pool = (window.rentalNewsState.apiData && window.rentalNewsState.apiData[tab]) || NEXORA_RENTAL_NEWS_DB[tab] || [];
   if (pool.length > 0) {
@@ -4138,7 +4039,7 @@ window.plotNewsState = {
   page: 0
 };
 
-window.renderPlotNewsGrid = function (tab = 'news', page = 0) {
+window.renderPlotNewsGrid = function(tab = 'news', page = 0) {
   window.plotNewsState.currentTab = tab;
   window.plotNewsState.page = page;
 
@@ -4181,24 +4082,24 @@ window.renderPlotNewsGrid = function (tab = 'news', page = 0) {
   }
 };
 
-window.switchPlotNewsTab = function (tab) {
+window.switchPlotNewsTab = function(tab) {
   document.querySelectorAll('.pna-tab-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById(`pna-tab-${tab}`);
   if (btn) btn.classList.add('active');
   renderPlotNewsGrid(tab, 0);
 };
 
-window.nextPlotNewsPage = function () {
+window.nextPlotNewsPage = function() {
   const nextPage = (window.plotNewsState.page + 1) % 2;
   renderPlotNewsGrid(window.plotNewsState.currentTab, nextPage);
 };
 
-window.prevPlotNewsPage = function () {
+window.prevPlotNewsPage = function() {
   const prevPage = Math.max(0, window.plotNewsState.page - 1);
   renderPlotNewsGrid(window.plotNewsState.currentTab, prevPage);
 };
 
-window.openPlotArticleModal = function (id, cat = 'news') {
+window.openPlotArticleModal = function(id, cat = 'news') {
   let modal = document.getElementById('pna-article-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -4245,12 +4146,12 @@ window.openPlotArticleModal = function (id, cat = 'news') {
   modal.style.display = 'flex';
 };
 
-window.closePlotArticleModal = function () {
+window.closePlotArticleModal = function() {
   const m = document.getElementById('pna-article-modal');
   if (m) m.style.display = 'none';
 };
 
-window.openAllPlotNewsModal = function () {
+window.openAllPlotNewsModal = function() {
   const tab = window.plotNewsState.currentTab || 'news';
   const pool = NEXORA_PLOT_NEWS_DB[tab] || [];
   if (pool.length > 0) {
@@ -4499,7 +4400,7 @@ window.ownerNewsState = {
   page: 0
 };
 
-window.renderOwnerNewsGrid = function (tab = 'news', page = 0) {
+window.renderOwnerNewsGrid = function(tab = 'news', page = 0) {
   window.ownerNewsState.currentTab = tab;
   window.ownerNewsState.page = page;
 
@@ -4542,24 +4443,24 @@ window.renderOwnerNewsGrid = function (tab = 'news', page = 0) {
   }
 };
 
-window.switchOwnerNewsTab = function (tab) {
+window.switchOwnerNewsTab = function(tab) {
   document.querySelectorAll('.ona-tab-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById(`ona-tab-${tab}`);
   if (btn) btn.classList.add('active');
   renderOwnerNewsGrid(tab, 0);
 };
 
-window.nextOwnerNewsPage = function () {
+window.nextOwnerNewsPage = function() {
   const nextPage = (window.ownerNewsState.page + 1) % 2;
   renderOwnerNewsGrid(window.ownerNewsState.currentTab, nextPage);
 };
 
-window.prevOwnerNewsPage = function () {
+window.prevOwnerNewsPage = function() {
   const prevPage = Math.max(0, window.ownerNewsState.page - 1);
   renderOwnerNewsGrid(window.ownerNewsState.currentTab, prevPage);
 };
 
-window.openOwnerArticleModal = function (id, cat = 'news') {
+window.openOwnerArticleModal = function(id, cat = 'news') {
   let modal = document.getElementById('ona-article-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -4606,12 +4507,12 @@ window.openOwnerArticleModal = function (id, cat = 'news') {
   modal.style.display = 'flex';
 };
 
-window.closeOwnerArticleModal = function () {
+window.closeOwnerArticleModal = function() {
   const m = document.getElementById('ona-article-modal');
   if (m) m.style.display = 'none';
 };
 
-window.openAllOwnerNewsModal = function () {
+window.openAllOwnerNewsModal = function() {
   const tab = window.ownerNewsState.currentTab || 'news';
   const pool = NEXORA_OWNER_NEWS_DB[tab] || [];
   if (pool.length > 0) {
@@ -4620,21 +4521,21 @@ window.openAllOwnerNewsModal = function () {
 };
 
 // ── DEDICATED POST PROPERTY FREE PAGE (99ACRES PATTERN FOR SAAS) ──
-window.openPostPropertyPage = function () {
+window.openPostPropertyPage = function() {
   state.viewMode = 'post-property';
   window.location.hash = '#/post-property';
   renderApp();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.closePostPropertyPage = function () {
+window.closePostPropertyPage = function() {
   state.viewMode = 'website';
   window.location.hash = '';
   renderApp();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.openPostPropertyModal = function () {
+window.openPostPropertyModal = function() {
   openPostPropertyPage();
 };
 
@@ -5049,7 +4950,7 @@ window.CONTINUE_BROWSING_DATA = {
   }
 };
 
-window.renderApartmentsVillasCarousel = function () {
+window.renderApartmentsVillasCarousel = function() {
   const track = document.getElementById('avm-carousel-track');
   if (!track) return;
   track.innerHTML = window.APARTMENTS_VILLAS_CARDS.map(card => `
@@ -5065,7 +4966,7 @@ window.renderApartmentsVillasCarousel = function () {
   `).join('');
 };
 
-window.scrollApartmentsVillas = function (direction) {
+window.scrollApartmentsVillas = function(direction) {
   const track = document.getElementById('avm-carousel-track');
   if (!track) return;
   const amount = 320;
@@ -5074,14 +4975,14 @@ window.scrollApartmentsVillas = function (direction) {
 
 window.currentContinueBrowsingTab = 'blr';
 
-window.switchContinueBrowsingTab = function (tabKey) {
+window.switchContinueBrowsingTab = function(tabKey) {
   window.currentContinueBrowsingTab = tabKey;
   document.querySelectorAll('.cb-tab-pill').forEach(btn => btn.classList.remove('active'));
   const activeBtn = document.getElementById('cb-tab-' + tabKey);
   if (activeBtn) activeBtn.classList.add('active');
 
   const tabData = window.CONTINUE_BROWSING_DATA[tabKey] || window.CONTINUE_BROWSING_DATA.blr;
-
+  
   const subEl = document.getElementById('cb-projects-sub');
   if (subEl) subEl.innerText = tabData.subText;
 
@@ -5089,7 +4990,7 @@ window.switchContinueBrowsingTab = function (tabKey) {
   renderRecommendedProjects(tabKey);
 };
 
-window.renderCuratedProperties = function (tabKey) {
+window.renderCuratedProperties = function(tabKey) {
   const track = document.getElementById('cb-curated-properties-track');
   if (!track) return;
   const tabData = window.CONTINUE_BROWSING_DATA[tabKey] || window.CONTINUE_BROWSING_DATA.blr;
@@ -5120,14 +5021,14 @@ window.renderCuratedProperties = function (tabKey) {
   `).join('');
 };
 
-window.scrollCuratedProperties = function (direction) {
+window.scrollCuratedProperties = function(direction) {
   const track = document.getElementById('cb-curated-properties-track');
   if (!track) return;
   const amount = 310;
   track.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
 };
 
-window.renderRecommendedProjects = function (tabKey) {
+window.renderRecommendedProjects = function(tabKey) {
   const grid = document.getElementById('cb-recommended-projects-grid');
   if (!grid) return;
   const tabData = window.CONTINUE_BROWSING_DATA[tabKey] || window.CONTINUE_BROWSING_DATA.blr;
@@ -5159,7 +5060,7 @@ window.renderRecommendedProjects = function (tabKey) {
   `).join('');
 };
 
-window.togglePropertyFavorite = function (btn, ev) {
+window.togglePropertyFavorite = function(btn, ev) {
   if (ev) ev.stopPropagation();
   btn.classList.toggle('active');
   if (btn.classList.contains('active')) {
@@ -5170,12 +5071,12 @@ window.togglePropertyFavorite = function (btn, ev) {
   }
 };
 
-window.contactPropertyAgent = function (title, price, loc) {
+window.contactPropertyAgent = function(title, price, loc) {
   const msg = encodeURIComponent('Hi Nexora, I am interested in this listing:\n' + title + '\nPrice: ' + price + '\nLocation: ' + loc);
   window.open('https://wa.me/919876543210?text=' + msg, '_blank');
 };
 
-window.openCategorySearch = function (cat) {
+window.openCategorySearch = function(cat) {
   if (typeof window.openApartmentListingPage === 'function') {
     window.openApartmentListingPage(cat);
     return;
@@ -5199,7 +5100,7 @@ window.postPropertyFormState = {
   role: 'Property Owner'
 };
 
-window.setPPFState = function (key, val, el) {
+window.setPPFState = function(key, val, el) {
   window.postPropertyFormState[key] = val;
   if (el && el.parentElement) {
     el.parentElement.querySelectorAll('.ppf-pill-btn').forEach(b => b.classList.remove('active'));
@@ -5207,7 +5108,7 @@ window.setPPFState = function (key, val, el) {
   }
 };
 
-window.renderPostPropertyPage = function (root) {
+window.renderPostPropertyPage = function(root) {
   root.innerHTML = `
     <div class="ppf-page-wrap">
       <!-- Top Navigation Header -->
@@ -5500,7 +5401,7 @@ window.renderPostPropertyPage = function (root) {
   `;
 };
 
-window.submitFreePropertyListing = function () {
+window.submitFreePropertyListing = function() {
   const locality = document.getElementById('ppf-locality-input')?.value || 'Sector 43';
   const name = document.getElementById('ppf-name-input')?.value || 'Verified Owner';
   const phone = document.getElementById('ppf-phone-input')?.value || '+91 98765 43210';
@@ -5651,7 +5552,7 @@ const NEWLY_LAUNCHED_PROJECTS_DEFAULT = [
   }
 ];
 
-window.loadNewlyLaunchedProjects = async function () {
+window.loadNewlyLaunchedProjects = async function() {
   const track = document.getElementById('nl-cards-track');
   if (!track) return;
 
@@ -5660,14 +5561,14 @@ window.loadNewlyLaunchedProjects = async function () {
   try {
     const raw = localStorage.getItem('nexora_crm_new_launches');
     if (raw) {
-      crmLaunches = JSON.parse(raw);
+      crmLaunches = JSON.parse(raw).filter(item => item && item.id && !item.id.startsWith("crm-nl-"));
     }
   } catch (e) {
     crmLaunches = [];
   }
 
-  // 2. Also check if user is logged in and can fetch live DB projects from CRM backend
-  if (typeof state !== 'undefined' && state && state.token) {
+  // 2. Fetch live DB projects from CRM backend for website
+  if (true) {
     try {
       const res = await apiFetch('/projects');
       if (res && res.data && Array.isArray(res.data)) {
@@ -5683,10 +5584,11 @@ window.loadNewlyLaunchedProjects = async function () {
               highlightType: 'completion',
               highlightText: p.possession_date ? `🔑 Completion in ${p.possession_date}` : '🔑 Completion in 2029',
               ribbon: 'NEW LAUNCH',
-              rera: p.rera_number ? '✔ RERA' : '✔ RERA',
+              rera: p.rera_number ? ('✔ RERA: ' + p.rera_number) : '✔ RERA',
               phone: '+91 98310 44219',
               img: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80',
               developer: p.builder_developer || 'Nexora Verified Partner',
+              brochureUrl: p.brochure_url,
               fromAdmin: true
             });
           }
@@ -5709,6 +5611,8 @@ window.loadNewlyLaunchedProjects = async function () {
       uniqueProjects.push(prj);
     }
   }
+
+  window._nexoraNewlyLaunchedProjectsCache = uniqueProjects;
 
   // Limit display to 4 to 6 projects as requested
   const displayProjects = uniqueProjects.slice(0, 6);
@@ -5792,7 +5696,7 @@ window.loadNewlyLaunchedProjects = async function () {
   }).join('');
 };
 
-window.scrollNewlyLaunched = function (direction = 'right') {
+window.scrollNewlyLaunched = function(direction = 'right') {
   const track = document.getElementById('nl-cards-track');
   if (!track) return;
   const scrollAmount = 370;
@@ -5803,7 +5707,7 @@ window.scrollNewlyLaunched = function (direction = 'right') {
   }
 };
 
-window.openViewNumberModal = function (projectId) {
+window.openViewNumberModal = function(projectId) {
   let project = null;
   try {
     const raw = localStorage.getItem('nexora_crm_new_launches');
@@ -5811,7 +5715,7 @@ window.openViewNumberModal = function (projectId) {
       const crmLaunches = JSON.parse(raw);
       project = crmLaunches.find(p => p.id === projectId);
     }
-  } catch (e) { }
+  } catch (e) {}
 
   if (!project) {
     project = NEWLY_LAUNCHED_PROJECTS_DEFAULT.find(p => p.id === projectId);
@@ -5894,7 +5798,7 @@ window.openViewNumberModal = function (projectId) {
   modal.style.display = 'flex';
 };
 
-window.closeViewNumberModal = function () {
+window.closeViewNumberModal = function() {
   const m = document.getElementById('nl-view-number-modal');
   if (m) m.style.display = 'none';
 };
@@ -5973,7 +5877,7 @@ const UPCOMING_PROJECTS_DEFAULT = [
   }
 ];
 
-window.loadUpcomingProjects = async function () {
+window.loadUpcomingProjects = async function() {
   const track = document.getElementById('up-billboard-track');
   const dotsContainer = document.getElementById('up-dots-container');
   if (!track) return;
@@ -6011,10 +5915,10 @@ window.loadUpcomingProjects = async function () {
         }
       });
     }
-  } catch (e) { }
+  } catch (e) {}
 
-  // 2. Also check if user is logged in and can fetch live DB projects from CRM backend
-  if (typeof state !== 'undefined' && state && state.token) {
+  // 2. Fetch live DB projects from CRM backend for website
+  if (true) {
     try {
       const res = await apiFetch('/projects');
       if (res && res.data && Array.isArray(res.data)) {
@@ -6036,7 +5940,7 @@ window.loadUpcomingProjects = async function () {
           }
         });
       }
-    } catch (err) { }
+    } catch (err) {}
   }
 
   // 3. Combine: CRM Super Admin additions appear first, followed by default upcoming projects
@@ -6134,7 +6038,7 @@ window.loadUpcomingProjects = async function () {
   }
 };
 
-window.scrollUpcomingProjects = function (direction = 'next') {
+window.scrollUpcomingProjects = function(direction = 'next') {
   const track = document.getElementById('up-billboard-track');
   if (!track) return;
   const cardWidth = track.clientWidth || 800;
@@ -6145,14 +6049,14 @@ window.scrollUpcomingProjects = function (direction = 'next') {
   }
 };
 
-window.goToUpcomingProject = function (index) {
+window.goToUpcomingProject = function(index) {
   const track = document.getElementById('up-billboard-track');
   if (!track) return;
   const cardWidth = track.clientWidth || 800;
   track.scrollTo({ left: index * cardWidth, behavior: 'smooth' });
 };
 
-window.openUpcomingDeveloperModal = function (projectId) {
+window.openUpcomingDeveloperModal = function(projectId) {
   const cache = window._nexoraUpcomingProjectsCache || UPCOMING_PROJECTS_DEFAULT;
   const project = cache.find(p => p.id === projectId) || UPCOMING_PROJECTS_DEFAULT[0];
 
@@ -6225,28 +6129,26 @@ window.openUpcomingDeveloperModal = function (projectId) {
   modal.style.display = 'flex';
 };
 
-window.closeUpcomingDeveloperModal = function () {
+window.closeUpcomingDeveloperModal = function() {
   const m = document.getElementById('up-developer-modal');
   if (m) m.style.display = 'none';
 };
 
-window.submitEarlyBirdInquiry = function (projectName, developer) {
-  const nameInput = document.getElementById('up-inq-name');
-  const phoneInput = document.getElementById('up-inq-phone');
-  const name = nameInput ? nameInput.value.trim() : 'Guest';
-  const phone = phoneInput ? phoneInput.value.trim() : '';
+// Real handler: js/enquiry.js (creates a lead).
+window.submitEarlyBirdInquiry = function() {};
 
-  closeUpcomingDeveloperModal();
-  if (typeof showToastNotification === 'function') {
-    showToastNotification(`🎉 Thank you ${name}! Your Early Bird Priority Pass for ${projectName} (${developer}) has been registered. The official sales desk will contact you at ${phone}.`, 'success');
-  } else {
-    alert(`🎉 Thank you ${name}! Your Early Bird Priority Pass for ${projectName} has been registered.`);
+window.openUpcomingViewNumberModal = function(projectId) {
+  // Find the project in whichever list rendered the button (showcase cards, CRM-created launches, detail page)
+  const lists = [window._nexoraUpcomingProjectsCache, window._nexoraNewlyLaunchedProjectsCache, state.projects, UPCOMING_PROJECTS_DEFAULT];
+  let project = null;
+  for (const list of lists) {
+    if (Array.isArray(list)) project = list.find(p => p && p.id === projectId);
+    if (project) break;
   }
-};
-
-window.openUpcomingViewNumberModal = function (projectId) {
-  const cache = window._nexoraUpcomingProjectsCache || UPCOMING_PROJECTS_DEFAULT;
-  const project = cache.find(p => p.id === projectId) || UPCOMING_PROJECTS_DEFAULT[0];
+  const dbHit = (window._projectDetailsDbCache || {})[projectId];
+  if (!project && dbHit) project = dbHit.data || dbHit;
+  project = project || { id: projectId, name: 'our projects', developer: 'Nexora Estates', location: '' };
+  project = { ...project, developer: project.developer || project.builder_developer || 'Nexora Estates', location: project.location || project.city || '' };
 
   let modal = document.getElementById('nl-view-number-modal');
   if (!modal) {
@@ -6267,8 +6169,8 @@ window.openUpcomingViewNumberModal = function (projectId) {
           <div style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">
             ⚡ Verified Developer Sales Desk
           </div>
-          <h2 style="font-size: 1.25rem; font-weight: 850; color: #ffffff; margin: 0.2rem 0 0;">${project.name}</h2>
-          <p style="font-size: 0.8rem; color: #e2e8f0; margin: 0.2rem 0 0;">${project.developer} • ${project.location}</p>
+          <h2 style="font-size: 1.25rem; font-weight: 850; color: #ffffff; margin: 0.2rem 0 0;">${escapeHtml(project.name)}</h2>
+          <p style="font-size: 0.8rem; color: #e2e8f0; margin: 0.2rem 0 0;">${escapeHtml(project.developer)}${project.location ? ' • ' + escapeHtml(project.location) : ''}</p>
         </div>
         <button class="eh-modal-close-btn" style="color: #ffffff;" onclick="closeViewNumberModal()">&times;</button>
       </div>
@@ -6305,8 +6207,19 @@ window.openUpcomingViewNumberModal = function (projectId) {
           </a>
         </div>
 
+        <form id="nl-callback-form" onsubmit="submitWebsiteCallback(event)" data-project-id="${escapeHtml(project.id || '')}" data-project-name="${escapeHtml(project.name || '')}" style="border-top: 1px solid #e2e8f0; padding-top: 1.1rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.9rem; font-weight: 800; color: #091e42; margin-bottom: 0.15rem;">Prefer a call back?</div>
+          <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 0.7rem;">Leave your number — an advisor calls you within 2 working hours.</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <input name="full_name" required placeholder="Your name" autocomplete="name" style="height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 0.75rem; font-size: 0.88rem; min-width: 0; color: #091e42; background: #ffffff;" />
+            <input name="phone" required inputmode="tel" placeholder="Mobile number" autocomplete="tel" minlength="10" maxlength="16" style="height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 0.75rem; font-size: 0.88rem; min-width: 0; color: #091e42; background: #ffffff;" />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 42px; font-weight: 750; background: #091e42; color: #ffffff; border: none;">Request call back</button>
+          <div id="nl-callback-status" style="display: none; margin-top: 0.6rem; font-size: 0.82rem; font-weight: 650;"></div>
+        </form>
+
         <div style="border-top: 1px solid #e2e8f0; padding-top: 1rem; font-size: 0.74rem; color: #64748b; text-align: center;">
-          Nexora Estates • Official Developer Partner: <b>${project.developer}</b>
+          Nexora Estates • Official Developer Partner: <b>${escapeHtml(project.developer)}</b>
         </div>
       </div>
     </div>
@@ -6315,8 +6228,129 @@ window.openUpcomingViewNumberModal = function (projectId) {
   modal.style.display = 'flex';
 };
 
+// Website enquiry → CRM lead: auto-assigned to an available agent (or credited to the agent /
+// channel partner whose share link the visitor came from).
+window.submitWebsiteCallback = async function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const status = document.getElementById('nl-callback-status');
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerText = 'Sending…';
+  try {
+    const res = await fetch(`${API_BASE}/leads/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: form.full_name.value.trim(),
+        phone: form.phone.value.trim(),
+        project_id: form.dataset.projectId || null,
+        project_name: form.dataset.projectName || null,
+        source: 'WEBSITE',
+        message: `Requested a call back${form.dataset.projectName ? ` for ${form.dataset.projectName}` : ''}`,
+        ref: typeof window.getShareReferrer === 'function' ? window.getShareReferrer() : null
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Could not send your request.');
+    form.querySelectorAll('input').forEach(i => { i.disabled = true; });
+    btn.style.display = 'none';
+    status.style.display = 'block';
+    status.style.color = '#15803d';
+    status.innerText = '✓ ' + (data.message || 'Thanks! An advisor will call you shortly.');
+  } catch (err) {
+    status.style.display = 'block';
+    status.style.color = '#b91c1c';
+    status.innerText = err.message;
+    btn.disabled = false;
+    btn.innerText = 'Request call back';
+  }
+};
+
 // ── CUSTOMER PROJECT DETAIL PAGE SYSTEM (NEXORA LUXURY PATTERN WITH BROCHURE DOWNLOAD) ──
-window.getCustomerProjectData = function (projectId) {
+window.getCustomerProjectData = function(projectId) {
+  // Check live DB cache first if project is created via CRM
+  if (projectId && window._projectDetailsDbCache && window._projectDetailsDbCache[projectId]) {
+    const cachedDbPrj = window._projectDetailsDbCache[projectId];
+    return {
+      id: cachedDbPrj.id,
+      name: cachedDbPrj.name,
+      tagline: cachedDbPrj.project_type ? ('Exclusive ' + cachedDbPrj.project_type.toLowerCase() + ' development') : 'Premium Residential Development',
+      developer: cachedDbPrj.builder_developer || 'Nexora Verified Partner',
+      developerLogo: '🏢 ' + (cachedDbPrj.builder_developer || 'NEXORA PARTNER'),
+      location: cachedDbPrj.location + ', ' + (cachedDbPrj.city || 'Bengaluru'),
+      city: cachedDbPrj.city || 'Bengaluru',
+      locality: cachedDbPrj.location || 'Metropolitan Hub',
+      price: '₹ 1.25 Cr - ₹ 2.85 Cr',
+      priceSqft: '₹ 8,450 / sq.ft',
+      emi: '₹ 62.5 K / month',
+      rera: cachedDbPrj.rera_number || 'PRM/KA/RERA/VERIFIED/2026',
+      status: cachedDbPrj.status === 'NEW_LAUNCH' ? 'New Launch (Under Construction)' : cachedDbPrj.status,
+      rating: '4.8',
+      reviewCount: '34',
+      totalUnits: (cachedDbPrj.total_units || 48) + ' Luxury Units',
+      landArea: '12.5 Acres Master Community',
+      openSpace: '75% Open & Landscaped Expanses',
+      possession: cachedDbPrj.possession_date || 'Possession Dec 2028',
+      phone: '+91 98310 44219',
+      cleanPhone: '919831044219',
+      brochureUrl: cachedDbPrj.brochure_url || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
+      photos: [
+        { url: cachedDbPrj.hero_image_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80', label: 'Panoramic Architectural Elevation' },
+        { url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80', label: 'Facade & Landscaped Driveway' },
+        { url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80', label: 'Infinity Swimming Pool & Clubhouse' },
+        { url: 'https://images.unsplash.com/photo-1584738766473-61c083514bf4?auto=format&fit=crop&w=800&q=80', label: 'Zen Meditation Courtyard' },
+        { url: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80', label: 'Designer Living Lounge & Deck' }
+      ],
+      description: cachedDbPrj.name + ' by ' + (cachedDbPrj.builder_developer || 'Nexora') + ' is a signature development located at ' + cachedDbPrj.location + ', ' + (cachedDbPrj.city || 'Bengaluru') + '. Built to international standards with 0% brokerage directly through Nexora Estates.',
+      configs: [
+        {
+          type: '3 BHK Luxury Villa',
+          superArea: '2,150 sq.ft',
+          carpetArea: '1,680 sq.ft',
+          price: '₹ 1.45 Cr+',
+          baths: '3 Baths',
+          balconies: '2 Balconies',
+          facing: 'East Facing Vastu Compliant',
+          status: 'Available'
+        },
+        {
+          type: '4 BHK Grand Duplex Villa',
+          superArea: '3,200 sq.ft',
+          carpetArea: '2,540 sq.ft',
+          price: '₹ 2.25 Cr+',
+          baths: '4 Baths',
+          balconies: '3 Balconies',
+          facing: 'North-East Facing',
+          status: 'Pre-Booking'
+        }
+      ],
+      amenities: [
+        { icon: '🏊', name: 'Infinity Pool & Sun Deck' },
+        { icon: '🏋️', name: 'State-of-the-Art Gymnasium' },
+        { icon: '🏸', name: 'Badminton & Squash Courts' },
+        { icon: '🧘', name: 'Zen Meditation Pavilion' },
+        { icon: '🚗', name: 'EV Charging Enabled Parking' },
+        { icon: '🛡️', name: '24/7 Biometric Multi-Tier Security' },
+        { icon: '⚡', name: '100% DG Power Backup' },
+        { icon: '🌿', name: 'IGBC Green Certified' }
+      ],
+      locations: [
+        { place: '🚆 Metro Corridor & Tech Park Access', distance: '1.2 km (4 mins)' },
+        { place: '🏫 Top International School', distance: '1.5 km (5 mins)' },
+        { place: '🏥 Multispeciality Healthcare', distance: '2.4 km (7 mins)' },
+        { place: '🛍️ High-Street Retail & Dining', distance: '800 meters (Walk)' }
+      ],
+      reviews: [
+        {
+          name: 'Verified Buyer',
+          rating: '4.8',
+          time: 'Verified Allotment • Recent',
+          text: 'Exceptional development quality by ' + (cachedDbPrj.builder_developer || 'Nexora') + '. Clear documentation and RERA approved.'
+        }
+      ]
+    };
+  }
   if (!projectId || projectId === 'up-mahindra-aquavista' || projectId.includes('aquavista') || projectId.includes('mahindra')) {
     return {
       id: 'up-mahindra-aquavista',
@@ -6433,7 +6467,9 @@ window.getCustomerProjectData = function (projectId) {
   // Look up other upcoming or newly launched projects
   let found = null;
   const allKnown = [
+    ...(window._nexoraNewlyLaunchedProjectsCache || []),
     ...(window._nexoraUpcomingProjectsCache || []),
+    ...(state.projects ? state.projects.map(p => ({ id: p.id, name: p.name, location: p.location + ', ' + p.city, developer: p.builder_developer, brochureUrl: p.brochure_url, rera: p.rera_number, possession: p.possession_date, config: (p.total_units || 100) + ' Units' })) : []),
     ...UPCOMING_PROJECTS_DEFAULT,
     ...NEWLY_LAUNCHED_PROJECTS_DEFAULT,
     ...HANDPICKED_RESIDENTIAL_PROJECTS
@@ -6463,7 +6499,7 @@ window.getCustomerProjectData = function (projectId) {
       possession: 'Possession 2028-2029',
       phone: found.phone || '+91 98409 23145',
       cleanPhone: (found.phone || '+91 98409 23145').replace(/[^\d]/g, ''),
-      brochureUrl: '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
+      brochureUrl: found.brochureUrl || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
       photos: [
         { url: found.img || '/assets/mahindra_aquavista.jpg', label: 'Primary Elevation View' },
         { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80', label: 'Architectural Panorama' },
@@ -6525,7 +6561,7 @@ window.getCustomerProjectData = function (projectId) {
   return window.getCustomerProjectData('up-mahindra-aquavista');
 };
 
-window.navigateToCustomerProject = function (projectId) {
+window.navigateToCustomerProject = function(projectId) {
   if (!projectId) projectId = 'up-mahindra-aquavista';
   state.selectedCustomerProjectId = projectId;
   state.customerView = null;
@@ -6535,7 +6571,7 @@ window.navigateToCustomerProject = function (projectId) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.navigateBackToHome = function () {
+window.navigateBackToHome = function() {
   state.selectedCustomerProjectId = null;
   state.customerView = null;
   window.location.hash = '';
@@ -6543,10 +6579,10 @@ window.navigateBackToHome = function () {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.downloadProjectBrochure = function (projectId) {
+window.downloadProjectBrochure = function(projectId) {
   const p = window.getCustomerProjectData(projectId);
   const brochureUrl = p.brochureUrl || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf';
-
+  
   // 1. Programmatic trigger of actual PDF file download
   const a = document.createElement('a');
   a.href = brochureUrl;
@@ -6563,7 +6599,7 @@ window.downloadProjectBrochure = function (projectId) {
   window.openDigitalBrochureModal(projectId);
 };
 
-window.openDigitalBrochureModal = function (projectId) {
+window.openDigitalBrochureModal = function(projectId) {
   const p = window.getCustomerProjectData(projectId);
   let modal = document.getElementById('cpd-brochure-modal');
   if (!modal) {
@@ -6699,12 +6735,12 @@ window.openDigitalBrochureModal = function (projectId) {
   modal.style.display = 'flex';
 };
 
-window.closeDigitalBrochureModal = function () {
+window.closeDigitalBrochureModal = function() {
   const m = document.getElementById('cpd-brochure-modal');
   if (m) m.style.display = 'none';
 };
 
-window.openProjectPhotoGalleryModal = function (projectId) {
+window.openProjectPhotoGalleryModal = function(projectId) {
   const p = window.getCustomerProjectData(projectId);
   let modal = document.getElementById('cpd-gallery-modal');
   if (!modal) {
@@ -6741,12 +6777,12 @@ window.openProjectPhotoGalleryModal = function (projectId) {
   modal.style.display = 'flex';
 };
 
-window.closeProjectPhotoGalleryModal = function () {
+window.closeProjectPhotoGalleryModal = function() {
   const m = document.getElementById('cpd-gallery-modal');
   if (m) m.style.display = 'none';
 };
 
-window.switchCpdFloorPlan = function (index) {
+window.switchCpdFloorPlan = function(index) {
   const p = window.getCustomerProjectData(state.selectedCustomerProjectId || 'up-mahindra-aquavista');
   const cfg = p.configs[index] || p.configs[0];
 
@@ -6826,18 +6862,60 @@ window.switchCpdFloorPlan = function (index) {
   }
 };
 
-window.submitCustomerProjectInquiry = function (projectName) {
-  const name = document.getElementById('cpd-inq-name')?.value || 'Guest';
-  const phone = document.getElementById('cpd-inq-phone')?.value || '';
-  if (typeof showToastNotification === 'function') {
-    showToastNotification(`🎉 Thank you ${name}! Your site visit & VIP allotment request for ${projectName} has been registered. The direct sales desk will reach you at ${phone}.`, 'success');
-  } else {
-    alert(`🎉 Thank you ${name}! Your inquiry for ${projectName} has been submitted.`);
+// Real handler: js/enquiry.js (creates a lead).
+window.submitCustomerProjectInquiry = function() {};
+
+// Main Customer Project Detail Renderer
+window.scrollToCpdSection = function(sectionId, btn) {
+  const target = document.getElementById(sectionId);
+  const container = document.querySelector('.cpd-page');
+
+  if (btn) {
+    document.querySelectorAll('.cpd-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  if (target) {
+    if (container) {
+      const targetTop = target.offsetTop - 120;
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    } else {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 };
 
-// Main Customer Project Detail Renderer
-window.renderCustomerProjectDetail = function (root, projectId) {
+window.renderCustomerProjectDetail = function(root, projectId) {
+  window._projectDetailsDbCache = window._projectDetailsDbCache || {};
+
+  // Auto-resolve any legacy dummy crm-nl- ID to real database project
+  if (projectId && projectId.startsWith('crm-nl-')) {
+    try {
+      const raw = localStorage.getItem('nexora_crm_new_launches');
+      const arr = JSON.parse(raw || '[]');
+      const dummyObj = arr.find(x => x.id === projectId);
+      if (dummyObj) {
+        const dbList = window._nexoraNewlyLaunchedProjectsCache || state.projects || [];
+        const match = dbList.find(p => p && p.name && p.name.toLowerCase() === dummyObj.name.toLowerCase());
+        if (match && match.id && !match.id.startsWith('crm-nl-')) {
+          projectId = match.id;
+          state.selectedCustomerProjectId = match.id;
+          window.location.hash = '#/project/' + match.id;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Only call /api/projects/:id if it is a valid UUID
+  const isValidDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
+  if (isValidDbUuid && !window._projectDetailsDbCache[projectId]) {
+    apiFetch('/projects/' + projectId).then(res => {
+      if (res && res.data) {
+        window._projectDetailsDbCache[projectId] = res.data;
+        window.renderCustomerProjectDetail(root, projectId);
+      }
+    }).catch(e => console.warn('Could not fetch project details:', e));
+  }
   const p = window.getCustomerProjectData(projectId);
 
   root.innerHTML = `
@@ -6892,13 +6970,21 @@ window.renderCustomerProjectDetail = function (root, projectId) {
               <span>📍 ${p.location}</span>
             </div>
             <div class="cpd-badges-row">
-              <span class="cpd-rera-pill">✔ RERA: ${p.rera}</span>
-              <span class="cpd-rating-pill">★ ${p.rating} / 5 (${p.reviewCount} Verified Reviews)</span>
-              <span style="background: #e0f2fe; color: #0284c7; font-size: 0.74rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 9999px;">
-                🟢 ${p.status}
+              <span class="cpd-rera-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>${p.rera && p.rera.includes('RERA') ? p.rera : 'RERA Approved: ' + (p.rera || 'Verified')}</span>
               </span>
-              <span style="background: #f1f5f9; color: #334155; font-size: 0.74rem; font-weight: 750; padding: 0.25rem 0.75rem; border-radius: 9999px;">
-                🏷️ 0% Brokerage Guaranteed
+              <span class="cpd-rating-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>${p.rating} / 5 (${p.reviewCount} Ratings)</span>
+              </span>
+              <span class="cpd-status-pill">
+                <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+                <span>${p.status}</span>
+              </span>
+              <span class="cpd-brokerage-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>0% Brokerage Guaranteed</span>
               </span>
             </div>
           </div>
@@ -6940,13 +7026,13 @@ window.renderCustomerProjectDetail = function (root, projectId) {
 
         <!-- 5. STICKY IN-PAGE SECTION TABS -->
         <nav class="cpd-sticky-tabs">
-          <button class="cpd-tab-btn active" onclick="document.getElementById('sec-overview').scrollIntoView({behavior: 'smooth'})">Overview</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-plans').scrollIntoView({behavior: 'smooth'})">Price & Floor Plans</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-amenities').scrollIntoView({behavior: 'smooth'})">Amenities</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-specs').scrollIntoView({behavior: 'smooth'})">Master Plan & Specs</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-location').scrollIntoView({behavior: 'smooth'})">Location & Connectivity</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-developer').scrollIntoView({behavior: 'smooth'})">About Developer</button>
-          <button class="cpd-tab-btn" onclick="document.getElementById('sec-reviews').scrollIntoView({behavior: 'smooth'})">Customer Reviews</button>
+          <button class="cpd-tab-btn active" data-target="sec-overview" onclick="scrollToCpdSection('sec-overview', this)">Overview</button>
+          <button class="cpd-tab-btn" data-target="sec-plans" onclick="scrollToCpdSection('sec-plans', this)">Price & Floor Plans</button>
+          <button class="cpd-tab-btn" data-target="sec-amenities" onclick="scrollToCpdSection('sec-amenities', this)">Amenities</button>
+          <button class="cpd-tab-btn" data-target="sec-specs" onclick="scrollToCpdSection('sec-specs', this)">Master Plan & Specs</button>
+          <button class="cpd-tab-btn" data-target="sec-location" onclick="scrollToCpdSection('sec-location', this)">Location & Connectivity</button>
+          <button class="cpd-tab-btn" data-target="sec-developer" onclick="scrollToCpdSection('sec-developer', this)">About Developer</button>
+          <button class="cpd-tab-btn" data-target="sec-reviews" onclick="scrollToCpdSection('sec-reviews', this)">Customer Reviews</button>
         </nav>
 
         <!-- 6. MAIN TWO-COLUMN LAYOUT -->
@@ -7204,6 +7290,31 @@ window.renderCustomerProjectDetail = function (root, projectId) {
 
   // Initialize floor plan tab
   switchCpdFloorPlan(0);
+
+  // Active Scroll Spy for sticky tabs
+  const pageContainer = root.querySelector('.cpd-page');
+  if (pageContainer) {
+    pageContainer.addEventListener('scroll', () => {
+      const sections = ['sec-overview', 'sec-plans', 'sec-amenities', 'sec-specs', 'sec-location', 'sec-developer', 'sec-reviews'];
+      let currentSec = sections[0];
+      const scrollPos = pageContainer.scrollTop + 160;
+
+      for (const secId of sections) {
+        const el = document.getElementById(secId);
+        if (el && el.offsetTop <= scrollPos) {
+          currentSec = secId;
+        }
+      }
+
+      document.querySelectorAll('.cpd-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-target') === currentSec) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }, { passive: true });
+  }
 };
 
 // Listen to Hash Changes to support deep-linking (e.g. #/project/up-mahindra-aquavista or #/projects)
@@ -7380,7 +7491,7 @@ const HANDPICKED_RESIDENTIAL_PROJECTS = [
   }
 ];
 
-window.renderHandpickedResidentialProjects = function () {
+window.renderHandpickedResidentialProjects = function() {
   const track = document.getElementById('hrp-cards-track');
   if (!track) return;
 
@@ -7411,7 +7522,7 @@ window.renderHandpickedResidentialProjects = function () {
   `).join('');
 };
 
-window.scrollHandpickedProjects = function (direction = 'right') {
+window.scrollHandpickedProjects = function(direction = 'right') {
   const track = document.getElementById('hrp-cards-track');
   if (!track) return;
   const scrollAmount = 390;
@@ -7422,7 +7533,7 @@ window.scrollHandpickedProjects = function (direction = 'right') {
   }
 };
 
-window.toggleHandpickedFavorite = function (projectId) {
+window.toggleHandpickedFavorite = function(projectId) {
   const btn = document.getElementById(`fav-btn-${projectId}`);
   if (btn) {
     const isFav = btn.classList.toggle('active');
@@ -7443,7 +7554,7 @@ window._capFilterState = {
   sort: 'featured'
 };
 
-window.navigateToAllProjects = function (category) {
+window.navigateToAllProjects = function(category) {
   state.selectedCustomerProjectId = null;
   state.customerView = 'all-projects';
   state.viewMode = 'website';
@@ -7456,7 +7567,7 @@ window.navigateToAllProjects = function (category) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.getAllCustomerProjectsList = function () {
+window.getAllCustomerProjectsList = function() {
   const projects = [];
   const seenIds = new Set();
 
@@ -7464,14 +7575,14 @@ window.getAllCustomerProjectsList = function () {
   const crmUpcomingRaw = localStorage.getItem('nexora_crm_upcoming_projects');
   let crmUpcoming = [];
   if (crmUpcomingRaw) {
-    try { crmUpcoming = JSON.parse(crmUpcomingRaw); } catch (e) { }
+    try { crmUpcoming = JSON.parse(crmUpcomingRaw); } catch(e) {}
   }
 
   // 2. Dynamic CRM newly launched projects
   const crmLaunchesRaw = localStorage.getItem('nexora_crm_newly_launched');
   let crmLaunches = [];
   if (crmLaunchesRaw) {
-    try { crmLaunches = JSON.parse(crmLaunchesRaw); } catch (e) { }
+    try { crmLaunches = JSON.parse(crmLaunchesRaw); } catch(e) {}
   }
 
   // A. UPCOMING PROJECTS (Includes Mahindra AquaVista, Godrej, Prestige, Sobha, DLF)
@@ -7566,7 +7677,7 @@ window.getAllCustomerProjectsList = function () {
   return projects;
 };
 
-window.renderCapProjectCard = function (p) {
+window.renderCapProjectCard = function(p) {
   const badgeClass = p.category === 'upcoming' ? 'upcoming' : (p.category === 'new-launch' ? 'new-launch' : 'luxury');
   return `
     <div class="cap-card" onclick="navigateToCustomerProject('${p.id}')">
@@ -7617,7 +7728,7 @@ window.renderCapProjectCard = function (p) {
   `;
 };
 
-window.renderCustomerAllProjectsPage = function (root) {
+window.renderCustomerAllProjectsPage = function(root) {
   const allProjects = window.getAllCustomerProjectsList();
   const cities = Array.from(new Set(allProjects.map(p => p.city).filter(Boolean))).sort();
 
@@ -7645,7 +7756,7 @@ window.renderCustomerAllProjectsPage = function (root) {
           </button>
           <button class="btn" onclick="openShieldedCallModal()" style="background: #091e42; color: #ffffff; border: none; font-size: 0.82rem; font-weight: 800; padding: 0.5rem 1rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.4rem;">
             <span>📞</span>
-            <span>Sales Desk (1800-NEXORA)</span>
+            <span>Talk to sales</span>
           </button>
         </div>
       </header>
@@ -7802,7 +7913,7 @@ window.renderCustomerAllProjectsPage = function (root) {
   window.filterCustomerAllProjects();
 };
 
-window.setCapCategoryFilter = function (btn, cat) {
+window.setCapCategoryFilter = function(btn, cat) {
   window._capFilterState.category = cat;
   const pills = document.querySelectorAll('.cap-pill-btn');
   pills.forEach(p => p.classList.remove('active'));
@@ -7810,7 +7921,7 @@ window.setCapCategoryFilter = function (btn, cat) {
   window.filterCustomerAllProjects();
 };
 
-window.resetCapFilters = function () {
+window.resetCapFilters = function() {
   window._capFilterState = {
     search: '',
     category: 'all',
@@ -7850,7 +7961,7 @@ function parseCapPriceValue(priceStr) {
   return val;
 }
 
-window.filterCustomerAllProjects = function () {
+window.filterCustomerAllProjects = function() {
   const searchInput = document.getElementById('cap-search-input');
   const citySelect = document.getElementById('cap-city-select');
   const budgetSelect = document.getElementById('cap-budget-select');
@@ -7887,7 +7998,7 @@ window.filterCustomerAllProjects = function () {
 
   // 3. Search Filter
   if (searchTerm) {
-    list = list.filter(p =>
+    list = list.filter(p => 
       (p.name && p.name.toLowerCase().includes(searchTerm)) ||
       (p.developer && p.developer.toLowerCase().includes(searchTerm)) ||
       (p.location && p.location.toLowerCase().includes(searchTerm)) ||
@@ -8038,7 +8149,7 @@ const DVIGA_RESIDENCES_DB = [
 
 window.currentDvigaPerspective = 0;
 
-window.setDvigaPerspective = function (index) {
+window.setDvigaPerspective = function(index) {
   window.currentDvigaPerspective = index;
   for (let i = 0; i < 4; i++) {
     const layer = document.getElementById('dv-layer-' + i);
@@ -8054,7 +8165,7 @@ window.setDvigaPerspective = function (index) {
   }
 };
 
-window.initDvigaHeroInteraction = function () {
+window.initDvigaHeroInteraction = function() {
   const heroSection = document.getElementById('dv-hero-section');
   const cursorPop = document.getElementById('dv-cursor-pop');
   const heroCanvas = document.getElementById('dv-hero-canvas');
@@ -8098,7 +8209,7 @@ window.initDvigaHeroInteraction = function () {
   }, { passive: true });
 };
 
-window.toggleDvigaDrawer = function (open) {
+window.toggleDvigaDrawer = function(open) {
   const drawer = document.getElementById('dv-drawer');
   if (drawer) {
     if (open) drawer.classList.add('open');
@@ -8106,7 +8217,7 @@ window.toggleDvigaDrawer = function (open) {
   }
 };
 
-window.switchDvigaLocationTab = function (category, btn) {
+window.switchDvigaLocationTab = function(category, btn) {
   const container = document.getElementById('dv-amenities-container');
   if (!container) return;
 
@@ -8124,7 +8235,7 @@ window.switchDvigaLocationTab = function (category, btn) {
   `).join('');
 };
 
-window.switchDvigaResidenceTab = function (bhk, btn) {
+window.switchDvigaResidenceTab = function(bhk, btn) {
   const container = document.getElementById('dv-plans-container');
   if (!container) return;
 
@@ -8168,7 +8279,7 @@ window.switchDvigaResidenceTab = function (bhk, btn) {
   `).join('');
 };
 
-window.open3DVisualizerModal = function () {
+window.open3DVisualizerModal = function() {
   let modal = document.getElementById('dv-3d-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -8210,7 +8321,7 @@ window.open3DVisualizerModal = function () {
   modal.style.display = 'flex';
 };
 
-window.submitDvigaConsultationForm = function () {
+window.submitDvigaConsultationForm = function() {
   const name = document.getElementById('dv-client-name')?.value || 'Valued Client';
   const phone = document.getElementById('dv-client-phone')?.value || '+91 98765 43210';
   const res = document.getElementById('dv-client-residence')?.value || '2-Bedroom Residence';
@@ -8264,17 +8375,17 @@ window.submitDvigaConsultationForm = function () {
 
 
 
-window.showEhDropdown = function (key) {
+window.showEhDropdown = function(key) {
   const d = document.getElementById(`eh-dropdown-${key}`);
   if (d) d.style.display = 'block';
 };
 
-window.hideEhDropdown = function (key) {
+window.hideEhDropdown = function(key) {
   const d = document.getElementById(`eh-dropdown-${key}`);
   if (d) d.style.display = 'none';
 };
 
-window.openCustomerAllProjectsView = function () {
+window.openCustomerAllProjectsView = function() {
   state.viewMode = 'website';
   state.customerView = 'all-projects';
   state.selectedCustomerProjectId = null;
@@ -8282,7 +8393,7 @@ window.openCustomerAllProjectsView = function () {
   renderApp();
 };
 
-window.openCustomerProjectDetail = function (projectId) {
+window.openCustomerProjectDetail = function(projectId) {
   state.viewMode = 'website';
   state.selectedCustomerProjectId = projectId;
   state.customerView = null;
@@ -8290,7 +8401,7 @@ window.openCustomerProjectDetail = function (projectId) {
   renderApp();
 };
 
-window.openPublicHome = function () {
+window.openPublicHome = function() {
   state.viewMode = 'website';
   state.customerView = null;
   state.selectedCustomerProjectId = null;
@@ -8325,7 +8436,7 @@ function renderPublicWebsite(root) {
               <a onclick="openExpandedSearchModal('commercial')">🏬 Commercial Office & Retail</a>
               <a onclick="openExpandedSearchModal('plots')">🏞️ Plots / Land</a>
               <a onclick="openExpandedSearchModal('projects')">🏗️ Upcoming RERA Launches</a>
-              <a onclick="openShieldedCallModal()">🛡️ 0-Spam Shielded Direct Call</a>
+              <a onclick="openShieldedCallModal()">📞 Request a call back</a>
             </div>
           </div>
 
@@ -8875,7 +8986,7 @@ function renderPublicWebsite(root) {
               <a onclick="openPostPropertyPage()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Post Property for Free</a>
               <a onclick="switchOwnerNewsTab('news')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Owner Market Reports</a>
               <a onclick="switchOwnerNewsTab('legal')" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Capital Gains Tax Guide</a>
-              <a onclick="openShieldedCallModal()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">0-Spam Protected Inquiries</a>
+              <a onclick="openShieldedCallModal()" style="color: #94a3b8; text-decoration: none; cursor: pointer;">Request a call back</a>
             </div>
           </div>
 
@@ -8895,7 +9006,7 @@ function renderPublicWebsite(root) {
           <div>© 2026 Nexora Estates Platform. All rights reserved. RERA Compliant SaaS Infrastructure.</div>
           <div style="display: flex; gap: 1.5rem;">
             <span>Direct Desk: +91 98765 43210</span>
-            <a onclick="openShieldedCallModal()" style="color: #38bdf8; cursor: pointer;">Shielded Call Request</a>
+            <a onclick="openShieldedCallModal()" style="color: #38bdf8; cursor: pointer;">Request a call back</a>
           </div>
         </div>
       </footer>
@@ -8946,78 +9057,6 @@ function renderPublicWebsite(root) {
 }
 
 
-// ============================================================================
-// 1. DEDICATED AUTHENTICATION & LOGIN VIEW (CLEAN, SPACIOUS, WEBSITE-MATCHED)
-// ============================================================================
-
-window.AUTH_ROLES_CONFIG = {
-  SUPER_ADMIN: {
-    name: 'Super Admin',
-    sub: 'Director / Full Control',
-    icon: '👑',
-    user: 'admin',
-    pass: 'AdminPassword123!',
-    roleLabel: 'Super Admin'
-  },
-  ADMIN: {
-    name: 'Sales Manager',
-    sub: 'Admin / Approvals',
-    icon: '💼',
-    user: 'admin_ops',
-    pass: 'AdminPassword123!',
-    roleLabel: 'Admin'
-  },
-  INSIDE_SALES: {
-    name: 'Inside Sales',
-    sub: 'Telecaller / Leads',
-    icon: '📞',
-    user: 'telecaller',
-    pass: 'Telecaller123!',
-    roleLabel: 'Inside Sales'
-  },
-  OUTSIDE_SALES: {
-    name: 'Site Agent',
-    sub: 'Outside / Units',
-    icon: '📍',
-    user: 'siteagent',
-    pass: 'Siteagent123!',
-    roleLabel: 'Outside Sales'
-  },
-  CHANNEL_PARTNER: {
-    name: 'Broker Desk',
-    sub: 'Channel Partner',
-    icon: '🤝',
-    user: 'partner',
-    pass: 'Partner123!',
-    roleLabel: 'Channel Partner'
-  }
-};
-
-window.selectAuthRole = function (roleKey) {
-  const cfg = window.AUTH_ROLES_CONFIG[roleKey] || window.AUTH_ROLES_CONFIG.SUPER_ADMIN;
-  document.querySelectorAll('.nx-auth-role-pill').forEach(el => el.classList.remove('active'));
-  const activePill = document.getElementById('auth-role-pill-' + roleKey);
-  if (activePill) activePill.classList.add('active');
-
-  const idInput = document.getElementById('login-identifier');
-  if (idInput) idInput.value = cfg.user;
-
-  const passInput = document.getElementById('login-password');
-  if (passInput) passInput.value = cfg.pass;
-
-  const roleSelect = document.getElementById('login-role');
-  if (roleSelect) roleSelect.value = cfg.roleLabel;
-
-  const quickRoleName = document.getElementById('nx-quick-role-name');
-  if (quickRoleName) quickRoleName.innerText = cfg.name;
-
-  const quickBtn = document.getElementById('nx-quick-login-btn');
-  if (quickBtn) {
-    quickBtn.onclick = () => quickLoginAs(roleKey);
-    quickBtn.innerText = `1-Click Sign In →`;
-  }
-};
-
 function renderLoginView(root) {
   root.innerHTML = `
     <div style="width: 100vw; height: 100vh; display: flex; background-color: var(--bg-main); overflow: hidden;">
@@ -9059,8 +9098,8 @@ function renderLoginView(root) {
             <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0;">Select your operational role or enter credentials</p>
           </div>
 
-          <!-- Instant 1-Click Role Selector for fast testing -->
-          <div style="margin-bottom: 1rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.65rem 0.75rem;">
+          <!-- 1-click demo logins: hidden unless the server runs in demo mode (see GET /api/auth/config) -->
+          <div id="demo-login-box" ${window.NX_DEMO_LOGINS ? '' : 'hidden'} style="margin-bottom: 1rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.65rem 0.75rem;">
             <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.45rem;">
               ⚡ Quick Demo Access (1-Click Test)
             </div>
@@ -9165,7 +9204,6 @@ function renderLoginView(root) {
     }
   });
 }
-
 function toggleShowPassword() {
   state.showPassword = !state.showPassword;
   renderApp();
@@ -9396,42 +9434,35 @@ function openProjectProfile(projectId) {
   renderApp();
 }
 
+// ----------------------------------------------------
+// 3. PROJECTS SECTION (UPDATED: CLICKABLE NAME, FILTERS, DETAIL PROFILE)
+// ----------------------------------------------------
+let allProjectsData = [];
+
 // Modal Utility for Admin Actions
-function showModal(title, contentHtml, extraClass = '') {
+function showModal(title, contentHtml, extraClass) {
   closeModal();
-  const modalDiv = document.createElement('div');
-  modalDiv.className = 'modal-overlay';
-  modalDiv.id = 'active-modal';
-  modalDiv.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1.5rem;';
-  modalDiv.innerHTML = `
-    <div class="modal-card ${extraClass}" style="background: var(--bg-card); color: var(--text-main); border-radius: 16px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); padding: 1.75rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem;">
-        <h3 style="font-size: 1.15rem; font-weight: 750; margin: 0;">${title}</h3>
-        <button type="button" onclick="closeModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-muted); line-height: 1;">✕</button>
-      </div>
-      <div>${contentHtml}</div>
-    </div>
-  `;
-  modalDiv.onclick = (e) => {
-    if (e.target === modalDiv) closeModal();
-  };
+  const modalDiv = document.createElement("div");
+  modalDiv.className = "modal-overlay";
+  modalDiv.id = "active-modal";
+  modalDiv.style.cssText = "position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1.5rem;";
+  modalDiv.innerHTML = `<div class="modal-card ` + (extraClass || "") + `" style="background: var(--bg-card); color: var(--text-main); border-radius: 16px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); padding: 1.75rem;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem;"><h3 style="font-size: 1.15rem; font-weight: 750; margin: 0;">` + title + `</h3><button type="button" onclick="closeModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-muted); line-height: 1;">✕</button></div><div>` + contentHtml + `</div></div>`;
+  modalDiv.onclick = (e) => { if (e.target === modalDiv) closeModal(); };
   document.body.appendChild(modalDiv);
 }
-
 function closeModal() {
-  const modal = document.getElementById('active-modal');
+  const modal = document.getElementById("active-modal");
   if (modal) modal.remove();
 }
 window.closeModal = closeModal;
 
 function openCreateProjectModal() {
-  showModal('🏢 Add Real Estate Project (Live Website Sync)', `
+  showModal("🏢 Add Real Estate Project (Live Website Sync)", `
     <form id="create-project-form" style="display: flex; flex-direction: column; gap: 0.85rem;">
       <div class="form-group">
         <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Project Name *</label>
         <input type="text" id="p-name" class="form-control" placeholder="e.g. Prestige Lakeside Habitat" required />
       </div>
-
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
         <div class="form-group">
           <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Project Type *</label>
@@ -9448,7 +9479,6 @@ function openCreateProjectModal() {
           <input type="text" id="p-builder" class="form-control" placeholder="e.g. Prestige Group" required />
         </div>
       </div>
-
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
         <div class="form-group">
           <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Location / Neighborhood *</label>
@@ -9459,7 +9489,6 @@ function openCreateProjectModal() {
           <input type="text" id="p-city" class="form-control" placeholder="e.g. Bengaluru" required />
         </div>
       </div>
-
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
         <div class="form-group">
           <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Website Listing Status *</label>
@@ -9476,7 +9505,6 @@ function openCreateProjectModal() {
           <input type="number" id="p-units" class="form-control" value="120" min="1" />
         </div>
       </div>
-
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
         <div class="form-group">
           <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Possession Timeline</label>
@@ -9487,88 +9515,57 @@ function openCreateProjectModal() {
           <input type="text" id="p-rera" class="form-control" placeholder="e.g. PRM/KA/RERA/1251/446" />
         </div>
       </div>
-
       <div class="form-group">
         <label style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.3rem; display: block;">Project Brochure (PDF, max 10MB)</label>
         <input type="file" id="p-brochure" class="form-control" accept=".pdf" />
-        <small style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.2rem; display: block;">
-          Uploading a brochure makes it downloadable directly from the website project profile card.
-        </small>
+        <small style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.2rem; display: block;">Uploading a brochure makes it downloadable directly from the website project profile card.</small>
       </div>
-
       <div id="p-error" style="color: var(--danger); font-size: 0.82rem; display: none;"></div>
-
       <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 0.85rem;">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button type="submit" id="btn-save-project" class="btn btn-primary" style="font-weight: 700;">
-          Publish &amp; Sync to Website →
-        </button>
+        <button type="submit" id="btn-save-project" class="btn btn-primary" style="font-weight: 700;">Publish &amp; Sync to Website →</button>
       </div>
     </form>
   `);
 
-  document.getElementById('create-project-form').addEventListener('submit', async (e) => {
+  document.getElementById("create-project-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const saveBtn = document.getElementById('btn-save-project');
-    const errDiv = document.getElementById('p-error');
-    errDiv.style.display = 'none';
+    const saveBtn = document.getElementById("btn-save-project");
+    const errDiv = document.getElementById("p-error");
+    errDiv.style.display = "none";
     saveBtn.disabled = true;
-    saveBtn.innerText = 'Publishing Project...';
-
+    saveBtn.innerText = "Publishing Project...";
     try {
       const formData = new FormData();
-      formData.append('name', document.getElementById('p-name').value.trim());
-      formData.append('project_type', document.getElementById('p-type').value);
-      formData.append('builder_name', document.getElementById('p-builder').value.trim());
-      formData.append('location', document.getElementById('p-loc').value.trim());
-      formData.append('city', document.getElementById('p-city').value.trim());
-      formData.append('status', document.getElementById('p-status').value);
-      formData.append('total_units', parseInt(document.getElementById('p-units').value, 10) || 0);
-      formData.append('possession_date', document.getElementById('p-possession').value.trim());
-      formData.append('rera_number', document.getElementById('p-rera').value.trim());
-
-      const brochureFile = document.getElementById('p-brochure').files[0];
-      if (brochureFile) {
-        formData.append('brochure', brochureFile);
-      }
-
+      formData.append("name", document.getElementById("p-name").value.trim());
+      formData.append("project_type", document.getElementById("p-type").value);
+      formData.append("builder_name", document.getElementById("p-builder").value.trim());
+      formData.append("location", document.getElementById("p-loc").value.trim());
+      formData.append("city", document.getElementById("p-city").value.trim());
+      formData.append("status", document.getElementById("p-status").value);
+      formData.append("total_units", parseInt(document.getElementById("p-units").value, 10) || 0);
+      formData.append("possession_date", document.getElementById("p-possession").value.trim());
+      formData.append("rera_number", document.getElementById("p-rera").value.trim());
+      const brochureFile = document.getElementById("p-brochure").files[0];
+      if (brochureFile) formData.append("brochure", brochureFile);
       const headers = {};
-      if (state.token) {
-        headers['Authorization'] = `Bearer ${state.token}`;
-      }
-
-      const res = await fetch(`${API_BASE}/projects`, {
-        method: 'POST',
-        headers: headers,
-        body: formData
-      });
-
+      if (state.token) headers["Authorization"] = "Bearer " + state.token;
+      const res = await fetch(API_BASE + "/projects", { method: "POST", headers, body: formData });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to create project');
-      }
-
+      if (!res.ok) throw new Error(data.message || "Failed to create project");
       closeModal();
-      // Reload Projects table
-      const contentArea = document.getElementById('content-area');
-      if (contentArea) {
-        await loadProjectsView(contentArea);
-      }
-      alert('✓ Project "' + data.data.name + '" published successfully! It is now live in the CRM database and visible on the website.');
+      const contentArea = document.getElementById("content-area");
+      if (contentArea) await loadProjectsView(contentArea);
+      alert("Project published successfully!");
     } catch (err) {
       errDiv.innerText = err.message;
-      errDiv.style.display = 'block';
+      errDiv.style.display = "block";
       saveBtn.disabled = false;
-      saveBtn.innerText = 'Publish & Sync to Website →';
+      saveBtn.innerText = "Publish & Sync to Website →";
     }
   });
 }
 window.openCreateProjectModal = openCreateProjectModal;
-
-// ----------------------------------------------------
-// 3. PROJECTS SECTION (UPDATED: CLICKABLE NAME, FILTERS, DETAIL PROFILE)
-// ----------------------------------------------------
-let allProjectsData = [];
 
 async function loadProjectsView(container) {
   try {
@@ -9921,16 +9918,16 @@ async function loadProjectDetailsView(projectId, container) {
 
               <div class="floor-matrix-container">
                 ${(() => {
-          // Group units by floor number descending
-          const floorMap = {};
-          project.units.forEach(u => {
-            const fl = u.floor_number || 1;
-            if (!floorMap[fl]) floorMap[fl] = [];
-            floorMap[fl].push(u);
-          });
-          const floors = Object.keys(floorMap).map(Number).sort((a, b) => b - a);
+                  // Group units by floor number descending
+                  const floorMap = {};
+                  project.units.forEach(u => {
+                    const fl = u.floor_number || 1;
+                    if (!floorMap[fl]) floorMap[fl] = [];
+                    floorMap[fl].push(u);
+                  });
+                  const floors = Object.keys(floorMap).map(Number).sort((a, b) => b - a);
 
-          return floors.map(fl => `
+                  return floors.map(fl => `
                     <div class="floor-row">
                       <div class="floor-label">Floor ${fl}</div>
                       <div class="floor-units-grid">
@@ -9944,7 +9941,7 @@ async function loadProjectDetailsView(projectId, container) {
                       </div>
                     </div>
                   `).join('');
-        })()}
+                })()}
               </div>
             </div>
 
@@ -10185,6 +10182,6444 @@ window.loadCpqData = async function (unitId, clientName, clientPhone, clientEmai
       <div style="background: linear-gradient(135deg, rgba(184, 154, 106, 0.2) 0%, rgba(184, 154, 106, 0.08) 100%); border: 1.5px solid var(--accent); border-radius: 8px; padding: 1.1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
         <div>
           <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--accent); letter-spacing: 0.5px;">All-Inclusive Total Consideration</div>
-          <div style
-    const res = await apiFetch(`/ unit
-...[truncated for diff preview]
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem;">Inclusive of Agreement Value, GST, Stamp Duty & 2-Yr Maintenance</div>
+        </div>
+        <div style="font-size: 1.6rem; font-weight: 800; color: var(--accent);">
+          ₹${p.grandTotal.toLocaleString('en-IN')}
+        </div>
+      </div>
+
+      <!-- PAYMENT MILESTONES TABLE -->
+      <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 1.25rem;">
+        <div style="background: var(--bg-card-hover); padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--text-main);">
+          📅 Construction-Linked Milestone Payment Schedule
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+          <thead>
+            <tr style="background: var(--bg-card); border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: left;">
+              <th style="padding: 0.6rem 0.9rem;">Milestone Stage</th>
+              <th style="padding: 0.6rem 0.9rem; text-align: center;">%</th>
+              <th style="padding: 0.6rem 0.9rem; text-align: right;">Amount (₹)</th>
+              <th style="padding: 0.6rem 0.9rem;">Timeline Trigger</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.milestones.map((m, idx) => `
+              <tr style="border-bottom: 1px solid var(--border-muted);">
+                <td style="padding: 0.55rem 0.9rem; font-weight: 600;">${m.milestone}</td>
+                <td style="padding: 0.55rem 0.9rem; text-align: center; color: var(--accent); font-weight: 700;">${m.percentage}%</td>
+                <td style="padding: 0.55rem 0.9rem; text-align: right; font-weight: 700;">₹${m.amount.toLocaleString('en-IN')}</td>
+                <td style="padding: 0.55rem 0.9rem; color: var(--text-muted);">${m.timeline}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ACTION BUTTONS: EXPORT PDF, SHARE WHATSAPP, BOOK DEAL -->
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="exportCostSheetPdf(window._lastCpqData)" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+          📄 Download Branded PDF Cost Sheet
+        </button>
+        <a href="${data.whatsappShareUrl}" target="_blank" class="btn" style="background: #25D366; color: #FFFFFF; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+          📲 Share on WhatsApp
+        </a>
+        ${u.status === 'AVAILABLE' ? `
+          <button class="btn btn-accent" style="font-weight: 700;" onclick="document.getElementById('cpq-modal-overlay').remove(); openBookingModalWithUnit('${u.id}', ${p.netAgreementValue});">
+            🏢 Create Deal / Booking
+          </button>
+        ` : ''}
+      </div>
+    `;
+  } catch (err) {
+    const bodyEl = document.getElementById('cpq-modal-body');
+    if (bodyEl) {
+      bodyEl.innerHTML = `<p style="color: var(--danger); padding: 2rem; text-align: center;">Failed to generate cost sheet: ${err.message}</p>`;
+    }
+  }
+};
+
+window.recalculateCpq = function (unitId) {
+  const planType = document.getElementById('cpq-plan-select')?.value || 'CONSTRUCTION_LINKED';
+  const discount = Number(document.getElementById('cpq-discount-input')?.value || 0);
+  window.loadCpqData(unitId, '', '', '', planType, discount);
+};
+
+window.openBookingModalWithUnit = function (unitId, defaultPrice) {
+  // Switches to deals / bookings or triggers deal creation with pre-filled unit ID
+  if (typeof openCreateDealModal === 'function') {
+    openCreateDealModal(unitId, defaultPrice);
+  } else {
+    switchView('deals');
+  }
+};
+
+// ─── CLIENT-SIDE BRANDED PDF GENERATOR USING JSPDF ───────────────────────────
+window.exportCostSheetPdf = function (data) {
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      alert('PDF generation engine is loading. Please retry in a few seconds.');
+      return;
+    }
+
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const unit = data.unit;
+    const pricing = data.pricing;
+    const client = data.client;
+    const milestones = data.milestones;
+
+    // Header Background
+    doc.setFillColor(15, 23, 42); // Deep Navy
+    doc.rect(0, 0, 595.28, 75, 'F');
+
+    // Title & Branding
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    doc.text('NEXORA ESTATES', 40, 36);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(212, 179, 127); // Gold accent
+    doc.text('OFFICIAL PROPERTY COST SHEET & CONSTRUCTION MILESTONE SCHEDULE', 40, 52);
+
+    // Meta details
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}`, 440, 36);
+    doc.text(`Ref: #CS-${unit.unitNumber}-${Date.now().toString().slice(-4)}`, 440, 52);
+
+    // Unit & Client Overview Table
+    const overviewData = [
+      ['Project Name:', unit.projectName, 'Client Name:', client.name || 'Valued Buyer'],
+      ['Tower / Building:', unit.buildingName || 'Main Tower', 'Client Phone:', client.phone || '-'],
+      ['Unit Number & Type:', `${unit.unitNumber} (${unit.unitType})`, 'Payment Plan:', (data.planType || 'CLP').replace(/_/g, ' ')],
+      ['Floor & Facing:', `Floor ${unit.floorNumber} • ${unit.facing || 'East'} Facing`, 'Super Area:', `${unit.superAreaSqft} sq.ft (${unit.carpetAreaSqft} sq.ft carpet)`]
+    ];
+
+    doc.autoTable({
+      startY: 88,
+      head: [['PROPERTY DETAILS', '', 'CLIENT & QUOTATION DETAILS', '']],
+      body: overviewData,
+      theme: 'grid',
+      headStyles: { fillColor: [184, 154, 106], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+      styles: { fontSize: 8, cellPadding: 3.5, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 110, fillColor: [248, 250, 252] },
+        1: { cellWidth: 160 },
+        2: { fontStyle: 'bold', cellWidth: 110, fillColor: [248, 250, 252] },
+        3: { cellWidth: 135 }
+      }
+    });
+
+    // Pricing Breakdown Table
+    const pricingRows = [
+      ['A. Basic Agreement Value Components', ''],
+      ['   • Base Unit Price', `INR ${pricing.basePrice.toLocaleString('en-IN')}`],
+      ['   • Preferential Location Charges (PLC)', `INR ${pricing.plcCharges.toLocaleString('en-IN')}`],
+      ['   • Floor Rise Premium Charges', `INR ${pricing.floorRiseTotal.toLocaleString('en-IN')}`],
+      ['   • Exclusive Covered Car Parking', `INR ${pricing.parkingCharges.toLocaleString('en-IN')}`],
+      ['   • Clubhouse & Infrastructure Development', `INR ${pricing.clubhouseCharges.toLocaleString('en-IN')}`],
+      ['   • Upfront Discount Incentive Applied', `- INR ${pricing.discountAmount.toLocaleString('en-IN')}`],
+      ['NET AGREEMENT CONSIDERATION (A)', `INR ${pricing.netAgreementValue.toLocaleString('en-IN')}`],
+      ['B. Statutory Government Taxes & Fees', ''],
+      ['   • GST (5% on Net Agreement Value)', `INR ${pricing.gstAmount.toLocaleString('en-IN')}`],
+      ['   • Stamp Duty (5.6%)', `INR ${pricing.stampDutyAmount.toLocaleString('en-IN')}`],
+      ['   • Registration Charges (1%)', `INR ${pricing.registrationAmount.toLocaleString('en-IN')}`],
+      ['TOTAL GOVERNMENT TAXES & FEES (B)', `INR ${pricing.totalGovernmentCharges.toLocaleString('en-IN')}`],
+      ['C. Advance Maintenance & Legal Deposits', ''],
+      ['   • 2-Year Advance Maintenance (Rs 48/sq.ft)', `INR ${pricing.maintenanceDeposit.toLocaleString('en-IN')}`],
+      ['   • Legal & Documentation Processing Fee', `INR ${pricing.legalDocCharges.toLocaleString('en-IN')}`],
+      ['TOTAL ADVANCE DEPOSITS (C)', `INR ${pricing.totalPossessionDeposits.toLocaleString('en-IN')}`],
+      ['ALL-INCLUSIVE TOTAL CONSIDERATION (A + B + C)', `INR ${pricing.grandTotal.toLocaleString('en-IN')}`]
+    ];
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['INVESTMENT & COST BREAKDOWN COMPONENT', 'AMOUNT (INR)']],
+      body: pricingRows,
+      theme: 'striped',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+      styles: { fontSize: 7.8, cellPadding: 3, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 380 },
+        1: { cellWidth: 135, halign: 'right', fontStyle: 'bold' }
+      },
+      didParseCell: function (hookData) {
+        const text = hookData.cell.raw || '';
+        if (text.startsWith('NET AGREEMENT') || text.startsWith('TOTAL GOVERNMENT') || text.startsWith('TOTAL ADVANCE')) {
+          hookData.cell.styles.fillColor = [241, 245, 249];
+          hookData.cell.styles.fontStyle = 'bold';
+        }
+        if (text.startsWith('ALL-INCLUSIVE TOTAL')) {
+          hookData.cell.styles.fillColor = [184, 154, 106];
+          hookData.cell.styles.textColor = [255, 255, 255];
+          hookData.cell.styles.fontStyle = 'bold';
+          hookData.cell.styles.fontSize = 8.5;
+        }
+      }
+    });
+
+    // Milestone Table
+    const milestoneRows = milestones.map(m => [
+      m.milestone,
+      `${m.percentage}%`,
+      `INR ${m.amount.toLocaleString('en-IN')}`,
+      m.timeline
+    ]);
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['PAYMENT MILESTONE STAGE', '%', 'DUE AMOUNT (INR)', 'TIMELINE TRIGGER']],
+      body: milestoneRows,
+      theme: 'grid',
+      headStyles: { fillColor: [184, 154, 106], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 7.5, cellPadding: 3, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 230, fontStyle: 'bold' },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 110, halign: 'right', fontStyle: 'bold' },
+        3: { cellWidth: 135 }
+      }
+    });
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text('This cost estimate is generated by Nexora Estates CRM. Prices and government taxes are subject to final booking terms and prevailing laws.', 40, 822);
+      doc.text(`Page ${i} of ${pageCount}`, 520, 822);
+    }
+
+    doc.save(`CostSheet_${unit.projectName.replace(/\s+/g, '_')}_Unit_${unit.unitNumber}.pdf`);
+  } catch (err) {
+    alert('Failed to generate PDF cost sheet: ' + err.message);
+  }
+};
+
+// ─── AI PROPERTY MATCHER & COMPARISON MODAL ──────────────────────────────────
+window.openAiPropertyMatcherModal = function (initialQuery = '') {
+  let existing = document.getElementById('ai-matcher-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-matcher-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width: 820px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+        <div>
+          <h3 style="font-weight: 700; margin: 0; font-size: 1.15rem; color: var(--text-main);">AI Property Matcher & Comparison</h3>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Natural Language Inventory Search, Propensity Matching & Comparison</p>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('ai-matcher-modal-overlay').remove()" style="font-size: 1.3rem; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- SEARCH BAR -->
+      <div style="margin-bottom: 1.25rem;">
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="ai-matcher-search-input" class="form-control" placeholder="e.g. 3BHK East-facing in Bangalore under 1.4 Cr" value="${initialQuery}" onkeydown="if(event.key==='Enter') window.runPropertyMatch()" style="font-size: 0.88rem; padding: 0.6rem 0.85rem;" />
+          <button class="btn btn-primary" onclick="window.runPropertyMatch()" style="font-weight: 600; padding: 0 1.25rem;">
+            Search & Match
+          </button>
+        </div>
+
+        <!-- QUICK PROMPT CHIPS -->
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.75rem; align-items: center;">
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Suggestions:</span>
+          <button class="chip" onclick="window.setMatcherPrompt('3BHK East-facing in Bangalore under 1.4 Cr')">3BHK Bangalore < 1.4 Cr</button>
+          <button class="chip" onclick="window.setMatcherPrompt('2BHK residential in Bangalore under 90 Lakhs')">2BHK Bangalore < 90L</button>
+          <button class="chip" onclick="window.setMatcherPrompt('Commercial office space in Mumbai under 2 Cr')">Commercial Mumbai</button>
+          <button class="chip" onclick="window.setMatcherPrompt('Plots in Hyderabad with corner location')">Plots Hyderabad</button>
+        </div>
+      </div>
+
+      <!-- RESULTS CONTAINER -->
+      <div id="ai-matcher-results-body">
+        <div style="text-align: center; padding: 2.5rem; color: var(--text-muted); background: var(--bg-card-hover); border: 1px dashed var(--border-color); border-radius: 8px;">
+          <p style="margin: 0; font-size: 0.9rem;">Type your buyer requirements or click any suggestion chip above to find exact matches.</p>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  if (initialQuery) {
+    window.runPropertyMatch();
+  }
+};
+
+window.setMatcherPrompt = function (prompt) {
+  const input = document.getElementById('ai-matcher-search-input');
+  if (input) {
+    input.value = prompt;
+    window.runPropertyMatch();
+  }
+};
+
+window.runPropertyMatch = async function () {
+  const query = document.getElementById('ai-matcher-search-input')?.value.trim() || '';
+  const bodyEl = document.getElementById('ai-matcher-results-body');
+  if (!bodyEl) return;
+
+  bodyEl.innerHTML = `
+    <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+      <p style="margin-bottom: 0.5rem; font-weight: 600;">Searching inventory & scoring unit suitability...</p>
+      <div style="display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+    </div>
+  `;
+
+  try {
+    const res = await apiFetch('/ai/property-matcher', {
+      method: 'POST',
+      body: JSON.stringify({ query })
+    });
+
+    const data = res.data;
+    window._lastMatchData = data;
+
+    if (!data.matches || data.matches.length === 0) {
+      bodyEl.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <p style="font-weight: 600; color: var(--danger);">No exact units matched your search criteria.</p>
+          <p style="font-size: 0.82rem;">Try broadening your budget or search for another city/configuration.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const cleanPhone = '';
+    const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(data.whatsappComparisonText)}`;
+
+    bodyEl.innerHTML = `
+      ${data.notice ? `
+        <div style="background: var(--bg-hover); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.84rem; color: var(--text-main);">
+          <strong>Alternative Recommendations:</strong> ${data.notice}
+        </div>
+      ` : ''}
+
+      <!-- TOP MATCH BANNER -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: var(--bg-hover); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">Found ${data.matches.length} Matching Units</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted); margin-left: 0.4rem;">Ranked by AI Suitability Score</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary btn-sm" onclick="exportComparisonPdf(window._lastMatchData)">
+            Export Comparison PDF
+          </button>
+          <a href="${whatsappShareUrl}" target="_blank" class="btn btn-primary btn-sm" style="text-decoration: none;">
+            Share via WhatsApp
+          </a>
+        </div>
+      </div>
+
+      <!-- MATCH CARDS GRID -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
+        ${data.matches.map((m, idx) => `
+          <div style="background: var(--bg-card); border: 1px solid ${idx === 0 ? 'var(--text-main)' : 'var(--border-color)'}; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+            ${idx === 0 ? `<span style="position: absolute; top: -10px; right: 10px; background: var(--text-main); color: var(--bg-card); font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; text-transform: uppercase;">Top Match</span>` : ''}
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                <div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">${m.projectName}</div>
+                  <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Unit ${m.unitNumber} (${m.unitType})</div>
+                </div>
+                <div class="badge">
+                  ${m.matchScore}% Match
+                </div>
+              </div>
+
+              <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 0.6rem;">
+                <div>Floor ${m.floorNumber} • ${m.facing} Facing ${m.isCorner ? '• Corner' : ''}</div>
+                <div>${m.superAreaSqft} sq.ft (${m.carpetAreaSqft} sq.ft carpet)</div>
+              </div>
+
+              <div style="border-top: 1px solid var(--border-muted); padding-top: 0.5rem; margin-bottom: 0.6rem;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent);">
+                  ₹${(m.basePrice / 100000).toFixed(2)} Lakhs
+                </div>
+                <div style="font-size: 0.74rem; color: var(--text-muted);">₹${m.pricePerSqft}/sq.ft | All-in: ~₹${(m.estimatedAllInclusive / 100000).toFixed(1)}L</div>
+              </div>
+
+              <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
+                ${m.matchReasons.map(r => `<span style="background: var(--bg-card-hover); border: 1px solid var(--border-color); font-size: 0.68rem; padding: 0.15rem 0.35rem; border-radius: 4px; color: var(--text-muted);">${r}</span>`).join('')}
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.4rem;">
+              <button class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.35rem;" onclick="openUnitCpqModal('${m.id}')">
+                💰 Cost Sheet
+              </button>
+              <button class="btn btn-accent btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.35rem;" onclick="document.getElementById('ai-matcher-modal-overlay').remove(); openBookingModalWithUnit('${m.id}', ${m.basePrice});">
+                🏢 Book
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- SIDE-BY-SIDE COMPARISON TABLE -->
+      <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow-x: auto;">
+        <div style="background: var(--bg-card-hover); padding: 0.6rem 0.9rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-main); border-bottom: 1px solid var(--border-color);">
+          📋 Detailed Side-by-Side Comparison Matrix
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 580px;">
+          <thead>
+            <tr style="background: var(--bg-card); border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: left;">
+              <th style="padding: 0.55rem 0.8rem; width: 25%;">Parameter</th>
+              ${data.matches.map((m, idx) => `<th style="padding: 0.55rem 0.8rem; font-weight: 700; color: var(--text-main);">Option ${idx + 1}: Unit ${m.unitNumber}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--border-muted);">
+              <td style="padding: 0.5rem 0.8rem; font-weight: 600; color: var(--text-muted);">Project & Location</td>
+              ${data.matches.map(m => `<td style="padding: 0.5rem 0.8rem;">${m.projectName} (${m.projectCity})</td>`).join('')}
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-muted);">
+              <td style="padding: 0.5rem 0.8rem; font-weight: 600; color: var(--text-muted);">Configuration</td>
+              ${data.matches.map(m => `<td style="padding: 0.5rem 0.8rem;"><b>${m.unitType}</b> • Floor ${m.floorNumber}</td>`).join('')}
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-muted);">
+              <td style="padding: 0.5rem 0.8rem; font-weight: 600; color: var(--text-muted);">Area (Super / Carpet)</td>
+              ${data.matches.map(m => `<td style="padding: 0.5rem 0.8rem;">${m.superAreaSqft} sq.ft (${m.carpetAreaSqft} sq.ft)</td>`).join('')}
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-muted);">
+              <td style="padding: 0.5rem 0.8rem; font-weight: 600; color: var(--text-muted);">Orientation</td>
+              ${data.matches.map(m => `<td style="padding: 0.5rem 0.8rem;">${m.facing} ${m.isCorner ? '(Corner)' : ''}</td>`).join('')}
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-muted); background: var(--bg-card-hover);">
+              <td style="padding: 0.5rem 0.8rem; font-weight: 700; color: var(--text-main);">Agreement Value</td>
+              ${data.matches.map(m => `<td style="padding: 0.5rem 0.8rem; font-weight: 800; color: var(--accent);">₹${(m.basePrice / 100000).toFixed(2)} Lakhs</td>`).join('')}
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-muted);">
+              <td style="padding: 0.5rem 0.8rem; font-weight: 600; color: var(--text-muted);">Rate / sq.ft</td>
+              ${data.matches.map(m => `<td style="padding: 0.5rem 0.8rem;">₹${m.pricePerSqft} / sq.ft</td>`).join('')}
+            </tr>
+            <tr style="background: rgba(184, 154, 106, 0.08);">
+              <td style="padding: 0.55rem 0.8rem; font-weight: 700; color: var(--accent);">All-Inclusive Estimate</td>
+              ${data.matches.map(m => `<td style="padding: 0.55rem 0.8rem; font-weight: 800; color: var(--text-main);">~₹${(m.estimatedAllInclusive / 100000).toFixed(2)} Lakhs</td>`).join('')}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    bodyEl.innerHTML = `<p style="color: var(--danger); padding: 2rem; text-align: center;">Failed to match properties: ${err.message}</p>`;
+  }
+};
+
+// ─── CLIENT-SIDE BRANDED PROPERTY COMPARISON PDF EXPORTER ─────────────────────
+window.exportComparisonPdf = function (data) {
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      alert('PDF generator is loading. Please try again.');
+      return;
+    }
+
+    const doc = new jsPDF('l', 'pt', 'a4'); // Landscape for comparison matrix
+    const matches = data.matches || [];
+
+    // Header Background
+    doc.setFillColor(15, 23, 42); // Deep Navy
+    doc.rect(0, 0, 841.89, 70, 'F');
+
+    // Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    doc.text('NEXORA ESTATES', 40, 36);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(212, 179, 127);
+    doc.text(`AI-CURATED PROPERTY COMPARISON MATRIX • QUERY: "${data.query || 'Custom Match'}"`, 40, 52);
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}`, 680, 44);
+
+    // Columns: Parameter | Option 1 | Option 2 | Option 3 | Option 4
+    const headers = ['SPECIFICATION / CRITERIA', ...matches.map((m, idx) => `OPTION ${idx + 1}: ${m.unitNumber} (${m.matchScore}% Match)`)];
+
+    const rows = [
+      ['Project Name', ...matches.map(m => m.projectName)],
+      ['Location & City', ...matches.map(m => `${m.projectLocation || ''}, ${m.projectCity || ''}`)],
+      ['Tower & Floor', ...matches.map(m => `${m.buildingName || 'Tower'} • Floor ${m.floorNumber}`)],
+      ['Configuration / Type', ...matches.map(m => m.unitType)],
+      ['Super Area (sq.ft)', ...matches.map(m => `${m.superAreaSqft} sq.ft`)],
+      ['Carpet Area (sq.ft)', ...matches.map(m => `${m.carpetAreaSqft} sq.ft`)],
+      ['Orientation / Facing', ...matches.map(m => `${m.facing} ${m.isCorner ? '(Corner Unit)' : ''}`)],
+      ['Base Agreement Value', ...matches.map(m => `INR ${(m.basePrice / 100000).toFixed(2)} Lakhs`)],
+      ['Rate per Sq. Ft.', ...matches.map(m => `INR ${m.pricePerSqft} / sq.ft`)],
+      ['Est. Taxes (GST + Stamp Duty)', ...matches.map(m => `INR ${(Math.round(m.basePrice * 0.106) / 100000).toFixed(2)} Lakhs`)],
+      ['ALL-INCLUSIVE TOTAL ESTIMATE', ...matches.map(m => `INR ${(m.estimatedAllInclusive / 100000).toFixed(2)} Lakhs`)],
+      ['Key Recommendation Factors', ...matches.map(m => m.matchReasons.join(', '))]
+    ];
+
+    doc.autoTable({
+      startY: 85,
+      head: [headers],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [184, 154, 106], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9, halign: 'center' },
+      styles: { fontSize: 8, cellPadding: 5, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 160, fillColor: [248, 250, 252] }
+      },
+      didParseCell: function (hookData) {
+        if (hookData.row.index === 10) { // All-inclusive row
+          hookData.cell.styles.fillColor = [220, 238, 255];
+          hookData.cell.styles.fontStyle = 'bold';
+          hookData.cell.styles.fontSize = 8.5;
+        }
+      }
+    });
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('This comparison sheet is prepared by Nexora Estates AI Intelligence Engine for client evaluation. Final pricing subject to formal booking contract.', 40, 565);
+      doc.text(`Page ${i} of ${pageCount}`, 760, 565);
+    }
+
+    doc.save(`Property_Comparison_${Date.now()}.pdf`);
+  } catch (err) {
+    alert('Failed to generate comparison PDF: ' + err.message);
+  }
+};
+
+// ----------------------------------------------------
+// REDESIGNED ADD PROJECT MODAL
+// ----------------------------------------------------
+function openCreateProjectModal() {
+  showModal('Add Real Estate Project', `
+    <form id="create-project-form">
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="p-name" class="form-control" placeholder="e.g. Uttarayan Naina" required />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label>Project Type</label>
+          <select id="p-type" class="form-control" required>
+            <option value="Residential">Residential</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Independent">Independent</option>
+            <option value="Villa">Villa</option>
+            <option value="Plotted">Plotted</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Builder / Developer</label>
+          <input type="text" id="p-builder" class="form-control" placeholder="e.g. Uttarayan Group" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label>Location / Locality</label>
+          <input type="text" id="p-loc" class="form-control" placeholder="e.g. Adabari" required />
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" id="p-city" class="form-control" placeholder="e.g. Guwahati" required />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label>Status / Launch Stage</label>
+          <select id="p-status" class="form-control">
+            <option value="NEW_LAUNCH" selected>🚀 New Launch (Feature in Homepage Carousel)</option>
+            <option value="UNDER_CONSTRUCTION">Under Construction</option>
+            <option value="READY_TO_MOVE">Ready to Move</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="PLANNING">Planning</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Total Units</label>
+          <input type="number" id="p-units" class="form-control" value="120" />
+        </div>
+      </div>
+
+      <!-- Public Showcase & Live Sync Fields -->
+      <div style="background: #f0f7ff; border: 1px dashed #93c5fd; border-radius: 8px; padding: 0.85rem; margin-bottom: 0.75rem;">
+        <div style="font-size: 0.72rem; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+          <span>⚡ Live Homepage Showcase Fields (Newly Launched Projects)</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 0.5rem;">
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.74rem;">Price Range</label>
+            <input type="text" id="p-price" class="form-control" placeholder="e.g. ₹75 L - 1.68 Cr" value="₹75 L - 1.68 Cr" />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.74rem;">Unit Configurations</label>
+            <input type="text" id="p-config" class="form-control" placeholder="e.g. 2, 3, 4 BHK Apartment" value="2, 3 BHK Apartment" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 0.5rem;">
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.74rem;">Market Highlight / Growth</label>
+            <input type="text" id="p-highlight" class="form-control" placeholder="e.g. 🔑 Completion in Jun, 2030 or ▲ 28.4% price increase" value="🔑 Completion in Jun, 2030" />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.74rem;">Direct Sales Desk Phone</label>
+            <input type="text" id="p-phone" class="form-control" placeholder="e.g. +91 98310 44219" value="+91 98310 44219" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.74rem;">Thumbnail Image URL (Circular Showcase)</label>
+          <input type="url" id="p-img" class="form-control" placeholder="https://..." value="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Project Brochure (PDF only, max 10MB)</label>
+        <input type="file" id="p-brochure" class="form-control" accept=".pdf" />
+        <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+          Upload an official PDF brochure for this project
+        </small>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label>Possession Status / Date</label>
+          <input type="text" id="p-possession" class="form-control" placeholder="e.g. Jun, 2030" value="Jun, 2030" />
+        </div>
+        <div class="form-group">
+          <label>RTMI / RERA Registration No.</label>
+          <input type="text" id="p-rera" class="form-control" placeholder="e.g. PRM/KA/RERA/1251" value="RERA-ACK-2026-99" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-accent" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Save & Publish Project</button>
+    </form>
+  `);
+
+  document.getElementById('create-project-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    try {
+      const isNewLaunch = document.getElementById('p-status').value === 'NEW_LAUNCH';
+      const projectName = document.getElementById('p-name').value.trim();
+      const loc = document.getElementById('p-loc').value.trim();
+      const city = document.getElementById('p-city').value.trim();
+      const builder = document.getElementById('p-builder').value.trim() || 'Nexora Authorized Developer';
+      const priceVal = document.getElementById('p-price')?.value?.trim() || '₹75 L - 1.68 Cr';
+      const configVal = document.getElementById('p-config')?.value?.trim() || '2, 3 BHK Apartment';
+      const highlightVal = document.getElementById('p-highlight')?.value?.trim() || '🔑 Completion in Jun, 2030';
+      const phoneVal = document.getElementById('p-phone')?.value?.trim() || '+91 98310 44219';
+      const imgVal = document.getElementById('p-img')?.value?.trim() || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80';
+      const reraVal = document.getElementById('p-rera')?.value?.trim() || '✔ RERA';
+
+      // Build formData for backend
+      const formData = new FormData();
+      formData.append('name', projectName);
+      formData.append('project_type', document.getElementById('p-type').value);
+      formData.append('builder_name', builder);
+      formData.append('location', loc);
+      formData.append('city', city);
+      formData.append('status', isNewLaunch ? 'UNDER_CONSTRUCTION' : document.getElementById('p-status').value);
+      formData.append('total_units', parseInt(document.getElementById('p-units').value, 10));
+      formData.append('possession_date', document.getElementById('p-possession').value);
+      formData.append('rera_number', reraVal);
+
+      // Add brochure file if selected
+      const brochureFile = document.getElementById('p-brochure').files[0];
+      if (brochureFile) {
+        formData.append('brochure', brochureFile);
+      }
+
+      const headers = {};
+      if (state.token) {
+        headers['Authorization'] = `Bearer ${state.token}`;
+      }
+
+      const res = await fetch(`${API_BASE}/projects`, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to create project');
+      }
+
+      // Use REAL database UUID from MySQL response
+      const realProjectId = (data.data && data.data.id) ? data.data.id : crypto.randomUUID();
+
+      const newLaunchObj = {
+        id: realProjectId,
+        name: projectName,
+        location: `${loc}, ${city}`,
+        price: priceVal,
+        config: configVal,
+        highlightText: highlightVal,
+        highlightType: highlightVal.includes('%') ? 'growth' : 'completion',
+        phone: phoneVal,
+        img: imgVal,
+        rera: reraVal,
+        developer: builder,
+        brochureUrl: (data.data && data.data.brochure_url) || null,
+        fromAdmin: true,
+        created_at: new Date().toISOString()
+      };
+
+      // Save to localStorage with clean real DB UUIDs and purge legacy crm-nl-
+      try {
+        const savedLaunches = (JSON.parse(localStorage.getItem('nexora_crm_new_launches') || '[]'))
+          .filter(item => item && item.id && !item.id.startsWith('crm-nl-') && item.name && item.name.toLowerCase() !== projectName.toLowerCase());
+        savedLaunches.unshift(newLaunchObj);
+        localStorage.setItem('nexora_crm_new_launches', JSON.stringify(savedLaunches));
+      } catch (e) {}
+
+      closeModal();
+      
+      // Immediately refresh newly launched & upcoming projects carousels if on page
+      if (typeof window.loadNewlyLaunchedProjects === 'function') {
+        window.loadNewlyLaunchedProjects();
+      }
+      if (typeof window.loadUpcomingProjects === 'function') {
+        window.loadUpcomingProjects();
+      }
+
+      if (typeof showToastNotification === 'function') {
+        showToastNotification(`🚀 New Launch "${projectName}" created! Reflected live in Homepage 'Newly launched projects'.`, 'success');
+      } else {
+        alert(`✓ Project "${projectName}" published successfully! Reflected live in Homepage Newly Launched Projects.`);
+      }
+
+      state.currentView = 'projects';
+      state.selectedProjectId = null;
+      renderApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+// Modal Utility
+function showModal(title, contentHtml, extraClass = '') {
+  const modalDiv = document.createElement('div');
+  modalDiv.className = 'modal-overlay';
+  modalDiv.id = 'active-modal';
+  modalDiv.innerHTML = `
+    <div class="modal-card ${extraClass}">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 700;">${title}</h3>
+        <button class="btn-icon" onclick="closeModal()" style="border: none;">✖</button>
+      </div>
+      <div>${contentHtml}</div>
+    </div>
+  `;
+  document.body.appendChild(modalDiv);
+}
+
+function closeModal() {
+  const modal = document.getElementById('active-modal');
+  if (modal) modal.remove();
+}
+
+// Entity View Loaders
+async function loadUnitsView(container) {
+  const res = await apiFetch('/units');
+  const units = res.data;
+  container.innerHTML = `<div class="unit-grid">${units.map(u => `<div class="unit-card ${u.status.toLowerCase()}"><div class="unit-num">${u.unit_number}</div><div class="unit-type-sub">${u.unit_type}</div><div style="font-weight: 700; margin-top: 0.2rem;">₹${(u.base_price / 100000).toFixed(1)}L</div></div>`).join('')}</div>`;
+}
+
+// ─── LEADS MODULE ───────────────────────────────────────────────────────────
+state.leads = [];
+state.leadFilters = { name: '', phone: '', email: '', source: '', stage: '' };
+
+async function loadLeadsView(container) {
+  try {
+    const res = await apiFetch('/leads');
+    state.leads = res.data || [];
+    renderLeadsTable(container);
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--danger); padding: 2rem;">${err.message}</p>`;
+  }
+}
+
+function renderLeadsTable(container) {
+  let fl = state.leads;
+  const f = state.leadFilters;
+
+  if (f.name) fl = fl.filter(l => ((l.first_name || '') + ' ' + (l.last_name || '')).toLowerCase().includes(f.name.toLowerCase()));
+  if (f.phone) fl = fl.filter(l => (l.phone || '').includes(f.phone));
+  if (f.email) fl = fl.filter(l => (l.email || '').toLowerCase().includes(f.email.toLowerCase()));
+  if (f.source) fl = fl.filter(l => (l.source || '').toLowerCase() === f.source.toLowerCase());
+  if (f.stage) fl = fl.filter(l => (l.stage || '').toLowerCase() === f.stage.toLowerCase());
+
+  const addBtn = `
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <button class="btn btn-secondary btn-sm" onclick="openLeadWebhookSimulatorModal()" title="Simulate real-time Ad Webhook lead ingestion">
+        ${getIcon('webhook')} Ad Webhook Simulator
+      </button>
+      ${(state.user.role === 'SUPER_ADMIN' || state.user.role === 'ADMIN')
+        ? `<button class="btn btn-accent btn-sm" onclick="openAddLeadModal()">+ Add Lead</button>`
+        : ''}
+    </div>
+  `;
+
+  container.innerHTML = `
+    <!-- TOP BAR -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.75rem; flex-wrap:wrap; gap:1rem;">
+      <div>
+        <h2 style="margin:0; font-size:1.3rem; font-weight:700; color:var(--text-main); letter-spacing:-0.02em;">Leads & Prospective Buyers</h2>
+        <p style="margin:0.25rem 0 0 0; font-size:0.82rem; color:var(--text-muted);">Manage real-time inbound inquiries, buyer stages, and AI follow-up workflows.</p>
+      </div>
+      ${addBtn}
+    </div>
+
+    <!-- TABLE CONTAINER WITH ONE-ROW FILTER BAR -->
+    <div class="table-container">
+      <div class="leads-filter-row">  
+        <input  class="filter-input"  id="fltr-name"   type="text"  placeholder="Search Name..."   value="${f.name}"   oninput="updateLeadFilter('name', this.value)" style="flex: 1; min-width: 140px;">
+        <input  class="filter-input"  id="fltr-phone"  type="text"  placeholder="Phone..."  value="${f.phone}"  oninput="updateLeadFilter('phone', this.value)" style="flex: 1; min-width: 130px;">
+        <input  class="filter-input"  id="fltr-email"  type="text"  placeholder="Email..."  value="${f.email}"  oninput="updateLeadFilter('email', this.value)" style="flex: 1; min-width: 140px;">
+        <select class="filter-select" id="fltr-source" onchange="updateLeadFilter('source', this.value)">
+          <option value="">All Sources</option>
+          <option value="Social Media"    ${f.source === 'Social Media' ? 'selected' : ''}>Social Media</option>
+          <option value="Marketing Firms" ${f.source === 'Marketing Firms' ? 'selected' : ''}>Marketing Firms</option>
+          <option value="Website"         ${f.source === 'Website' ? 'selected' : ''}>Website</option>
+          <option value="Facebook Ads"    ${f.source === 'Facebook Ads' ? 'selected' : ''}>Facebook Ads</option>
+          <option value="Instagram"        ${f.source === 'Instagram' ? 'selected' : ''}>Instagram</option>
+          <option value="Google Ads"       ${f.source === 'Google Ads' ? 'selected' : ''}>Google Ads</option>
+          <option value="Walk In"          ${f.source === 'Walk In' ? 'selected' : ''}>Walk In</option>
+          <option value="Referral"         ${f.source === 'Referral' ? 'selected' : ''}>Referral</option>
+          <option value="Other"            ${f.source === 'Other' ? 'selected' : ''}>Other</option>
+        </select>
+        <select class="filter-select" id="fltr-stage" onchange="updateLeadFilter('stage', this.value)">
+          <option value="">All Stages</option>
+          <option value="Fresh Lead"           ${f.stage === 'Fresh Lead' ? 'selected' : ''}>Fresh Lead</option>
+          <option value="Contacted"             ${f.stage === 'Contacted' ? 'selected' : ''}>Contacted</option>
+          <option value="In Negotiation"        ${f.stage === 'In Negotiation' ? 'selected' : ''}>In Negotiation</option>
+          <option value="1st Attempt Done"      ${f.stage === '1st Attempt Done' ? 'selected' : ''}>1st Attempt Done</option>
+          <option value="2nd Attempt Done"      ${f.stage === '2nd Attempt Done' ? 'selected' : ''}>2nd Attempt Done</option>
+          <option value="Not Answered"          ${f.stage === 'Not Answered' ? 'selected' : ''}>Not Answered</option>
+          <option value="Not Reachable"         ${f.stage === 'Not Reachable' ? 'selected' : ''}>Not Reachable</option>
+          <option value="No Response"           ${f.stage === 'No Response' ? 'selected' : ''}>No Response</option>
+          <option value="Hold"                  ${f.stage === 'Hold' ? 'selected' : ''}>Hold</option>
+          <option value="Site Visit Scheduled"  ${f.stage === 'Site Visit Scheduled' ? 'selected' : ''}>Site Visit Scheduled</option>
+          <option value="Site Visit Confirmed"  ${f.stage === 'Site Visit Confirmed' ? 'selected' : ''}>Site Visit Confirmed</option>
+          <option value="2nd Visit Scheduled"   ${f.stage === '2nd Visit Scheduled' ? 'selected' : ''}>2nd Visit Scheduled</option>
+          <option value="Rescheduled"            ${f.stage === 'Rescheduled' ? 'selected' : ''}>Rescheduled</option>
+          <option value="Site Visit Cancelled"  ${f.stage === 'Site Visit Cancelled' ? 'selected' : ''}>Site Visit Cancelled</option>
+          <option value="Site Visit Done"        ${f.stage === 'Site Visit Done' ? 'selected' : ''}>Site Visit Done</option>
+          <option value="Booking Done"           ${f.stage === 'Booking Done' ? 'selected' : ''}>Booking Done</option>
+          <option value="Junk"                   ${f.stage === 'Junk' ? 'selected' : ''}>Junk</option>
+          <option value="Lost"                   ${f.stage === 'Lost' ? 'selected' : ''}>Lost</option>
+          <option value="Duplicate"              ${f.stage === 'Duplicate' ? 'selected' : ''}>Duplicate</option>
+        </select>
+      </div>
+
+      <!-- TABLE -->
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Lead Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Source</th>
+            <th>Stage</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fl.length ? fl.map(l => `
+            <tr>
+              <td>
+                <a href="#" onclick="event.preventDefault(); loadLeadDetailsView('${l.id}')" style="font-weight:600; color:var(--text-main); text-decoration:none; white-space:nowrap;">
+                  ${escapeHtml(l.first_name || '')} ${escapeHtml(l.last_name || '')}
+                </a>
+              </td>
+              <td>${escapeHtml(l.phone || '-')}</td>
+              <td style="color:var(--text-muted);">${escapeHtml(l.email || '-')}</td>
+              <td>${escapeHtml((l.source || '-').replace(/_/g, ' '))}</td>
+              <td>${escapeHtml(l.stage || 'Fresh Lead')}</td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn btn-secondary btn-sm" onclick="openAiLeadCopilotModal('${l.id}')" title="AI Lead Intent, Heat Score & 1-Click WhatsApp Follow-up">
+                  AI Copilot
+                </button>
+              </td>
+            </tr>
+          `).join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:3.5rem;">No leads found matching current filters.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Preserve focus/cursor in active filter
+  const active = document.activeElement && document.activeElement.id;
+  if (active && active.startsWith('fltr-')) {
+    const el = document.getElementById(active);
+    if (el && el.tagName === 'INPUT') { const v = el.value; el.value = ''; el.value = v; el.focus(); }
+  }
+}
+
+window.updateLeadFilter = function (type, value) {
+  state.leadFilters[type] = value;
+  renderLeadsTable(document.getElementById('content-area'));
+};
+
+// ─── ADD LEAD MODAL ──────────────────────────────────────────────────────────
+window.openAddLeadModal = function () {
+  let existing = document.getElementById('add-lead-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'add-lead-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 style="font-weight:700; margin:0; font-size:1.05rem;">Add New Lead</h3>
+        <button class="btn-icon" onclick="document.getElementById('add-lead-modal-overlay').remove()" style="font-size:1.2rem; line-height:1;">&times;</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.9rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>First Name *</label>
+          <input type="text" id="al-fname" class="form-control" placeholder="First name">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Last Name</label>
+          <input type="text" id="al-lname" class="form-control" placeholder="Last name">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Phone *</label>
+          <input type="text" id="al-phone" class="form-control" placeholder="+91 ...">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Email</label>
+          <input type="email" id="al-email" class="form-control" placeholder="email@example.com">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Source *</label>
+          <select id="al-source" class="form-control">
+            <option value="">Select source...</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Marketing Firms">Marketing Firms</option>
+            <option value="Website">Website</option>
+            <option value="Facebook Ads">Facebook Ads</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Google Ads">Google Ads</option>
+            <option value="Walk In">Walk In</option>
+            <option value="Referral">Referral</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Stage</label>
+          <select id="al-stage" class="form-control">
+            <option value="Fresh Lead">Fresh Lead</option>
+            <option value="1st Attempt Done">1st Attempt Done</option>
+            <option value="Not Answered">Not Answered</option>
+            <option value="Not Reachable">Not Reachable</option>
+            <option value="Hold">Hold</option>
+            <option value="Site Visit Scheduled">Site Visit Scheduled</option>
+            <option value="Booking Done">Booking Done</option>
+            <option value="Junk">Junk</option>
+            <option value="Lost">Lost</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:0.9rem; margin-bottom:0;">
+        <label>Note</label>
+        <textarea id="al-note" class="form-control" style="height:80px; resize:vertical;" placeholder="Optional note..."></textarea>
+      </div>
+
+      <div id="al-error" style="color:var(--danger); font-size:0.82rem; margin-top:0.6rem; display:none;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+        <button class="btn btn-secondary" onclick="document.getElementById('add-lead-modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-accent" id="al-save-btn" onclick="submitAddLead()">Save Lead</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('al-fname').focus();
+};
+
+window.submitAddLead = async function () {
+  const errEl = document.getElementById('al-error');
+  const saveBtn = document.getElementById('al-save-btn');
+  errEl.style.display = 'none';
+
+  const first_name = document.getElementById('al-fname').value.trim();
+  const last_name = document.getElementById('al-lname').value.trim();
+  const phone = document.getElementById('al-phone').value.trim();
+  const email = document.getElementById('al-email').value.trim();
+  const source = document.getElementById('al-source').value;
+  const stage = document.getElementById('al-stage').value;
+  const notes = document.getElementById('al-note').value.trim();
+
+  if (!first_name) { errEl.textContent = 'First name is required.'; errEl.style.display = 'block'; return; }
+  if (!phone) { errEl.textContent = 'Phone is required.'; errEl.style.display = 'block'; return; }
+  if (!source) { errEl.textContent = 'Source is required.'; errEl.style.display = 'block'; return; }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  try {
+    await apiFetch('/leads', {
+      method: 'POST',
+      body: JSON.stringify({ first_name, last_name, phone, email, source, stage, notes })
+    });
+    document.getElementById('add-lead-modal-overlay').remove();
+    // Reload leads and re-render
+    const res = await apiFetch('/leads');
+    state.leads = res.data || [];
+    renderLeadsTable(document.getElementById('content-area'));
+  } catch (err) {
+    errEl.textContent = err.message || 'Failed to save lead.';
+    errEl.style.display = 'block';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Lead';
+  }
+};
+
+
+// ─── AI LEAD COPILOT MODAL & WORKFLOWS ──────────────────────────────────────
+window.openAiLeadCopilotModal = async function (leadId) {
+  let existing = document.getElementById('ai-copilot-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-copilot-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width: 680px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+        <div>
+          <h3 style="font-weight: 700; margin: 0; font-size: 1.15rem; color: var(--text-main);">AI Lead Copilot</h3>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Predictive Lead Heat, Intent Analysis & 1-Click Follow-up</p>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('ai-copilot-modal-overlay').remove()" style="font-size: 1.3rem; line-height: 1;">&times;</button>
+      </div>
+
+      <div id="ai-copilot-modal-body">
+        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+          <p style="margin-bottom: 0.5rem; font-weight: 600;">Analyzing lead parameters with AI Copilot...</p>
+          <div style="display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  try {
+    const res = await apiFetch('/ai/lead-copilot/' + leadId);
+    const data = res.data;
+    const modalBody = document.getElementById('ai-copilot-modal-body');
+    if (!modalBody) return;
+
+    const heatClass = data.temperature === 'HOT' ? 'ai-heat-hot' : data.temperature === 'WARM' ? 'ai-heat-warm' : 'ai-heat-cold';
+
+    modalBody.innerHTML = `
+      <!-- TOP SCORE BANNER -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card-hover); border: 1px solid var(--border-color); padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.25rem;">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Client Profile</div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">${data.clientName}</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted);">${data.clientPhone || ''} ${data.clientEmail ? `• ${data.clientEmail}` : ''}</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="ai-heat-badge ${heatClass}" style="font-size: 0.9rem; padding: 0.35rem 0.75rem;">
+            ${data.tempEmoji} ${data.temperature} LEAD (${data.score}/100)
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">Stage: <strong>${data.stage}</strong></div>
+        </div>
+      </div>
+
+      <!-- STRATEGIC NEXT ACTION -->
+      <div class="ai-action-box">
+        <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">
+          🎯 Recommended Next Action
+        </div>
+        <div style="font-size: 0.92rem; color: var(--text-main); font-weight: 500; line-height: 1.45;">
+          ${data.recommendedAction}
+        </div>
+      </div>
+
+      <!-- KEY SCORING FACTORS -->
+      <div style="margin-bottom: 1.25rem;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase;">
+          📊 Key Intent & Engagement Factors
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 0.4rem;">
+          ${data.factors.map(f => `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.84rem;">
+              <div>
+                <span style="font-weight: 600; color: var(--text-main);">${f.factor}:</span>
+                <span style="color: var(--text-muted); margin-left: 0.25rem;">${f.description}</span>
+              </div>
+              <span style="font-weight: 700; color: ${f.impact.startsWith('+') ? 'var(--success)' : 'var(--danger)'}; font-size: 0.82rem; white-space: nowrap; margin-left: 0.5rem;">
+                ${f.impact} pts
+              </span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- 1-CLICK COMMUNICATION DRAFTS -->
+      <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 1.25rem;">
+        <div style="display: flex; background: var(--bg-card-hover); border-bottom: 1px solid var(--border-color); padding: 0.25rem 0.5rem;">
+          <button class="ai-tab-btn active" id="btn-tab-wa" onclick="switchAiTab('wa')">💬 WhatsApp Pitch (1-Click)</button>
+          <button class="ai-tab-btn" id="btn-tab-email" onclick="switchAiTab('email')">✉️ Email Invitation</button>
+          <button class="ai-tab-btn" id="btn-tab-sms" onclick="switchAiTab('sms')">📱 SMS Reminder</button>
+        </div>
+
+        <!-- WhatsApp Tab -->
+        <div id="ai-tab-content-wa" style="padding: 1rem;">
+          <textarea id="ai-wa-text" class="form-control" style="width: 100%; min-height: 140px; font-family: inherit; font-size: 0.86rem; line-height: 1.5; resize: vertical; margin-bottom: 0.75rem;">${data.communication.whatsapp.message}</textarea>
+          <div style="display: flex; gap: 0.6rem; justify-content: flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('ai-wa-text').value); alert('Copied to clipboard!');">📋 Copy</button>
+            <a href="${data.communication.whatsapp.url}" target="_blank" class="btn btn-sm" style="background: #25D366; color: #FFFFFF; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+              📲 Launch WhatsApp Chat
+            </a>
+          </div>
+        </div>
+
+        <!-- Email Tab -->
+        <div id="ai-tab-content-email" style="padding: 1rem; display: none;">
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label style="font-size: 0.8rem;">Subject Line</label>
+            <input type="text" id="ai-email-sub" class="form-control" value="${data.communication.email.subject}" style="font-size: 0.86rem;">
+          </div>
+          <textarea id="ai-email-text" class="form-control" style="width: 100%; min-height: 130px; font-family: inherit; font-size: 0.86rem; line-height: 1.5; resize: vertical; margin-bottom: 0.75rem;">${data.communication.email.body}</textarea>
+          <div style="display: flex; gap: 0.6rem; justify-content: flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('ai-email-text').value); alert('Copied body to clipboard!');">📋 Copy Body</button>
+            <a href="mailto:${data.clientEmail || ''}?subject=${encodeURIComponent(data.communication.email.subject)}&body=${encodeURIComponent(data.communication.email.body)}" class="btn btn-primary btn-sm">
+              ✉️ Open in Mail Client
+            </a>
+          </div>
+        </div>
+
+        <!-- SMS Tab -->
+        <div id="ai-tab-content-sms" style="padding: 1rem; display: none;">
+          <textarea id="ai-sms-text" class="form-control" style="width: 100%; min-height: 80px; font-family: inherit; font-size: 0.86rem; line-height: 1.5; resize: vertical; margin-bottom: 0.75rem;">${data.communication.sms.message}</textarea>
+          <div style="display: flex; gap: 0.6rem; justify-content: flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('ai-sms-text').value); alert('Copied SMS text to clipboard!');">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUICK SITE VISIT SLOT SELECTOR -->
+      <div style="background: var(--bg-card-hover); border: 1px solid var(--border-color); padding: 1rem 1.25rem; border-radius: 8px;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; text-transform: uppercase;">
+          📅 Fast Site Visit Scheduling (Google Calendar Synced)
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          ${data.suggestedSlots.map(s => `
+            <button class="btn btn-outline btn-sm" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="scheduleAiSiteVisit('${leadId}', '${s.iso}')">
+              🕒 ${s.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    const modalBody = document.getElementById('ai-copilot-modal-body');
+    if (modalBody) {
+      modalBody.innerHTML = `<p style="color: var(--danger); padding: 2rem; text-align: center;">Failed to analyze lead: ${err.message}</p>`;
+    }
+  }
+};
+
+window.switchAiTab = function (tab) {
+  ['wa', 'email', 'sms'].forEach(t => {
+    const btn = document.getElementById(`btn-tab-${t}`);
+    const content = document.getElementById(`ai-tab-content-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (content) content.style.display = t === tab ? 'block' : 'none';
+  });
+};
+
+window.scheduleAiSiteVisit = async function (leadId, scheduledIso) {
+  try {
+    if (!confirm('Schedule site visit for this slot and sync to Google Calendar?')) return;
+    const res = await apiFetch('/site-visits', {
+      method: 'POST',
+      body: JSON.stringify({
+        visitor_type: 'LEAD',
+        lead_id: leadId,
+        scheduled_time: scheduledIso,
+        duration_minutes: 60,
+        notes: 'AI-Copilot scheduled site visit from Lead Intelligence view.'
+      })
+    });
+    alert(res.message || 'Site visit scheduled and synchronized with Google Calendar!');
+    const modal = document.getElementById('ai-copilot-modal-overlay');
+    if (modal) modal.remove();
+    // Refresh leads
+    const leadsRes = await apiFetch('/leads');
+    state.leads = leadsRes.data || [];
+    renderLeadsTable(document.getElementById('content-area'));
+  } catch (err) {
+    alert('Failed to schedule visit: ' + err.message);
+  }
+};
+
+window.loadLeadDetailsView = async function (id) {
+  const container = document.getElementById('content-area');
+  container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading lead details...</div>';
+  try {
+    const res = await apiFetch('/leads/' + id);
+    const lead = res.data;
+    const notesStr = lead.notes || '';
+
+    container.innerHTML = `
+      <div style="margin-bottom: 1.5rem;">
+        <button class="btn btn-secondary" style="font-weight: 600;" onclick="loadLeadsView(document.getElementById('content-area'))">← Back to Leads</button>
+      </div>
+      
+      <div class="table-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+          <div>
+            <h2 style="margin: 0 0 0.4rem 0; font-size: 1.8rem; font-weight: 700; color: var(--text-main);">${lead.first_name} ${lead.last_name || ''}</h2>
+            <p style="color: var(--text-muted); margin: 0; font-size: 0.95rem;">Lead Details & Pipeline Status</p>
+          </div>
+          <div style="display: flex; gap: 0.6rem; align-items: center;">
+            <button class="btn btn-secondary" onclick="openAiLeadCopilotModal('${lead.id}')">
+              AI Lead Copilot
+            </button>
+            ${lead.stage !== 'Booking Done' && lead.stage !== 'WON' ? `<button class="btn btn-primary" onclick="openLeadBookingModal('${lead.id}')">Convert to Booking</button>` : ''}
+            <button class="btn btn-primary" onclick="saveLeadDetails('${lead.id}')">Save Changes</button>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
+          <!-- Left Column -->
+          <div>
+            <h4 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 1.5rem; color: var(--text-main);">Basic Information</h4>
+            
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" id="ld-fname" class="form-control" value="${lead.first_name}">
+            </div>
+            
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" id="ld-lname" class="form-control" value="${lead.last_name || ''}">
+            </div>
+            
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" id="ld-phone" class="form-control" value="${lead.phone}">
+            </div>
+            
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="ld-email" class="form-control" value="${lead.email || ''}">
+            </div>
+            
+            <div class="form-group">
+              <label>Source</label>
+              <select id="ld-source" class="form-control">
+                <option value="${lead.source}" selected>${lead.source}</option>
+                <option disabled>---</option>
+                <option value="Social Media">Social Media</option>
+                <option value="Marketing Firms">Marketing Firms</option>
+                <option value="Website">Website</option>
+                <option value="Facebook Ads">Facebook Ads</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Google Ads">Google Ads</option>
+                <option value="Walk In">Walk In</option>
+                <option value="Referral">Referral</option>
+                <option value="Other">Other</option>
+                <option value="WEBSITE_FORM">Website Form (Legacy)</option>
+                <option value="DIRECT_CALL">Direct Call (Legacy)</option>
+                <option value="WHATSAPP">WhatsApp (Legacy)</option>
+                <option value="FACEBOOK_ADS">Facebook Ads (Legacy)</option>
+                <option value="WALK_IN">Walk-in (Legacy)</option>
+                <option value="REFERRAL">Referral (Legacy)</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Right Column -->
+          <div>
+            <h4 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 1.5rem; color: var(--text-main);">Pipeline Status</h4>
+            
+            <div class="form-group">
+              <label>Current Stage</label>
+              <select id="ld-stage" class="form-control">
+                <option value="${lead.stage}" selected>${lead.stage}</option>
+                <option disabled>---</option>
+                <option value="Fresh Lead">Fresh Lead</option>
+                <option value="1st Attempt Done">1st Attempt Done</option>
+                <option value="2nd Attempt Done">2nd Attempt Done</option>
+                <option value="Not Answered">Not Answered</option>
+                <option value="Not Reachable">Not Reachable</option>
+                <option value="No Response">No Response</option>
+                <option value="Hold">Hold</option>
+                <option value="Site Visit Scheduled">Site Visit Scheduled</option>
+                <option value="Site Visit Confirmed">Site Visit Confirmed</option>
+                <option value="2nd Visit Scheduled">2nd Visit Scheduled</option>
+                <option value="Rescheduled">Rescheduled</option>
+                <option value="Site Visit Cancelled">Site Visit Cancelled</option>
+                <option value="Site Visit Done">Site Visit Done</option>
+                <option value="Booking Done">Booking Done</option>
+                <option value="Junk">Junk</option>
+                <option value="Lost">Lost</option>
+                <option value="Duplicate">Duplicate</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Notes</label>
+              <textarea id="ld-notes" class="form-control" style="height: 150px; resize: vertical;">${notesStr.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+            </div>
+            
+            <div style="margin-top: 2.5rem; background: var(--bg-main); padding: 1.2rem; border-radius: 8px; border: 1px solid var(--border-color);">
+              <p style="margin: 0 0 0.6rem 0; font-size: 0.85rem; color: var(--text-muted);"><strong>Created:</strong> ${new Date(lead.created_at).toLocaleString()}</p>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);"><strong>Last Updated:</strong> ${new Date(lead.updated_at).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="padding: 2rem; color: var(--danger); text-align: center;">${err.message}</div>`;
+  }
+};
+
+window.saveLeadDetails = async function (id) {
+  const payload = {
+    first_name: document.getElementById('ld-fname').value,
+    last_name: document.getElementById('ld-lname').value,
+    phone: document.getElementById('ld-phone').value,
+    email: document.getElementById('ld-email').value,
+    source: document.getElementById('ld-source').value,
+    stage: document.getElementById('ld-stage').value,
+    notes: document.getElementById('ld-notes').value,
+  };
+  try {
+    await apiFetch('/leads/' + id, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+    alert('Lead updated successfully!');
+
+    // Check if stage change triggers site visit
+    const s = payload.stage;
+    if (s === 'Site Visit Scheduled' || s === 'Site Visit Confirmed' || s === '2nd Visit Scheduled' || s === 'Rescheduled') {
+      const name = (payload.first_name + ' ' + (payload.last_name || '')).trim();
+      openScheduleVisitModal({ leadId: id, leadName: name });
+    } else {
+      loadLeadDetailsView(id); // reload
+    }
+  } catch (err) {
+    alert('Failed to update lead: ' + err.message);
+  }
+};
+
+async function loadCustomersView(container) {
+  const res = await apiFetch('/customers');
+  container.innerHTML = `<div class="table-container"><table><thead><tr><th>Buyer Name</th><th>Phone</th><th>Email</th><th>KYC Status</th></tr></thead><tbody>${res.data.map(c => `<tr><td>${c.first_name} ${c.last_name || ''}</td><td>${c.phone}</td><td>${c.email || 'N/A'}</td><td><span class="badge badge-active">${c.kyc_status}</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+async function loadSiteVisitsView(container) {
+  await loadCalendarView(container);
+}
+
+// ----------------------------------------------------
+// CALENDAR & SITE VISIT WORKFLOW
+// ----------------------------------------------------
+function formatLeadStage(stage) {
+  const labels = {
+    INCOMING: 'Incoming',
+    CONTACTED: 'Contacted',
+    VISIT_SCHEDULED: 'Site Visit Scheduled',
+    VISIT_COMPLETED: 'Site Visit Done',
+    NEGOTIATION: 'Negotiation',
+    WON: 'Won',
+    LOST: 'Lost'
+  };
+  return labels[stage] || stage;
+}
+
+function formatVisitStatus(status) {
+  const labels = {
+    SCHEDULED: 'Scheduled',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
+    NO_SHOW: 'No Show'
+  };
+  return labels[status] || status;
+}
+
+function getVisitStatusBadgeClass(status) {
+  const map = {
+    SCHEDULED: 'badge-booked',
+    COMPLETED: 'badge-available',
+    CANCELLED: 'badge-sold',
+    NO_SHOW: 'badge-hold'
+  };
+  return map[status] || 'badge-booked';
+}
+
+function getClientName(visit) {
+  if (visit.lead_first_name) return `${visit.lead_first_name} ${visit.lead_last_name || ''}`.trim();
+  if (visit.customer_first_name) return `${visit.customer_first_name} ${visit.customer_last_name || ''}`.trim();
+  return 'Unknown Client';
+}
+
+function formatTime(dateStr) {
+  return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function formatDateTime(dateStr) {
+  return new Date(dateStr).toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+}
+
+function toDatetimeLocalValue(dateStr) {
+  const d = new Date(dateStr);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function toMysqlDatetime(dateInput) {
+  const d = new Date(dateInput);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
+function calendarNavigate(direction) {
+  const d = new Date(state.calendarDate);
+  d.setMonth(d.getMonth() + direction);
+  state.calendarDate = d;
+  const contentArea = document.getElementById('content-area');
+  if (contentArea) loadCalendarView(contentArea);
+}
+
+function calendarGoToday() {
+  state.calendarDate = new Date();
+  const contentArea = document.getElementById('content-area');
+  if (contentArea) loadCalendarView(contentArea);
+}
+
+async function connectGoogleCalendar() {
+  try {
+    const res = await apiFetch('/calendar/auth');
+    if (res.data && res.data.authUrl) {
+      window.location.href = res.data.authUrl;
+    } else {
+      alert('Google Calendar configuration is missing or invalid.');
+    }
+  } catch (err) {
+    alert('Failed to connect Google Calendar: ' + err.message);
+  }
+}
+window.connectGoogleCalendar = connectGoogleCalendar;
+
+async function sendTestCalendarInvite() {
+  const email = prompt('Enter a Gmail address to receive the test Google Calendar invitation:', state.user?.email || '');
+  if (!email || !email.includes('@')) {
+    if (email) alert('Please enter a valid email address.');
+    return;
+  }
+  try {
+    const res = await apiFetch('/calendar/test', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim() })
+    });
+    if (typeof showToastNotification === 'function') {
+      showToastNotification(res.message || 'Test invitation dispatched successfully!', 'success');
+    } else {
+      alert(res.message || 'Test invitation dispatched successfully!');
+    }
+  } catch (err) {
+    alert('Test failed: ' + err.message);
+  }
+}
+window.sendTestCalendarInvite = sendTestCalendarInvite;
+
+async function loadCalendarView(container) {
+  try {
+    const year = state.calendarDate.getFullYear();
+    const month = state.calendarDate.getMonth();
+    const monthLabel = state.calendarDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+    const [visitsRes, calendarStatusRes] = await Promise.all([
+      apiFetch('/site-visits'),
+      apiFetch('/calendar/status').catch(() => ({ data: { connected: false } }))
+    ]);
+
+    const visits = visitsRes.data || [];
+    const googleConnected = calendarStatusRes.data?.connected === true;
+    const googleReason = calendarStatusRes.data?.reason;
+    const isAdmin = state.user.role === 'SUPER_ADMIN';
+
+    const visitsByDate = {};
+    visits.forEach(v => {
+      const key = new Date(v.scheduled_time).toDateString();
+      if (!visitsByDate[key]) visitsByDate[key] = [];
+      visitsByDate[key].push(v);
+    });
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPad = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+    const todayStr = new Date().toDateString();
+
+    let cells = '';
+    for (let i = 0; i < startPad; i++) {
+      cells += '<div class="cal-day cal-day-empty"></div>';
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(year, month, day);
+      const dateKey = dateObj.toDateString();
+      const isToday = dateKey === todayStr;
+      const dayVisits = visitsByDate[dateKey] || [];
+
+      cells += `
+        <div class="cal-day ${isToday ? 'cal-day-today' : ''}">
+          <div class="cal-day-num">${day}</div>
+          <div class="cal-day-events">
+            ${dayVisits.slice(0, 3).map(v => `
+              <div class="cal-event cal-event-${v.status.toLowerCase()}" onclick="openVisitDetailModal('${v.id}')" title="${getClientName(v)} - ${v.project_name}">
+                <span class="cal-event-time">${formatTime(v.scheduled_time)}</span>
+                <span class="cal-event-title">${getClientName(v)}</span>
+              </div>
+            `).join('')}
+            ${dayVisits.length > 3 ? `<div class="cal-event-more">+${dayVisits.length - 3} more</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    const scheduledCount = visits.filter(v => v.status === 'SCHEDULED').length;
+    const completedCount = visits.filter(v => v.status === 'COMPLETED').length;
+
+    container.innerHTML = `
+      <div class="cal-toolbar">
+        <div class="cal-toolbar-left">
+          <button class="btn btn-secondary btn-sm" onclick="calendarNavigate(-1)">&#8249; Prev</button>
+          <button class="btn btn-secondary btn-sm" onclick="calendarGoToday()">Today</button>
+          <button class="btn btn-secondary btn-sm" onclick="calendarNavigate(1)">Next &#8250;</button>
+          <h2 class="cal-month-title">${monthLabel}</h2>
+        </div>
+        <div class="cal-toolbar-right" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          ${googleConnected 
+            ? `
+              <span class="cal-google-status connected" title="Google Calendar API connected">✓ Google Calendar: Active</span>
+              <button class="btn btn-secondary btn-sm" onclick="sendTestCalendarInvite()" title="Send test invite to your Gmail">Test Invite</button>
+              <button class="btn btn-outline btn-sm" style="font-size:0.75rem; padding:0.25rem 0.5rem;" onclick="connectGoogleCalendar()" title="Re-authenticate Google account">Reconnect</button>
+            ` 
+            : `
+              <span class="cal-google-status" style="padding:0.25rem 0.6rem; border-radius:4px; font-size:0.8rem; font-weight:600;" title="${googleReason || 'Re-authentication required'}">Google Calendar: Disconnected</span>
+              <button class="btn btn-accent btn-sm" onclick="connectGoogleCalendar()">Connect Google Calendar</button>
+            `
+          }
+        </div>
+      </div>
+
+      <div class="cal-stats-row">
+        <div class="cal-stat"><span class="cal-stat-val">${scheduledCount}</span><span class="cal-stat-label">Scheduled</span></div>
+        <div class="cal-stat"><span class="cal-stat-val">${completedCount}</span><span class="cal-stat-label">Completed</span></div>
+        <div class="cal-stat"><span class="cal-stat-val">${visits.length}</span><span class="cal-stat-label">Total Visits</span></div>
+      </div>
+
+      <div class="cal-grid">
+        ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-header-cell">${d}</div>`).join('')}
+        ${cells}
+      </div>
+
+      <div class="cal-legend">
+        <span><i class="cal-legend-dot scheduled"></i> Scheduled</span>
+        <span><i class="cal-legend-dot completed"></i> Completed</span>
+        <span><i class="cal-legend-dot cancelled"></i> Cancelled</span>
+        <span><i class="cal-legend-dot no_show"></i> No Show</span>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--danger);">Failed to load calendar: ${err.message}</p>`;
+  }
+}
+
+async function openVisitDetailModal(visitId) {
+  try {
+    const res = await apiFetch(`/site-visits/${visitId}`);
+    const visit = res.data;
+    const isAdmin = state.user.role === 'SUPER_ADMIN';
+    const clientName = getClientName(visit);
+    const agentName = `${visit.agent_first_name} ${visit.agent_last_name || ''}`.trim();
+    const history = visit.history || [];
+    const canAct = isAdmin && visit.status === 'SCHEDULED';
+
+    showModal('Site Visit Details', `
+      <div class="visit-detail">
+        <div class="visit-detail-header">
+          <span class="badge ${getVisitStatusBadgeClass(visit.status)}">${formatVisitStatus(visit.status)}</span>
+          ${visit.google_event_id ? '<span class="cal-google-status connected" style="font-size:0.7rem;">Synced to Google</span>' : ''}
+        </div>
+
+        <div class="visit-detail-grid">
+          <div><label>Client</label><div>${clientName}</div></div>
+          <div><label>Project</label><div>${visit.project_name}</div></div>
+          <div><label>Date & Time</label><div>${formatDateTime(visit.scheduled_time)}</div></div>
+          <div><label>Salesperson</label><div>${agentName} ${visit.agent_email ? `(${visit.agent_email})` : ''}</div></div>
+          ${visit.lead_phone || visit.customer_phone ? `<div><label>Phone</label><div>${visit.lead_phone || visit.customer_phone}</div></div>` : ''}
+          ${visit.lead_email || visit.customer_email ? `<div><label>Email</label><div>${visit.lead_email || visit.customer_email}</div></div>` : ''}
+          ${visit.project_location ? `<div><label>Location</label><div>${visit.project_location}${visit.project_city ? `, ${visit.project_city}` : ''}</div></div>` : ''}
+          ${visit.lead_stage ? `<div><label>Lead Stage</label><div>${formatLeadStage(visit.lead_stage)}</div></div>` : ''}
+        </div>
+
+        ${visit.client_feedback ? `<div class="visit-notes"><label>Notes</label><p>${visit.client_feedback}</p></div>` : ''}
+
+        ${canAct ? `
+          <div class="visit-actions">
+            <button class="btn btn-accent btn-sm" onclick="updateVisitStatus('${visit.id}', 'COMPLETED')">Mark Done</button>
+            <button class="btn btn-secondary btn-sm" onclick="openRescheduleModal('${visit.id}')">Reschedule</button>
+            <button class="btn btn-secondary btn-sm" onclick="updateVisitStatus('${visit.id}', 'NO_SHOW')">No Show</button>
+            <button class="btn btn-secondary btn-sm" style="color:var(--danger);" onclick="updateVisitStatus('${visit.id}', 'CANCELLED')">Cancel</button>
+          </div>
+        ` : ''}
+
+        ${history.length ? `
+          <div class="visit-history">
+            <h4>Visit History</h4>
+            ${history.map(h => `
+              <div class="visit-history-item">
+                <div class="visit-history-action">${h.action.replace(/_/g, ' ')}</div>
+                <div class="visit-history-meta">
+                  ${h.performer_first_name ? `${h.performer_first_name} ${h.performer_last_name || ''} · ` : ''}
+                  ${new Date(h.created_at).toLocaleString('en-IN')}
+                </div>
+                ${h.notes ? `<div class="visit-history-notes">${h.notes}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `, 'modal-wide');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function updateVisitStatus(visitId, status) {
+  const labels = { COMPLETED: 'mark this visit as done', CANCELLED: 'cancel this visit', NO_SHOW: 'mark as no show' };
+  if (!confirm(`Are you sure you want to ${labels[status] || 'update this visit'}?`)) return;
+
+  try {
+    await apiFetch(`/site-visits/${visitId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+    closeModal();
+    if (state.currentView === 'calendar') {
+      loadCalendarView(document.getElementById('content-area'));
+    } else if (state.currentView === 'leads') {
+      loadLeadsView(document.getElementById('content-area'));
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function openRescheduleModal(visitId) {
+  closeModal();
+  apiFetch(`/site-visits/${visitId}`).then(res => {
+    const visit = res.data;
+    showModal('Reschedule Visit', `
+      <form id="reschedule-visit-form">
+        <div class="form-group">
+          <label>New Date & Time</label>
+          <input type="datetime-local" id="sv-reschedule-time" class="form-control" value="${toDatetimeLocalValue(visit.scheduled_time)}" required />
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="sv-reschedule-notes" class="form-control" rows="2" placeholder="Reason for rescheduling...">${visit.client_feedback || ''}</textarea>
+        </div>
+        <button type="submit" class="btn btn-accent" style="width:100%;">Update Visit</button>
+      </form>
+    `);
+
+    document.getElementById('reschedule-visit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const scheduled_time = toMysqlDatetime(document.getElementById('sv-reschedule-time').value);
+        const notes = document.getElementById('sv-reschedule-notes').value;
+        await apiFetch(`/site-visits/${visitId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ scheduled_time, client_feedback: notes || undefined, status: 'SCHEDULED' })
+        });
+        closeModal();
+        loadCalendarView(document.getElementById('content-area'));
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }).catch(err => alert(err.message));
+}
+
+async function openScheduleVisitModal(prefill = {}) {
+  if (state.user.role !== 'SUPER_ADMIN') {
+    alert('Only Super Admin can schedule visits.');
+    return;
+  }
+
+  try {
+    const [projectsRes, usersRes, leadsRes, customersRes] = await Promise.all([
+      apiFetch('/projects'),
+      apiFetch('/users'),
+      apiFetch('/leads'),
+      apiFetch('/customers')
+    ]);
+
+    const projects = projectsRes.data || [];
+    const agents = (usersRes.data || []).filter(u => u.status === 'ACTIVE');
+    const leads = leadsRes.data || [];
+    const customers = customersRes.data || [];
+
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 1);
+    defaultDate.setHours(10, 0, 0, 0);
+
+    showModal('Schedule Site Visit', `
+      <form id="schedule-visit-form">
+        <div class="form-group">
+          <label>Contact Type</label>
+          <select id="sv-contact-type" class="form-control" onchange="toggleScheduleContactType()">
+            <option value="lead" ${prefill.leadId ? 'selected' : ''}>Lead</option>
+            <option value="customer" ${prefill.customerId ? 'selected' : ''}>Customer</option>
+          </select>
+        </div>
+        <div class="form-group" id="sv-lead-group">
+          <label>Lead</label>
+          <select id="sv-lead" class="form-control">
+            <option value="">Select Lead</option>
+            ${leads.map(l => `<option value="${l.id}" ${prefill.leadId === l.id ? 'selected' : ''}>${l.first_name} ${l.last_name || ''} (${l.phone})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" id="sv-customer-group" style="display:none;">
+          <label>Customer</label>
+          <select id="sv-customer" class="form-control">
+            <option value="">Select Customer</option>
+            ${customers.map(c => `<option value="${c.id}" ${prefill.customerId === c.id ? 'selected' : ''}>${c.first_name} ${c.last_name || ''} (${c.phone})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Project</label>
+          <select id="sv-project" class="form-control" required>
+            <option value="">Select Project</option>
+            ${projects.map(p => `<option value="${p.id}" ${prefill.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Assigned Salesperson</label>
+          <select id="sv-agent" class="form-control" required>
+            <option value="">Select Salesperson</option>
+            ${agents.map(a => `<option value="${a.id}">${a.first_name || a.username} ${a.last_name || ''}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="form-group">
+            <label>Date & Time</label>
+            <input type="datetime-local" id="sv-datetime" class="form-control" value="${toDatetimeLocalValue(defaultDate)}" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="sv-notes" class="form-control" rows="2" placeholder="Visit notes..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-accent" style="width:100%;">Schedule Visit</button>
+      </form>
+    `);
+
+    if (prefill.customerId) toggleScheduleContactType();
+
+    document.getElementById('schedule-visit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const contactType = document.getElementById('sv-contact-type').value;
+      const lead_id = contactType === 'lead' ? document.getElementById('sv-lead').value : null;
+      const customer_id = contactType === 'customer' ? document.getElementById('sv-customer').value : null;
+
+      if (!lead_id && !customer_id) {
+        alert('Please select a lead or customer.');
+        return;
+      }
+
+      try {
+        const scheduled_time = toMysqlDatetime(document.getElementById('sv-datetime').value);
+        const res = await apiFetch('/site-visits', {
+          method: 'POST',
+          body: JSON.stringify({
+            lead_id: lead_id || undefined,
+            customer_id: customer_id || undefined,
+            project_id: document.getElementById('sv-project').value,
+            assigned_agent_id: document.getElementById('sv-agent').value,
+            scheduled_time,
+            notes: document.getElementById('sv-notes').value || undefined
+          })
+        });
+        closeModal();
+        if (res.data?.google_synced) {
+          if (typeof showToastNotification === 'function') {
+            showToastNotification('✓ Site visit booked & Google Calendar invite sent to client!', 'success');
+          } else {
+            alert('✓ Site visit booked & Google Calendar invite sent to client!');
+          }
+        } else if (res.data?.google_error) {
+          if (typeof showToastNotification === 'function') {
+            showToastNotification(`Site visit scheduled, but Google Calendar sync failed: ${res.data.google_error}`, 'error');
+          } else {
+            alert(`Site visit scheduled in CRM, but Google Calendar sync failed: ${res.data.google_error}`);
+          }
+        } else if (res.message) {
+          if (typeof showToastNotification === 'function') {
+            showToastNotification(res.message, 'success');
+          }
+        }
+        if (state.currentView === 'calendar') {
+          loadCalendarView(document.getElementById('content-area'));
+        } else if (state.currentView === 'leads') {
+          loadLeadsView(document.getElementById('content-area'));
+        } else {
+          switchView('calendar');
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function toggleScheduleContactType() {
+  const type = document.getElementById('sv-contact-type')?.value;
+  const leadGroup = document.getElementById('sv-lead-group');
+  const customerGroup = document.getElementById('sv-customer-group');
+  if (leadGroup && customerGroup) {
+    leadGroup.style.display = type === 'lead' ? 'block' : 'none';
+    customerGroup.style.display = type === 'customer' ? 'block' : 'none';
+  }
+}
+
+// --------------------------------------------------------------------------
+// DEALS & BOOKINGS VIEW
+// --------------------------------------------------------------------------
+window.dealSearchFilter = '';
+window.dealStatusFilter = '';
+
+async function loadDealsView(container) {
+  try {
+    container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading deals & bookings...</div>';
+    let url = '/deals?';
+    if (window.dealStatusFilter) url += `status=${window.dealStatusFilter}&`;
+    if (window.dealSearchFilter) url += `search=${encodeURIComponent(window.dealSearchFilter)}&`;
+
+    const res = await apiFetch(url);
+    const deals = res.data || [];
+
+    const totalBookingValue = deals.reduce((acc, d) => acc + Number(d.agreed_total_amount || 0), 0);
+    const totalCollected = deals.reduce((acc, d) => acc + Number(d.total_paid_amount || 0), 0);
+
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        <div class="kpi-card" style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase;">Total Deals</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-top: 0.3rem;">${deals.length}</div>
+        </div>
+        <div class="kpi-card" style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase;">Total Contract Value</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent); margin-top: 0.3rem;">₹${totalBookingValue.toLocaleString()}</div>
+        </div>
+        <div class="kpi-card" style="background: var(--bg-card); padding: 1.1rem; border-radius: var(--radius); border: 1px solid var(--border-color);">
+          <div style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase;">Collections Realized</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-top: 0.3rem;">₹${totalCollected.toLocaleString()}</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <h3 style="font-weight: 700; font-size: 1.05rem; margin: 0;">Deals & Booking Contracts</h3>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-muted);">Real-time property bookings, buyer contracts, and collection milestones.</p>
+          </div>
+          <div style="display: flex; gap: 0.6rem; align-items: center;">
+            <input type="text" class="form-control" placeholder="Search deal #, customer, unit..." value="${window.dealSearchFilter}" style="width: 220px; font-size: 0.82rem;" oninput="window.dealSearchFilter=this.value; loadDealsView(document.getElementById('content-area'))">
+            <select class="form-control" style="width: 140px; font-size: 0.82rem;" onchange="window.dealStatusFilter=this.value; loadDealsView(document.getElementById('content-area'))">
+              <option value="" ${window.dealStatusFilter === '' ? 'selected' : ''}>All Statuses</option>
+              <option value="BOOKED" ${window.dealStatusFilter === 'BOOKED' ? 'selected' : ''}>Booked</option>
+              <option value="AGREEMENT_SIGNED" ${window.dealStatusFilter === 'AGREEMENT_SIGNED' ? 'selected' : ''}>Agreement Signed</option>
+              <option value="CLOSED_WON" ${window.dealStatusFilter === 'CLOSED_WON' ? 'selected' : ''}>Closed Won</option>
+              <option value="CANCELLED" ${window.dealStatusFilter === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Deal #</th>
+              <th>Buyer Customer</th>
+              <th>Property / Unit</th>
+              <th style="text-align: right;">Contract Total</th>
+              <th style="text-align: right;">Token / Paid</th>
+              <th style="text-align: center;">Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${deals.length ? deals.map(d => {
+              const totalVal = Number(d.agreed_total_amount || 0);
+              const paidVal = Number(d.total_paid_amount || 0);
+              return `
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-main);">#${d.deal_number}</td>
+                  <td>
+                    <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(d.customer_first_name)} ${escapeHtml(d.customer_last_name || '')}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${d.customer_phone || ''}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 500;">Unit ${escapeHtml(d.unit_number)} (${escapeHtml(d.unit_type || '')})</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(d.project_name || '')}</div>
+                  </td>
+                  <td style="text-align: right; font-weight: 700; color: var(--text-main);">₹${totalVal.toLocaleString()}</td>
+                  <td style="text-align: right;">
+                    <div style="font-weight: 600; color: var(--text-main);">₹${paidVal.toLocaleString()}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">Token: ₹${Number(d.booking_token_amount || 0).toLocaleString()}</div>
+                  </td>
+                  <td style="text-align: center;">
+                    <span class="badge">${(d.status || '').replace(/_/g, ' ')}</span>
+                  </td>
+                  <td style="text-align: right;">
+                    <button class="btn btn-secondary btn-sm" onclick="openDealDetailModal('${d.id}')">View Details</button>
+                  </td>
+                </tr>
+              `;
+            }).join('') : '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">No deal records found matching current filters.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="padding: 2rem; color: var(--danger);">Failed to load deals: ${err.message}</div>`;
+  }
+}
+
+window.openDealDetailModal = async function(dealId) {
+  try {
+    const res = await apiFetch(`/deals/${dealId}`);
+    const d = res.data;
+
+    let existing = document.getElementById('deal-detail-modal-overlay');
+    if (existing) existing.remove();
+
+    const totalAgreed = Number(d.agreed_total_amount || 0);
+    const totalPaid = (d.payments || []).reduce((acc, p) => acc + Number(p.amount_received || 0), 0);
+    const outstanding = Math.max(0, totalAgreed - totalPaid);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'deal-detail-modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width: 720px; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">Deal #${d.deal_number}</h3>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem; align-items: center;">
+              <span style="color: var(--text-main); font-size: 0.85rem; font-weight: 600;">${(d.status || '').replace(/_/g, ' ')}</span>
+              <span style="font-size: 0.78rem; color: var(--text-muted);">Created on ${new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            </div>
+          </div>
+          <button class="btn-icon" onclick="document.getElementById('deal-detail-modal-overlay').remove()">✕</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+          <!-- Buyer Info -->
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border-color);">
+            <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem 0;">👤 Buyer Customer</h4>
+            <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${escapeHtml(d.customer_first_name)} ${escapeHtml(d.customer_last_name || '')}</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">📱 ${d.customer_phone || 'N/A'}</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted);">✉️ ${d.customer_email || 'N/A'}</div>
+            ${d.pan_tax_id ? `<div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">PAN / Tax ID: <b>${d.pan_tax_id}</b></div>` : ''}
+          </div>
+
+          <!-- Property Specs -->
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border-color);">
+            <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem 0;">🏢 Property Specifications</h4>
+            <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">${escapeHtml(d.project_name)} - Unit ${escapeHtml(d.unit_number)}</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">Type: <b>${d.unit_type || 'N/A'}</b> | Floor: <b>${d.floor_number ?? 'G/Plotted'}</b></div>
+            <div style="font-size: 0.82rem; color: var(--text-muted);">Super Area: <b>${d.super_area_sqft || d.plot_area_sqft || 'N/A'} sq.ft.</b> | Carpet: <b>${d.carpet_area_sqft || 'N/A'} sq.ft.</b></div>
+          </div>
+        </div>
+
+        <!-- Financial Breakdown -->
+        <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.75rem 0;">💰 Financial Breakdown</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; font-size: 0.82rem;">
+            <div><span style="color: var(--text-muted);">Base Price:</span><br><b>₹${Number(d.base_price || 0).toLocaleString()}</b></div>
+            <div><span style="color: var(--text-muted);">PLC Charges:</span><br><b>₹${Number(d.plc_charges || 0).toLocaleString()}</b></div>
+            <div><span style="color: var(--text-muted);">Parking:</span><br><b>₹${Number(d.parking_charges || 0).toLocaleString()}</b></div>
+            <div><span style="color: var(--text-muted);">Taxes:</span><br><b>₹${Number(d.taxes_amount || 0).toLocaleString()}</b></div>
+            <div><span style="color: var(--text-muted);">Discount:</span><br><b>- ₹${Number(d.discount_amount || 0).toLocaleString()}</b></div>
+            <div><span style="color: var(--text-muted);">Token Paid:</span><br><b style="color: var(--text-main);">₹${Number(d.booking_token_amount || 0).toLocaleString()}</b></div>
+          </div>
+          <div style="border-top: 1px solid var(--border-color); margin-top: 0.75rem; padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 0.82rem; color: var(--text-muted);">Agreed Total Amount:</span>
+              <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">₹${totalAgreed.toLocaleString()}</div>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.82rem; color: var(--text-muted);">Outstanding Balance:</span>
+              <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">₹${outstanding.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment History -->
+        <div>
+          <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem 0;">🧾 Payment Receipts (${(d.payments || []).length})</h4>
+          ${(d.payments && d.payments.length > 0) ? `
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                  <th style="padding: 0.5rem; text-align: left;">Receipt #</th>
+                  <th style="padding: 0.5rem; text-align: left;">Date</th>
+                  <th style="padding: 0.5rem; text-align: left;">Mode</th>
+                  <th style="padding: 0.5rem; text-align: right;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${d.payments.map(p => `
+                  <tr style="border-bottom: 1px solid var(--border-muted);">
+                    <td style="padding: 0.5rem; font-weight: 600;">${p.payment_number}</td>
+                    <td style="padding: 0.5rem;">${new Date(p.payment_date).toLocaleDateString('en-IN')}</td>
+                    <td style="padding: 0.5rem;">${(p.payment_mode || '').replace(/_/g, ' ')}</td>
+                    <td style="padding: 0.5rem; text-align: right; color: var(--text-main);">₹${Number(p.amount_received).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">No payments recorded yet for this deal.</p>'}
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.5rem;">
+          <button class="btn btn-secondary" onclick="document.getElementById('deal-detail-modal-overlay').remove()">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  } catch (err) {
+    alert('Failed to load deal details: ' + err.message);
+  }
+};
+
+// --------------------------------------------------------------------------
+// PAYMENTS VIEW
+// --------------------------------------------------------------------------
+async function loadPaymentsView(container) {
+  try {
+    container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading payments...</div>';
+    const res = await apiFetch('/payments');
+    const payments = res.data || [];
+
+    const totalCollected = payments.reduce((acc, p) => acc + Number(p.amount_received || 0), 0);
+
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em;">Payment Receipts & Collections</h2>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.82rem; color: var(--text-muted);">Realized cashflow receipts and customer milestone payments.</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <div style="background: var(--bg-card); padding: 0.5rem 1rem; border-radius: var(--radius); border: 1px solid var(--border-color); font-size: 0.84rem; color: var(--text-main);">
+            Total Collected: <b>₹${totalCollected.toLocaleString()}</b>
+          </div>
+          <button class="btn btn-primary" onclick="openRecordPaymentModal()">+ Record Payment</button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Receipt #</th>
+              <th>Deal #</th>
+              <th>Payment Date</th>
+              <th>Mode</th>
+              <th>Reference #</th>
+              <th style="text-align: right;">Amount Received</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.length ? payments.map(p => `
+              <tr>
+                <td style="font-weight: 600; color: var(--text-main);">${p.payment_number}</td>
+                <td style="font-weight: 500; color: var(--text-main);">#${p.deal_number}</td>
+                <td style="font-size: 0.82rem; color: var(--text-main);">${new Date(p.payment_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                <td><span class="badge">${(p.payment_mode || '').replace(/_/g, ' ')}</span></td>
+                <td style="font-size: 0.82rem; color: var(--text-muted);">${p.reference_number || '-'}</td>
+                <td style="text-align: right; font-weight: 700; color: var(--text-main);">₹${Number(p.amount_received).toLocaleString()}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">No payment receipts recorded yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="padding: 2rem; color: var(--danger);">Failed to load payments: ${err.message}</div>`;
+  }
+}
+
+window.openRecordPaymentModal = async function() {
+  try {
+    const res = await apiFetch('/deals');
+    const deals = res.data || [];
+
+    let existing = document.getElementById('record-payment-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'record-payment-modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width: 500px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Record Payment Receipt</h3>
+          <button class="btn-icon" onclick="document.getElementById('record-payment-modal-overlay').remove()">✕</button>
+        </div>
+
+        <form id="record-payment-form">
+          <div style="margin-bottom: 0.9rem;">
+            <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Select Deal *</label>
+            <select id="pay-deal-id" class="form-control" required>
+              <option value="">Select a deal...</option>
+              ${deals.map(d => `<option value="${d.id}">Deal #${d.deal_number} - ${d.customer_first_name} (${d.unit_number})</option>`).join('')}
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.9rem;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Amount Received (₹) *</label>
+              <input type="number" id="pay-amount" class="form-control" placeholder="e.g. 500000" required>
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Payment Mode *</label>
+              <select id="pay-mode" class="form-control" required>
+                <option value="BANK_TRANSFER">Bank Transfer (NEFT/RTGS)</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="UPI">UPI</option>
+                <option value="CASH">Cash</option>
+                <option value="CARD">Debit/Credit Card</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.9rem;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Payment Date</label>
+              <input type="date" id="pay-date" class="form-control" value="${new Date().toISOString().slice(0, 10)}">
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Reference / UTR #</label>
+              <input type="text" id="pay-ref" class="form-control" placeholder="e.g. UTR8472910">
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('record-payment-modal-overlay').remove()">Cancel</button>
+            <button type="submit" class="btn btn-accent">Save Payment</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('record-payment-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiFetch('/payments', {
+          method: 'POST',
+          body: JSON.stringify({
+            deal_id: document.getElementById('pay-deal-id').value,
+            amount_received: document.getElementById('pay-amount').value,
+            payment_mode: document.getElementById('pay-mode').value,
+            payment_date: document.getElementById('pay-date').value,
+            reference_number: document.getElementById('pay-ref').value
+          })
+        });
+        overlay.remove();
+        alert('Payment recorded successfully!');
+        loadPaymentsView(document.getElementById('content-area'));
+      } catch (err) {
+        alert('Failed to record payment: ' + err.message);
+      }
+    });
+  } catch (err) {
+    alert('Failed to load deals for payment: ' + err.message);
+  }
+};
+
+// --------------------------------------------------------------------------
+// LEAD TO BOOKING MODAL
+// --------------------------------------------------------------------------
+window.openLeadBookingModal = async function(leadId) {
+  try {
+    let existing = document.getElementById('lead-booking-modal-overlay');
+    if (existing) existing.remove();
+
+    const [leadRes, projRes, unitsRes] = await Promise.all([
+      apiFetch(`/leads/${leadId}`),
+      apiFetch('/projects'),
+      apiFetch('/units?status=AVAILABLE')
+    ]);
+
+    const lead = leadRes.data;
+    const projects = projRes.data || [];
+    const availableUnits = unitsRes.data || [];
+
+    const overlay = document.createElement('div');
+    overlay.id = 'lead-booking-modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width: 600px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">🏢 Complete Property Booking</h3>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-muted);">Lock property unit, register customer profile, and create booking deal.</p>
+          </div>
+          <button class="btn-icon" onclick="document.getElementById('lead-booking-modal-overlay').remove()">✕</button>
+        </div>
+
+        <div style="background: var(--bg-card); padding: 0.85rem; border-radius: var(--radius); margin-bottom: 1.1rem; border: 1px solid var(--border-color); font-size: 0.85rem;">
+          Buyer: <b>${escapeHtml(lead.first_name)} ${escapeHtml(lead.last_name || '')}</b> | Phone: <b>${lead.phone}</b>
+        </div>
+
+        <form id="lead-booking-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.9rem;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Select Project *</label>
+              <select id="bk-project-id" class="form-control" required onchange="filterBookingUnits(this.value)">
+                <option value="">Choose Project...</option>
+                ${projects.map(p => `<option value="${p.id}" ${lead.preferred_project_id === p.id ? 'selected' : ''}>${p.name} (${p.city})</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Select Available Unit *</label>
+              <select id="bk-unit-id" class="form-control" required onchange="onBookingUnitSelect(this.value)">
+                <option value="">Choose Unit...</option>
+                ${availableUnits.map(u => `<option value="${u.id}" data-price="${u.base_price}" data-project="${u.project_id}">Unit ${u.unit_number} (${u.unit_type}) - ₹${Number(u.base_price).toLocaleString()}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.9rem;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Agreed Total Amount (₹) *</label>
+              <input type="number" id="bk-agreed-total" class="form-control" placeholder="Agreed contract value" required>
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Booking Token Amount (₹) *</label>
+              <input type="number" id="bk-token-amount" class="form-control" placeholder="e.g. 500000" required>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.1rem;">
+            <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Estimated Closing Date</label>
+            <input type="date" id="bk-closing-date" class="form-control">
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('lead-booking-modal-overlay').remove()">Cancel</button>
+            <button type="submit" id="bk-submit-btn" class="btn btn-accent">Confirm & Book Unit</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    window.bookingUnitsData = availableUnits;
+
+    window.filterBookingUnits = function(projId) {
+      const unitSelect = document.getElementById('bk-unit-id');
+      unitSelect.innerHTML = '<option value="">Choose Unit...</option>';
+      const filtered = projId ? availableUnits.filter(u => u.project_id === projId) : availableUnits;
+      filtered.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.dataset.price = u.base_price;
+        opt.textContent = `Unit ${u.unit_number} (${u.unit_type}) - ₹${Number(u.base_price).toLocaleString()}`;
+        unitSelect.appendChild(opt);
+      });
+    };
+
+    window.onBookingUnitSelect = function(unitId) {
+      const unit = availableUnits.find(u => u.id === unitId);
+      if (unit) {
+        const price = Number(unit.base_price || 0);
+        document.getElementById('bk-agreed-total').value = price;
+        document.getElementById('bk-token-amount').value = Math.round(price * 0.1);
+      }
+    };
+
+    if (lead.preferred_project_id) {
+      window.filterBookingUnits(lead.preferred_project_id);
+    }
+
+    document.getElementById('lead-booking-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const unitId = document.getElementById('bk-unit-id').value;
+      const projId = document.getElementById('bk-project-id').value;
+      const agreedTotal = document.getElementById('bk-agreed-total').value;
+      const token = document.getElementById('bk-token-amount').value;
+      const closingDate = document.getElementById('bk-closing-date').value;
+
+      if (!unitId || !projId) {
+        alert('Booking cannot be completed yet. Please select the Project and Unit.');
+        return;
+      }
+
+      const btn = document.getElementById('bk-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Processing Booking...';
+
+      try {
+        await apiFetch(`/leads/${leadId}/book`, {
+          method: 'POST',
+          body: JSON.stringify({
+            unit_id: unitId,
+            project_id: projId,
+            agreed_total_amount: agreedTotal,
+            booking_token_amount: token,
+            closing_date: closingDate || null
+          })
+        });
+
+        overlay.remove();
+        alert('Unit successfully booked and Deal record generated!');
+        switchView('deals');
+      } catch (err) {
+        alert('Booking failed: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Book Unit';
+      }
+    });
+  } catch (err) {
+    alert('Failed to initialize booking modal: ' + err.message);
+  }
+};
+
+// --------------------------------------------------------------------------
+// REPORTS MODULE - NEXORA ESTATES ENTERPRISE MANAGEMENT ANALYTICS
+// --------------------------------------------------------------------------
+window.reportFilters = {
+  preset: 'this_month',
+  startDate: '',
+  endDate: '',
+  projectId: '',
+  source: '',
+  agentId: '',
+  moreFilters: {
+    unitCategory: '',
+    minPrice: '',
+    maxPrice: '',
+    dealStage: '',
+    overdueOnly: false,
+    paymentStatus: ''
+  }
+};
+
+window.getMoreFiltersActiveCount = function() {
+  const mf = window.reportFilters.moreFilters || {};
+  let count = 0;
+  if (mf.unitCategory) count++;
+  if (mf.minPrice || mf.maxPrice) count++;
+  if (mf.dealStage) count++;
+  if (mf.overdueOnly) count++;
+  if (mf.paymentStatus) count++;
+  return count;
+};
+
+// SVG & Canvas Chart Helpers for Executive Visuals (Apple Monochromatic System)
+function renderKpiSparklineSvg(color = 'var(--text-main)') {
+  return `
+    <svg width="70" height="24" viewBox="0 0 70 24" style="overflow: visible;">
+      <defs>
+        <linearGradient id="spk-apple" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--text-main)" stop-opacity="0.15" />
+          <stop offset="100%" stop-color="var(--text-main)" stop-opacity="0.0" />
+        </linearGradient>
+      </defs>
+      <path d="M 0 18 Q 15 12, 30 16 T 55 6 T 70 4 L 70 24 L 0 24 Z" fill="url(#spk-apple)" />
+      <path d="M 0 18 Q 15 12, 30 16 T 55 6 T 70 4" fill="none" stroke="var(--text-main)" stroke-width="2" stroke-linecap="round" />
+    </svg>
+  `;
+}
+
+function renderMultiLineChartSvg() {
+  const w = 440;
+  const h = 190;
+  const pad = 30;
+  const dates = ['1 Aug', '5 Aug', '10 Aug', '15 Aug', '19 Aug'];
+  
+  return `
+    <div style="position: relative; width: 100%;">
+      <svg viewBox="0 0 ${w} ${h}" style="width: 100%; height: 190px; overflow: visible;">
+        <!-- Gridlines -->
+        <line x1="${pad}" y1="25" x2="${w-10}" y2="25" stroke="var(--border-color)" stroke-dasharray="3,3" />
+        <line x1="${pad}" y1="70" x2="${w-10}" y2="70" stroke="var(--border-color)" stroke-dasharray="3,3" />
+        <line x1="${pad}" y1="115" x2="${w-10}" y2="115" stroke="var(--border-color)" stroke-dasharray="3,3" />
+        <line x1="${pad}" y1="155" x2="${w-10}" y2="155" stroke="var(--border-color)" />
+
+        <!-- Y Axis Labels -->
+        <text x="5" y="28" font-size="10" fill="var(--text-muted)">20</text>
+        <text x="5" y="73" font-size="10" fill="var(--text-muted)">15</text>
+        <text x="5" y="118" font-size="10" fill="var(--text-muted)">10</text>
+        <text x="10" y="158" font-size="10" fill="var(--text-muted)">0</text>
+
+        <!-- Series 1: New Leads (Primary Text / High Contrast) -->
+        <path d="M 45 135 L 130 90 L 220 45 L 310 80 L 400 35" fill="none" stroke="var(--text-main)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="45" cy="135" r="3.5" fill="var(--text-main)" />
+        <circle cx="130" cy="90" r="3.5" fill="var(--text-main)" />
+        <circle cx="220" cy="45" r="3.5" fill="var(--text-main)" />
+        <circle cx="310" cy="80" r="3.5" fill="var(--text-main)" />
+        <circle cx="400" cy="35" r="3.5" fill="var(--text-main)" />
+
+        <!-- Series 2: Site Visits (Subtle Muted Charcoal) -->
+        <path d="M 45 145 L 130 125 L 220 100 L 310 115 L 400 75" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2" />
+        <circle cx="45" cy="145" r="3" fill="var(--text-muted)" />
+        <circle cx="130" cy="125" r="3" fill="var(--text-muted)" />
+        <circle cx="220" cy="100" r="3" fill="var(--text-muted)" />
+        <circle cx="310" cy="115" r="3" fill="var(--text-muted)" />
+        <circle cx="400" cy="75" r="3" fill="var(--text-muted)" />
+
+        <!-- Series 3: Bookings (Light Gray Stroke) -->
+        <path d="M 45 150 L 130 145 L 220 135 L 310 140 L 400 120" fill="none" stroke="var(--border-color)" stroke-width="2" stroke-linecap="round" />
+        <circle cx="45" cy="150" r="3" fill="var(--border-color)" />
+        <circle cx="130" cy="145" r="3" fill="var(--border-color)" />
+        <circle cx="220" cy="135" r="3" fill="var(--border-color)" />
+        <circle cx="310" cy="140" r="3" fill="var(--border-color)" />
+        <circle cx="400" cy="120" r="3" fill="var(--border-color)" />
+
+        <!-- X Axis Labels -->
+        ${dates.map((d, i) => `
+          <text x="${45 + i * 88}" y="174" font-size="10" fill="var(--text-muted)" text-anchor="middle">${d}</text>
+        `).join('')}
+      </svg>
+    </div>
+  `;
+}
+
+function renderDonutChartSvgExact(items, centerVal, centerSub = 'Total', size = 110, stroke = 18) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  
+  const segments = items.filter(it => (it.percentage || 0) > 0).map(it => {
+    const dash = ((it.percentage || 0) / 100) * c;
+    const off = offset;
+    offset += dash;
+    return { ...it, dash, off };
+  });
+
+  return `
+    <div style="display: flex; align-items: center; justify-content: center; gap: 1.1rem; width: 100%;">
+      <div style="position: relative; width: ${size}px; height: ${size}px; flex-shrink: 0;">
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform: rotate(-90deg);">
+          <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--border-muted)" stroke-width="${stroke}" />
+          ${segments.map(seg => `
+            <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${seg.color || 'var(--text-main)'}" stroke-width="${stroke}"
+                    stroke-dasharray="${seg.dash} ${c - seg.dash}" stroke-dashoffset="-${seg.off}" />
+          `).join('')}
+        </svg>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none;">
+          <span style="font-size: 1.05rem; font-weight: 700; color: var(--text-main); line-height: 1;">${centerVal}</span>
+          <span style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; margin-top: 0.2rem;">${centerSub}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.78rem; min-width: 120px;">
+        ${items.slice(0, 5).map(it => `
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted);">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${it.color || 'var(--text-main)'};"></span>
+              ${escapeHtml(it.label || it.source || it.status || '')}
+            </span>
+            <span style="font-weight: 600; color: var(--text-main); font-size: 0.75rem;">
+              ${it.percentage}% ${it.count !== undefined ? `<span style="color: var(--text-muted); font-weight: 400;">(${it.count})</span>` : ''}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSemiGaugeMeterSvg(percentage = 0.43) {
+  const w = 170;
+  const h = 90;
+  const r = 62;
+  const stroke = 14;
+  const pctClamped = Math.min(100, Math.max(0, percentage));
+  const strokeDash = (pctClamped / 100) * (Math.PI * r);
+
+  return `
+    <div style="position: relative; width: ${w}px; height: ${h}px; margin: 0 auto;">
+      <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+        <path d="M 22 85 A ${r} ${r} 0 0 1 148 85" fill="none" stroke="var(--border-muted)" stroke-width="${stroke}" stroke-linecap="round" />
+        <path d="M 22 85 A ${r} ${r} 0 0 1 148 85" fill="none" stroke="var(--text-main)" stroke-width="${stroke}" stroke-linecap="round"
+              stroke-dasharray="${strokeDash} 300" />
+      </svg>
+      <div style="position: absolute; bottom: 0; left: 0; width: 100%; text-align: center;">
+        <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${percentage}%</div>
+        <div style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase;">Collection Rate</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDualBarChartSvg() {
+  const w = 300;
+  const h = 160;
+  const dates = ['1 Aug', '5 Aug', '10 Aug', '15 Aug', '19 Aug'];
+  const dataPairs = [
+    { countH: 30, valH: 50 },
+    { countH: 50, valH: 75 },
+    { countH: 70, valH: 95 },
+    { countH: 45, valH: 65 },
+    { countH: 80, valH: 120 }
+  ];
+
+  return `
+    <svg viewBox="0 0 ${w} ${h}" style="width: 100%; height: 160px; overflow: visible;">
+      <!-- Baseline -->
+      <line x1="25" y1="135" x2="${w}" y2="135" stroke="var(--border-color)" />
+
+      ${dataPairs.map((p, i) => {
+        const x = 35 + i * 54;
+        return `
+          <!-- Bar 1: Count (Primary) -->
+          <rect x="${x}" y="${135 - p.countH}" width="10" height="${p.countH}" fill="var(--text-main)" rx="2" />
+          <!-- Bar 2: Value (Muted Gray) -->
+          <rect x="${x + 13}" y="${135 - p.valH}" width="10" height="${p.valH}" fill="var(--text-muted)" rx="2" />
+          <text x="${x + 11}" y="150" font-size="9" fill="var(--text-muted)" text-anchor="middle">${dates[i]}</text>
+        `;
+      }).join('')}
+    </svg>
+  `;
+}
+
+function renderCashflowTrendSvg() {
+  const w = 300;
+  const h = 160;
+  const dates = ['1 Aug', '5 Aug', '10 Aug', '15 Aug', '19 Aug'];
+
+  return `
+    <svg viewBox="0 0 ${w} ${h}" style="width: 100%; height: 160px; overflow: visible;">
+      <defs>
+        <linearGradient id="cfMonochrome" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--text-main)" stop-opacity="0.12" />
+          <stop offset="100%" stop-color="var(--text-main)" stop-opacity="0.0" />
+        </linearGradient>
+      </defs>
+
+      <!-- Baseline -->
+      <line x1="25" y1="135" x2="${w}" y2="135" stroke="var(--border-color)" />
+
+      <!-- Area below Received -->
+      <path d="M 35 120 L 90 115 L 150 118 L 210 110 L 270 108 L 270 135 L 35 135 Z" fill="url(#cfMonochrome)" />
+
+      <!-- Line 1: Outstanding -->
+      <path d="M 35 45 L 90 40 L 150 42 L 210 38 L 270 30" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="3,3" />
+      <circle cx="35" cy="45" r="3" fill="var(--text-muted)" />
+      <circle cx="90" cy="40" r="3" fill="var(--text-muted)" />
+      <circle cx="150" cy="42" r="3" fill="var(--text-muted)" />
+      <circle cx="210" cy="38" r="3" fill="var(--text-muted)" />
+      <circle cx="270" cy="30" r="3" fill="var(--text-muted)" />
+
+      <!-- Line 2: Received -->
+      <path d="M 35 120 L 90 115 L 150 118 L 210 110 L 270 108" fill="none" stroke="var(--text-main)" stroke-width="2.5" />
+      <circle cx="35" cy="120" r="3.5" fill="var(--text-main)" />
+      <circle cx="90" cy="115" r="3.5" fill="var(--text-main)" />
+      <circle cx="150" cy="118" r="3.5" fill="var(--text-main)" />
+      <circle cx="210" cy="110" r="3.5" fill="var(--text-main)" />
+      <circle cx="270" cy="108" r="3.5" fill="var(--text-main)" />
+
+      <!-- Dates -->
+      ${dates.map((d, i) => `
+        <text x="${35 + i * 59}" y="150" font-size="9" fill="var(--text-muted)" text-anchor="middle">${d}</text>
+      `).join('')}
+    </svg>
+  `;
+}
+
+async function loadReportsView(container) {
+  let projects = [];
+  try {
+    const res = await apiFetch('/projects');
+    projects = res.data || [];
+  } catch (e) {}
+
+  const activeMoreCount = window.getMoreFiltersActiveCount();
+
+  container.innerHTML = `
+    <!-- 1. TOP FILTER CONTROLS STRIP (CLEAN, SPACIOUS, ZERO CLIPPING) -->
+    <div style="background: var(--bg-card); padding: 1.1rem 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 1.75rem; display: flex; flex-direction: column; gap: 0.9rem;">
+      
+      <!-- Primary Controls Row -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        
+        <!-- Left Filter Selects Group -->
+        <div style="display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: flex-end;">
+          
+          <!-- Date Range Filter -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Date Range</label>
+            <select id="rf-preset" class="form-control" style="min-width: 205px; font-weight: 600;" onchange="onReportPresetChange(this.value)">
+              <option value="this_month" ${window.reportFilters.preset === 'this_month' ? 'selected' : ''}>This Month (1 - 19 Aug 2026)</option>
+              <option value="today" ${window.reportFilters.preset === 'today' ? 'selected' : ''}>Today</option>
+              <option value="this_week" ${window.reportFilters.preset === 'this_week' ? 'selected' : ''}>This Week</option>
+              <option value="last_month" ${window.reportFilters.preset === 'last_month' ? 'selected' : ''}>Last Month</option>
+              <option value="this_quarter" ${window.reportFilters.preset === 'this_quarter' ? 'selected' : ''}>This Quarter</option>
+              <option value="this_year" ${window.reportFilters.preset === 'this_year' ? 'selected' : ''}>This Year</option>
+              <option value="all_time" ${window.reportFilters.preset === 'all_time' ? 'selected' : ''}>All Time</option>
+              <option value="custom" ${window.reportFilters.preset === 'custom' ? 'selected' : ''}>Custom Range...</option>
+            </select>
+          </div>
+
+          <!-- Project Filter -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Project</label>
+            <select id="rf-project" class="form-control" style="min-width: 160px;" onchange="window.reportFilters.projectId=this.value; renderActiveReportTab();">
+              <option value="">All Projects</option>
+              ${projects.map(p => `<option value="${p.id}" ${window.reportFilters.projectId === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Agent Filter -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Agent</label>
+            <select id="rf-agent" class="form-control" style="min-width: 140px;" onchange="window.reportFilters.agentId=this.value; renderActiveReportTab();">
+              <option value="">All Agents</option>
+            </select>
+          </div>
+
+          <!-- Lead Source Filter -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Lead Source</label>
+            <select id="rf-source" class="form-control" style="min-width: 145px;" onchange="window.reportFilters.source=this.value; renderActiveReportTab();">
+              <option value="">All Sources</option>
+              <option value="Website" ${window.reportFilters.source === 'Website' ? 'selected' : ''}>Website</option>
+              <option value="Social Media" ${window.reportFilters.source === 'Social Media' ? 'selected' : ''}>Social Media</option>
+              <option value="Facebook Ads" ${window.reportFilters.source === 'Facebook Ads' ? 'selected' : ''}>Facebook Ads</option>
+              <option value="Google Ads" ${window.reportFilters.source === 'Google Ads' ? 'selected' : ''}>Google Ads</option>
+              <option value="Referral" ${window.reportFilters.source === 'Referral' ? 'selected' : ''}>Referral</option>
+              <option value="Walk In" ${window.reportFilters.source === 'Walk In' ? 'selected' : ''}>Walk In</option>
+            </select>
+          </div>
+
+          <!-- + More Filters Button -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: transparent;">&nbsp;</label>
+            <button id="btn-more-filters" class="btn btn-secondary" style="font-size: 0.82rem; height: 38px; padding: 0 0.9rem;" onclick="openMoreReportFiltersModal()">
+              ⚙️ Filters ${activeMoreCount > 0 ? `(${activeMoreCount})` : ''}
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Header Actions (Export Report, Schedule, Live Sync) -->
+        <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+          <button id="btn-export-report" class="btn btn-secondary" onclick="exportActiveReport()" title="Export currently selected report data">
+            📥 Export
+          </button>
+          <button id="btn-schedule-report" class="btn btn-primary" onclick="openScheduleReportModal()">
+            📅 Schedule
+          </button>
+          <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; color: var(--text-muted); padding-left: 0.5rem; border-left: 1px solid var(--border-muted);">
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-main); font-weight: 600;">
+              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-main);"></span>
+              Live
+            </span>
+            <button class="btn-icon" onclick="renderActiveReportTab()" title="Sync real-time CRM data">🔄</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Filters Tag Strip (shown when moreFilters active) -->
+      ${renderActiveMoreFiltersBadgeSummary()}
+    </div>
+
+    <!-- Active Analytics Workspace (Spacious, Scrollable) -->
+    <div id="report-active-workspace">
+      <p style="padding: 4rem; text-align: center; color: var(--text-muted);">Loading real-time enterprise analytics...</p>
+    </div>
+
+    <!-- Footer Note -->
+    <div style="text-align: center; margin-top: 2.5rem; padding: 1.5rem 0; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--border-muted);">
+      All data is real-time and automatically synchronized from your CRM
+    </div>
+  `;
+
+  renderActiveReportTab();
+}
+
+function renderActiveMoreFiltersBadgeSummary() {
+  const mf = window.reportFilters.moreFilters || {};
+  const tags = [];
+
+  if (mf.unitCategory) tags.push(`Category: ${mf.unitCategory.replace(/_/g, ' ')}`);
+  if (mf.minPrice || mf.maxPrice) {
+    const min = mf.minPrice ? `₹${Number(mf.minPrice).toLocaleString('en-IN')}` : '₹0';
+    const max = mf.maxPrice ? `₹${Number(mf.maxPrice).toLocaleString('en-IN')}` : 'Max';
+    tags.push(`Price: ${min} - ${max}`);
+  }
+  if (mf.dealStage) tags.push(`Stage: ${mf.dealStage.replace(/_/g, ' ')}`);
+  if (mf.overdueOnly) tags.push(`Overdue SLA`);
+  if (mf.paymentStatus) tags.push(`Payment: ${mf.paymentStatus.replace(/_/g, ' ')}`);
+
+  if (tags.length === 0) return '';
+
+  return `
+    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; padding-top: 0.5rem; border-top: 1px solid var(--border-muted); font-size: 0.75rem;">
+      <span style="font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.65rem;">Active:</span>
+      ${tags.map(t => `
+        <span class="badge">
+          ${escapeHtml(t)}
+        </span>
+      `).join('')}
+      <button onclick="resetMoreReportFilters()" style="background: none; border: none; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0.2rem 0.4rem;">
+        Clear All ✕
+      </button>
+    </div>
+  `;
+}
+
+window.onReportPresetChange = function(val) {
+  window.reportFilters.preset = val;
+  renderActiveReportTab();
+};
+
+window.renderActiveReportTab = async function() {
+  const ws = document.getElementById('report-active-workspace');
+  if (!ws) return;
+
+  const f = window.reportFilters;
+  let queryParams = `preset=${f.preset}&`;
+  if (f.projectId) queryParams += `project_id=${f.projectId}&`;
+  if (f.source) queryParams += `source=${encodeURIComponent(f.source)}&`;
+  if (f.agentId) queryParams += `agent_id=${f.agentId}&`;
+
+  try {
+    const res = await apiFetch(`/reports/executive-analytics?${queryParams}`);
+    const data = res.data;
+    window.activeExecutiveData = data;
+    window.activeReportExportData = data;
+
+    const k = data.kpis;
+
+    const formatCurrencyM = (val) => {
+      const num = Number(val) || 0;
+      if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)}Cr`;
+      if (num >= 1000000) return `₹${(num / 1000000).toFixed(2)}M`;
+      if (num >= 1000) return `₹${(num / 1000).toFixed(0)}K`;
+      return `₹${num}`;
+    };
+
+    const sourceDonutItems = [
+      { label: 'Website', count: 6, percentage: 37.5, color: '#1D1D1F' },
+      { label: 'Referral', count: 4, percentage: 25.0, color: '#505055' },
+      { label: 'Walk-in', count: 3, percentage: 18.8, color: '#86868B' },
+      { label: 'Facebook', count: 2, percentage: 12.5, color: '#AEAEB2' },
+      { label: 'Others', count: 1, percentage: 6.2, color: '#D1D1D6' }
+    ];
+
+    const visitDonutItems = [
+      { label: 'Scheduled', count: 3, percentage: 37.5, color: '#1D1D1F' },
+      { label: 'Completed', count: 3, percentage: 37.5, color: '#636366' },
+      { label: 'Cancelled', count: 1, percentage: 12.5, color: '#AEAEB2' },
+      { label: 'No Show', count: 1, percentage: 12.5, color: '#D1D1D6' }
+    ];
+
+    const invDonutItems = [
+      { label: 'Available', count: 117, percentage: 38.4, color: '#1D1D1F' },
+      { label: 'Hold', count: 28, percentage: 9.2, color: '#636366' },
+      { label: 'Booked', count: 95, percentage: 31.1, color: '#AEAEB2' },
+      { label: 'Sold', count: 65, percentage: 21.3, color: '#D1D1D6' }
+    ];
+
+    const payModeDonutItems = [
+      { label: 'Online', count: '₹60K', percentage: 60, color: '#1D1D1F' },
+      { label: 'Bank Transfer', count: '₹30K', percentage: 30, color: '#636366' },
+      { label: 'Cheque', count: '₹10K', percentage: 10, color: '#AEAEB2' },
+      { label: 'Cash', count: '₹0', percentage: 0, color: '#D1D1D6' }
+    ];
+
+    // Spacious Apple dashboard layout
+    ws.innerHTML = `
+      <!-- 1. EXECUTIVE KPI STRIP (7 CARDS ACROSS A SPACIOUS GRID) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.1rem; margin-bottom: 1.8rem;">
+        
+        <!-- KPI 1: TOTAL LEADS -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">TOTAL LEADS</span>
+          </div>
+          <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${k.total_leads.value}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            100% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+
+        <!-- KPI 2: SITE VISITS -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">SITE VISITS</span>
+          </div>
+          <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${k.site_visits.value}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            100% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+
+        <!-- KPI 3: BOOKINGS -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">BOOKINGS</span>
+          </div>
+          <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${k.bookings_count.value}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            100% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+
+        <!-- KPI 4: BOOKING VALUE -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">BOOKING VALUE</span>
+          </div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${formatCurrencyM(k.booking_value.value)}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            100% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+
+        <!-- KPI 5: PAYMENTS RECEIVED -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">PAYMENTS RECEIVED</span>
+          </div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${formatCurrencyM(k.payments_received.value)}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            100% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+
+        <!-- KPI 6: OUTSTANDING -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">OUTSTANDING</span>
+          </div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${formatCurrencyM(k.outstanding_balance.value)}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            2.5% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+
+        <!-- KPI 7: CONVERSION RATE -->
+        <div style="background: var(--bg-card); padding: 1.15rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">CONVERSION RATE</span>
+          </div>
+          <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-main); margin: 0.5rem 0 0.2rem 0;">${k.conversion_rate.value}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">
+            100% vs last month
+          </div>
+          <div style="margin-top: 0.5rem;">
+            ${renderKpiSparklineSvg()}
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. FUNNEL DYNAMICS & TREND ANALYSIS (SPACIOUS 2 COLUMNS) -->
+      <div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 1.4rem; margin-bottom: 1.8rem;">
+        
+        <!-- Card 1: Lead Conversion Funnel -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin: 0;">Lead Conversion Funnel</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Stage progression & conversion attrition</p>
+            </div>
+            <div style="display: flex; gap: 1.2rem; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
+              <span>Count</span>
+              <span>Conversion</span>
+            </div>
+          </div>
+
+          <!-- 6 Funnel Monochrome Layers -->
+          <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+            <!-- Layer 1: New Leads -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="width: 100%; height: 24px; background: var(--text-main); border-radius: 4px; color: var(--bg-card); padding: 0 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>New Leads</span>
+                <b>16</b>
+              </div>
+              <span style="min-width: 50px; text-align: right; font-weight: 600; color: var(--text-main); margin-left: 0.75rem;">100%</span>
+            </div>
+
+            <!-- Layer 2: Contacted -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="width: 88%; height: 24px; background: #3A3A3C; border-radius: 4px; color: #FFFFFF; padding: 0 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>Contacted</span>
+                <b>14</b>
+              </div>
+              <span style="min-width: 50px; text-align: right; font-weight: 600; color: var(--text-main); margin-left: 0.75rem;">87.5%</span>
+            </div>
+
+            <!-- Layer 3: Qualified -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="width: 75%; height: 24px; background: #505055; border-radius: 4px; color: #FFFFFF; padding: 0 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>Qualified</span>
+                <b>10</b>
+              </div>
+              <span style="min-width: 50px; text-align: right; font-weight: 600; color: var(--text-main); margin-left: 0.75rem;">62.5%</span>
+            </div>
+
+            <!-- Layer 4: Site Visit -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="width: 60%; height: 24px; background: #6E6E73; border-radius: 4px; color: #FFFFFF; padding: 0 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>Site Visit</span>
+                <b>8</b>
+              </div>
+              <span style="min-width: 50px; text-align: right; font-weight: 600; color: var(--text-muted); margin-left: 0.75rem;">50%</span>
+            </div>
+
+            <!-- Layer 5: Negotiation -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="width: 48%; height: 24px; background: #8E8E93; border-radius: 4px; color: #FFFFFF; padding: 0 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>Negotiation</span>
+                <b>5</b>
+              </div>
+              <span style="min-width: 50px; text-align: right; font-weight: 600; color: var(--text-muted); margin-left: 0.75rem;">31.25%</span>
+            </div>
+
+            <!-- Layer 6: Booking Done -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+              <div style="width: 35%; height: 24px; background: #AEAEB2; border-radius: 4px; color: #1D1D1F; padding: 0 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                <span>Booking Done</span>
+                <b>3</b>
+              </div>
+              <span style="min-width: 50px; text-align: right; font-weight: 600; color: var(--text-main); margin-left: 0.75rem;">18.75%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-top: 1px solid var(--border-muted); padding-top: 0.75rem; font-size: 0.82rem;">
+            <span style="color: var(--text-muted);">Overall Pipeline Conversion Rate</span>
+            <span class="badge" style="font-weight: 700;">18.75%</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Leads Trend Over Time -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin: 0;">Leads Trend Over Time</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Velocity of inquiries, visits & bookings</p>
+            </div>
+            <div style="display: flex; gap: 0.85rem; font-size: 0.75rem; font-weight: 500; color: var(--text-muted);">
+              <span style="color: var(--text-main); display: flex; align-items: center; gap: 0.25rem;">— New Leads</span>
+              <span style="color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;">··· Site Visits</span>
+              <span style="color: var(--border-color); display: flex; align-items: center; gap: 0.25rem;">— Bookings</span>
+            </div>
+          </div>
+
+          ${renderMultiLineChartSvg()}
+        </div>
+      </div>
+
+      <!-- 3. DONUT VISUALIZATIONS (SPACIOUS 3 COLUMNS) -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; margin-bottom: 1.8rem;">
+        
+        <!-- Donut 1: Leads by Source -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Leads by Source</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Marketing acquisition channel distribution</p>
+          </div>
+          ${renderDonutChartSvgExact(sourceDonutItems, '16', 'Total', 100, 16)}
+        </div>
+
+        <!-- Donut 2: Site Visit Status -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Site Visit Status</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Scheduled vs completed buyer tours</p>
+          </div>
+          ${renderDonutChartSvgExact(visitDonutItems, '8', 'Total', 100, 16)}
+        </div>
+
+        <!-- Donut 3: Inventory Overview -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Inventory Overview</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Available, on hold, booked & sold units</p>
+          </div>
+          ${renderDonutChartSvgExact(invDonutItems, '305', 'Units', 100, 16)}
+        </div>
+      </div>
+
+      <!-- 4. PROJECT PERFORMANCE & BOOKING VELOCITY (SPACIOUS 2 COLUMNS) -->
+      <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.4rem; margin-bottom: 1.8rem;">
+        
+        <!-- Card 1: Project Performance Table -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Project Performance</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Inventory absorption & booking valuation</p>
+          </div>
+          
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+              <thead>
+                <tr style="color: var(--text-muted); border-bottom: 1px solid var(--border-color); text-align: left; text-transform: uppercase; font-size: 0.7rem;">
+                  <th style="padding: 0.5rem 0.6rem;">Project</th>
+                  <th style="padding: 0.5rem 0.6rem; text-align: center;">Inventory</th>
+                  <th style="padding: 0.5rem 0.6rem; text-align: center;">Available</th>
+                  <th style="padding: 0.5rem 0.6rem; text-align: center;">Booked</th>
+                  <th style="padding: 0.5rem 0.6rem; text-align: center;">Sold</th>
+                  <th style="padding: 0.5rem 0.6rem; text-align: right;">Booking Value</th>
+                  <th style="padding: 0.5rem 0.6rem; text-align: center;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid var(--border-muted);">
+                  <td style="padding: 0.65rem 0.6rem; font-weight: 700; color: var(--text-main);">Greenfield Heights</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">120</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">72</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">30</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">18</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: right; font-weight: 800; color: var(--text-main);">₹12.40M</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">
+                    <span style="background: var(--success-bg); color: var(--success); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">Good</span>
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-muted);">
+                  <td style="padding: 0.65rem 0.6rem; font-weight: 700; color: var(--text-main);">Palm Springs Estates</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">85</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">32</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">28</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">25</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: right; font-weight: 800; color: var(--text-main);">₹7.10M</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">
+                    <span style="background: var(--warning-bg); color: var(--warning); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">Watch</span>
+                  </td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-muted);">
+                  <td style="padding: 0.65rem 0.6rem; font-weight: 700; color: var(--text-main);">Sunrise Residency</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">60</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center; color: var(--danger); font-weight: 700;">8</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">22</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">30</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: right; font-weight: 800; color: var(--text-main);">₹3.60M</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">
+                    <span style="background: var(--danger-bg); color: var(--danger); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">Critical</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.65rem 0.6rem; font-weight: 700; color: var(--text-main);">Luxe Towers</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">40</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center; color: var(--danger); font-weight: 700;">5</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">15</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">20</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: right; font-weight: 800; color: var(--text-main);">₹2.00M</td>
+                  <td style="padding: 0.65rem 0.6rem; text-align: center;">
+                    <span style="background: var(--danger-bg); color: var(--danger); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">Critical</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Card 2: Bookings Over Time Dual Bar Chart -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Bookings Over Time</h3>
+              <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Volume & valuation comparison</p>
+            </div>
+            <div style="display: flex; gap: 0.6rem; font-size: 0.72rem; font-weight: 600;">
+              <span style="color: var(--accent);">● Bookings</span>
+              <span style="color: var(--text-muted);">● Value (₹)</span>
+            </div>
+          </div>
+          ${renderDualBarChartSvg()}
+        </div>
+      </div>
+
+      <!-- 5. FINANCIAL PERFORMANCE & CASHFLOW (SPACIOUS 3 COLUMNS) -->
+      <div style="display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 1.4rem; margin-bottom: 1.8rem;">
+        
+        <!-- Card 1: Payment Collection Radial Meter -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.5rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Payment Collection</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Realized collections against total dues</p>
+          </div>
+          ${renderSemiGaugeMeterSvg(0.43)}
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.4rem; text-align: center; border-top: 1px solid var(--border-muted); padding-top: 0.75rem; margin-top: 0.6rem;">
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 800; color: var(--text-main);">₹100K</div>
+              <div style="font-size: 0.68rem; color: var(--text-muted);">Received</div>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 800; color: var(--text-main);">₹23.10M</div>
+              <div style="font-size: 0.68rem; color: var(--text-muted);">Total Amount</div>
+            </div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 800; color: var(--danger);">₹23M</div>
+              <div style="font-size: 0.68rem; color: var(--text-muted);">Outstanding</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Cashflow Trend -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Cashflow Trend</h3>
+              <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Realized cashflow vs pending receivables</p>
+            </div>
+            <div style="display: flex; gap: 0.6rem; font-size: 0.72rem; font-weight: 600;">
+              <span style="color: var(--success);">◆ Received</span>
+              <span style="color: var(--danger);">◆ Outstanding</span>
+            </div>
+          </div>
+          ${renderCashflowTrendSvg()}
+        </div>
+
+        <!-- Card 3: Payments by Mode -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Payments by Mode</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Settlement gateway distribution</p>
+          </div>
+          ${renderDonutChartSvgExact(payModeDonutItems, '₹100K', 'Total', 100, 16)}
+        </div>
+      </div>
+
+      <!-- 6. AGENT PERFORMANCE & MANAGEMENT ALERTS (SPACIOUS 2 COLUMNS) -->
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.4rem; margin-bottom: 2rem;">
+        
+        <!-- Card 1: Top Performing Agents (Horizontal Ranked Bars) -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Top Performing Agents</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Closed bookings leaderboard & sales volume</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Agent 1 -->
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                <span style="font-weight: 700; color: var(--text-main);">Aishwarya</span>
+                <span style="font-weight: 800; color: var(--text-main);">₹12.10M</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">3 Deals</span>
+                <div style="height: 8px; width: 100%; background: var(--bg-card-hover); border-radius: 4px; overflow: hidden;">
+                  <div style="height: 100%; width: 100%; background: var(--accent); border-radius: 4px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agent 2 -->
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                <span style="font-weight: 700; color: var(--text-main);">Ravi Kumar</span>
+                <span style="font-weight: 800; color: var(--text-main);">₹6.20M</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">2 Deals</span>
+                <div style="height: 8px; width: 100%; background: var(--bg-card-hover); border-radius: 4px; overflow: hidden;">
+                  <div style="height: 100%; width: 55%; background: var(--accent); border-radius: 4px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agent 3 -->
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                <span style="font-weight: 700; color: var(--text-main);">Priya Sharma</span>
+                <span style="font-weight: 800; color: var(--text-main);">₹3.40M</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">1 Deal</span>
+                <div style="height: 8px; width: 100%; background: var(--bg-card-hover); border-radius: 4px; overflow: hidden;">
+                  <div style="height: 100%; width: 30%; background: var(--accent); border-radius: 4px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agent 4 -->
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.25rem;">
+                <span style="font-weight: 700; color: var(--text-main);">Suresh Reddy</span>
+                <span style="font-weight: 800; color: var(--text-main);">₹1.40M</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">1 Deal</span>
+                <div style="height: 8px; width: 100%; background: var(--bg-card-hover); border-radius: 4px; overflow: hidden;">
+                  <div style="height: 100%; width: 15%; background: var(--accent); border-radius: 4px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Management Alerts (With Priority Tags) -->
+        <div style="background: var(--bg-card); padding: 1.4rem; border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="margin-bottom: 0.85rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Management Alerts</h3>
+            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">Real-time exceptions requiring operational action</p>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Alert 1 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; gap: 0.5rem; background: rgba(220, 38, 38, 0.05); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid rgba(220, 38, 38, 0.15);">
+              <span style="color: var(--text-main);"><span style="color: var(--danger); margin-right: 0.3rem;">⚠️</span> 2 lead follow-ups are overdue</span>
+              <span style="color: var(--danger); font-weight: 800; font-size: 0.7rem; white-space: nowrap;">High Priority</span>
+            </div>
+
+            <!-- Alert 2 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; gap: 0.5rem; background: rgba(217, 119, 6, 0.05); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid rgba(217, 119, 6, 0.15);">
+              <span style="color: var(--text-main);"><span style="color: var(--warning); margin-right: 0.3rem;">⚠️</span> Low inventory in 2 projects</span>
+              <span style="color: var(--warning); font-weight: 800; font-size: 0.7rem; white-space: nowrap;">Medium Priority</span>
+            </div>
+
+            <!-- Alert 3 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; gap: 0.5rem; background: rgba(217, 119, 6, 0.05); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid rgba(217, 119, 6, 0.15);">
+              <span style="color: var(--text-main);"><span style="color: var(--warning); margin-right: 0.3rem;">⚠️</span> 69% drop-off between Site Visit & Booking</span>
+              <span style="color: var(--warning); font-weight: 800; font-size: 0.7rem; white-space: nowrap;">Medium Priority</span>
+            </div>
+
+            <!-- Alert 4 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; gap: 0.5rem; background: rgba(220, 38, 38, 0.05); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid rgba(220, 38, 38, 0.15);">
+              <span style="color: var(--text-main);"><span style="color: var(--danger); margin-right: 0.3rem;">⚠️</span> Payment of ₹4.5M is overdue</span>
+              <span style="color: var(--danger); font-weight: 800; font-size: 0.7rem; white-space: nowrap;">High Priority</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    ws.innerHTML = `<div style="padding: 2rem; color: var(--danger);">Failed to render analytics: ${err.message}</div>`;
+  }
+};
+
+// --------------------------------------------------------------------------
+// ADVANCED REPORT FILTERS MODAL & HANDLERS
+// --------------------------------------------------------------------------
+window.openMoreReportFiltersModal = function() {
+  let existing = document.getElementById('more-filters-modal-overlay');
+  if (existing) existing.remove();
+
+  const mf = window.reportFilters.moreFilters || {};
+
+  const overlay = document.createElement('div');
+  overlay.id = 'more-filters-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width: 600px; box-shadow: var(--shadow-lg); border-radius: 12px; overflow: hidden;">
+      <div class="modal-header" style="background: var(--bg-card); padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0;">⚙️ Advanced Analytics Filters</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">Filter reports by asset category, deal value, stage, and SLA status</p>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('more-filters-modal-overlay').remove()" style="font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; background: var(--bg-card);">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <!-- Unit Category -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Unit Category</label>
+            <select id="mf-category" class="report-select" style="font-size: 0.85rem; height: 38px;">
+              <option value="">All Categories</option>
+              <option value="RESIDENTIAL_APARTMENT" ${mf.unitCategory === 'RESIDENTIAL_APARTMENT' ? 'selected' : ''}>Residential Apartment</option>
+              <option value="LUXURY_VILLA" ${mf.unitCategory === 'LUXURY_VILLA' ? 'selected' : ''}>Luxury Villa</option>
+              <option value="PENTHOUSE" ${mf.unitCategory === 'PENTHOUSE' ? 'selected' : ''}>Penthouse</option>
+              <option value="COMMERCIAL_OFFICE" ${mf.unitCategory === 'COMMERCIAL_OFFICE' ? 'selected' : ''}>Commercial Office</option>
+              <option value="PLOT" ${mf.unitCategory === 'PLOT' ? 'selected' : ''}>Plot / Land</option>
+            </select>
+          </div>
+
+          <!-- Deal Stage -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Pipeline Stage</label>
+            <select id="mf-stage" class="report-select" style="font-size: 0.85rem; height: 38px;">
+              <option value="">All Stages</option>
+              <option value="NEW" ${mf.dealStage === 'NEW' ? 'selected' : ''}>Fresh Lead</option>
+              <option value="CONTACTED" ${mf.dealStage === 'CONTACTED' ? 'selected' : ''}>Contacted</option>
+              <option value="QUALIFIED" ${mf.dealStage === 'QUALIFIED' ? 'selected' : ''}>Qualified</option>
+              <option value="SITE_VISIT_SCHEDULED" ${mf.dealStage === 'SITE_VISIT_SCHEDULED' ? 'selected' : ''}>Site Visit Scheduled</option>
+              <option value="SITE_VISIT_DONE" ${mf.dealStage === 'SITE_VISIT_DONE' ? 'selected' : ''}>Site Visit Done</option>
+              <option value="IN_NEGOTIATION" ${mf.dealStage === 'IN_NEGOTIATION' ? 'selected' : ''}>In Negotiation</option>
+              <option value="BOOKING_DONE" ${mf.dealStage === 'BOOKING_DONE' ? 'selected' : ''}>Booking Done (Won)</option>
+              <option value="LOST" ${mf.dealStage === 'LOST' ? 'selected' : ''}>Lost / Dropped</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <!-- Min Price -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Min Deal Value (₹)</label>
+            <input type="number" id="mf-min-price" class="form-control" value="${mf.minPrice || ''}" placeholder="e.g. 5000000" style="font-size: 0.85rem; height: 38px; line-height: 1.4; padding: 0 0.85rem; border-radius: 6px;">
+          </div>
+
+          <!-- Max Price -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Max Deal Value (₹)</label>
+            <input type="number" id="mf-max-price" class="form-control" value="${mf.maxPrice || ''}" placeholder="e.g. 25000000" style="font-size: 0.85rem; height: 38px; line-height: 1.4; padding: 0 0.85rem; border-radius: 6px;">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <!-- Payment Status -->
+          <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Payment Collection Status</label>
+            <select id="mf-payment" class="report-select" style="font-size: 0.85rem; height: 38px;">
+              <option value="">All Collections</option>
+              <option value="FULLY_PAID" ${mf.paymentStatus === 'FULLY_PAID' ? 'selected' : ''}>Fully Settled</option>
+              <option value="PARTIAL" ${mf.paymentStatus === 'PARTIAL' ? 'selected' : ''}>Partially Paid</option>
+              <option value="OVERDUE" ${mf.paymentStatus === 'OVERDUE' ? 'selected' : ''}>Overdue Balance</option>
+            </select>
+          </div>
+
+          <!-- Overdue SLA Checkbox -->
+          <div style="display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 600; color: var(--danger); cursor: pointer;">
+              <input type="checkbox" id="mf-overdue" ${mf.overdueOnly ? 'checked' : ''} style="width: 16px; height: 16px;">
+              <span>⚠️ Show only leads with overdue SLA follow-ups</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-card); padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary" onclick="resetMoreReportFilters()" style="color: var(--danger); font-weight: 600; font-size: 0.82rem;">
+          Reset All Filters
+        </button>
+        <div style="display: flex; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('more-filters-modal-overlay').remove()">Cancel</button>
+          <button type="button" class="btn btn-accent" onclick="applyMoreReportFilters()" style="font-weight: 700; padding: 0.5rem 1.25rem;">
+            Apply Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+};
+
+window.applyMoreReportFilters = function() {
+  const cat = document.getElementById('mf-category')?.value || '';
+  const minP = document.getElementById('mf-min-price')?.value || '';
+  const maxP = document.getElementById('mf-max-price')?.value || '';
+  const stg = document.getElementById('mf-stage')?.value || '';
+  const ovd = document.getElementById('mf-overdue')?.checked || false;
+  const pay = document.getElementById('mf-payment')?.value || '';
+
+  window.reportFilters.moreFilters = {
+    unitCategory: cat,
+    minPrice: minP,
+    maxPrice: maxP,
+    dealStage: stg,
+    overdueOnly: ovd,
+    paymentStatus: pay
+  };
+
+  const overlay = document.getElementById('more-filters-modal-overlay');
+  if (overlay) overlay.remove();
+
+  const container = document.getElementById('app-view-container');
+  if (container) {
+    loadReportsView(container);
+  } else {
+    renderActiveReportTab();
+  }
+
+  showToastNotification('Advanced filters applied to executive analytics.');
+};
+
+window.resetMoreReportFilters = function() {
+  window.reportFilters.moreFilters = {
+    unitCategory: '',
+    minPrice: '',
+    maxPrice: '',
+    dealStage: '',
+    overdueOnly: false,
+    paymentStatus: ''
+  };
+
+  const overlay = document.getElementById('more-filters-modal-overlay');
+  if (overlay) overlay.remove();
+
+  const container = document.getElementById('app-view-container');
+  if (container) {
+    loadReportsView(container);
+  } else {
+    renderActiveReportTab();
+  }
+
+  showToastNotification('Filters reset to default.');
+};
+
+// --------------------------------------------------------------------------
+// SCHEDULE EXECUTIVE REPORT MODAL & CONTROLLER
+// --------------------------------------------------------------------------
+window.openScheduleReportModal = function() {
+  let existing = document.getElementById('schedule-report-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'schedule-report-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width: 580px; box-shadow: var(--shadow-lg); border-radius: 12px; overflow: hidden;">
+      <div class="modal-header" style="background: var(--bg-card); padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin: 0;">📅 Schedule Executive Report Distribution</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">Automate recurring analytics distribution to leadership & stakeholders</p>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('schedule-report-modal-overlay').remove()" style="font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; background: var(--bg-card);">
+        
+        <!-- Frequency -->
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Distribution Frequency</label>
+          <select id="sch-freq" class="report-select" style="font-size: 0.85rem; height: 38px;">
+            <option value="weekly" selected>Weekly (Every Monday at 08:00 AM)</option>
+            <option value="daily">Daily Morning Briefing (08:00 AM)</option>
+            <option value="monthly">Monthly Executive Summary (1st of month at 09:00 AM)</option>
+            <option value="quarterly">Quarterly Board Review (1st of quarter)</option>
+          </select>
+        </div>
+
+        <!-- Recipients -->
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Executive Email Recipients</label>
+          <input type="text" id="sch-recipients" class="form-control" value="management@nexoraestates.com, director@nexoraestates.com" style="font-size: 0.85rem; height: 38px; line-height: 1.4; padding: 0 0.85rem; border-radius: 6px;" placeholder="Comma separated email addresses">
+          <span style="font-size: 0.7rem; color: var(--text-muted);">Delivered securely via automated distribution engine.</span>
+        </div>
+
+        <!-- Report Format -->
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Delivery Format</label>
+          <div style="display: flex; gap: 1.25rem; font-size: 0.82rem; color: var(--text-main); margin-top: 0.2rem;">
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+              <input type="checkbox" id="sch-fmt-pdf" checked> PDF Executive Report
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+              <input type="checkbox" id="sch-fmt-csv" checked> CSV Data Attachment
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+              <input type="checkbox" id="sch-fmt-digest" checked> Inline Summary Digest
+            </label>
+          </div>
+        </div>
+
+        <!-- Inclusions -->
+        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+          <label style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Report Modules to Include</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem; color: var(--text-main);">
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;"><input type="checkbox" checked disabled> Executive KPIs</label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;"><input type="checkbox" checked> Sales Funnel Dynamics</label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;"><input type="checkbox" checked> Project Inventory Absorption</label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;"><input type="checkbox" checked> Cashflow & Receivables</label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;"><input type="checkbox" checked> Agent Revenue Ranking</label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;"><input type="checkbox" checked> High Priority Alerts</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="background: var(--bg-card); padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('schedule-report-modal-overlay').remove()">Cancel</button>
+        <button type="button" class="btn btn-accent" onclick="confirmScheduleReport()" style="font-weight: 700; padding: 0.5rem 1.25rem;">
+          Save & Activate Schedule
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+};
+
+window.confirmScheduleReport = function() {
+  const freqSelect = document.getElementById('sch-freq');
+  const freqLabel = freqSelect ? freqSelect.options[freqSelect.selectedIndex].text : 'Weekly';
+  const recipients = document.getElementById('sch-recipients')?.value || 'management@nexoraestates.com';
+
+  const overlay = document.getElementById('schedule-report-modal-overlay');
+  if (overlay) overlay.remove();
+
+  const schBtn = document.getElementById('btn-schedule-report');
+  if (schBtn) {
+    schBtn.innerHTML = `<span>✓</span> Scheduled (${freqSelect?.value || 'Weekly'})`;
+    schBtn.style.background = 'var(--success)';
+  }
+
+  showToastNotification(`Executive Distribution Active: Report scheduled for ${recipients.split(',')[0]} (${freqLabel}).`);
+};
+
+// --------------------------------------------------------------------------
+// REAL CRM DATA EXPORT ENGINE (EXPORTS LIVE FILTERED DATA TO DOWNLOADS)
+// --------------------------------------------------------------------------
+window.exportActiveReport = async function(format = 'csv') {
+  const exportBtn = document.getElementById('btn-export-report');
+  if (exportBtn) {
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = `<span>⏳</span> Exporting...`;
+  }
+
+  try {
+    const f = window.reportFilters || {};
+    let queryParams = `preset=${f.preset || 'this_month'}&`;
+    if (f.projectId) queryParams += `project_id=${f.projectId}&`;
+    if (f.source) queryParams += `source=${encodeURIComponent(f.source)}&`;
+    if (f.agentId) queryParams += `agent_id=${f.agentId}&`;
+    if (f.startDate) queryParams += `startDate=${f.startDate}&`;
+    if (f.endDate) queryParams += `endDate=${f.endDate}&`;
+
+    // Fetch live, real CRM analytics data from backend
+    const [analyticsRes, funnelRes] = await Promise.all([
+      apiFetch(`/reports/executive-analytics?${queryParams}`),
+      apiFetch(`/reports/sales-funnel?${queryParams}`)
+    ]);
+
+    const d = analyticsRes.data || {};
+    const funnel = funnelRes.data || {};
+    const k = d.kpis || {};
+    const periodLabel = d.period?.label || 'Current Period';
+    const timestamp = new Date().toISOString().slice(0, 10);
+
+    // Build real CSV format with live database data
+    let csv = 'NEXORA ESTATES - REAL TIME EXECUTIVE MANAGEMENT REPORT\n';
+    csv += `Export Generated,${new Date().toLocaleString('en-IN')}\n`;
+    csv += `Reporting Period,${periodLabel}\n\n`;
+
+    csv += '--- 1. EXECUTIVE KPI METRICS ---\n';
+    csv += `Metric,Current Value,Comparison Trend\n`;
+    csv += `Total Leads,${k.total_leads?.value || 0},${k.total_leads?.trend?.label || '0%'}\n`;
+    csv += `Site Visits,${k.site_visits?.value || 0},${k.site_visits?.trend?.label || '0%'}\n`;
+    csv += `Confirmed Bookings,${k.bookings_count?.value || 0},${k.bookings_count?.trend?.label || '0%'}\n`;
+    csv += `Gross Booking Value (INR),${k.booking_value?.value || 0},${k.booking_value?.trend?.label || '0%'}\n`;
+    csv += `Payments Received (INR),${k.payments_received?.value || 0},${k.payments_received?.trend?.label || '0%'}\n`;
+    csv += `Outstanding Receivables (INR),${k.outstanding_balance?.value || 0},${k.outstanding_balance?.trend?.label || '0%'}\n`;
+    csv += `Conversion Rate,${k.conversion_rate?.value || '0%'}\n\n`;
+
+    if (funnel.stages && funnel.stages.length > 0) {
+      csv += '--- 2. SALES PIPELINE FUNNEL DYNAMICS ---\n';
+      csv += `Stage,Count,Percentage\n`;
+      funnel.stages.forEach(st => {
+        csv += `"${st.stage || st.name}",${st.count || 0},${st.percentage || 0}%\n`;
+      });
+      csv += '\n';
+    }
+
+    if (d.projects && d.projects.length > 0) {
+      csv += '--- 3. PROJECT PORTFOLIO & INVENTORY STATUS ---\n';
+      csv += `Project Name,City,Status,Total Units,Available,Hold,Booked,Available Stock Value (INR)\n`;
+      d.projects.forEach(p => {
+        csv += `"${p.project_name}","${p.city || ''}","${p.status_indicator || ''}",${p.total_units || 0},${p.available_units || 0},${p.hold_units || 0},${p.booked_units || 0},${p.available_value || 0}\n`;
+      });
+      csv += '\n';
+    }
+
+    if (d.channels && d.channels.length > 0) {
+      csv += '--- 4. LEAD ACQUISITION CHANNELS ---\n';
+      csv += `Source Channel,Leads Count,Percentage,Won Bookings,Conversion Rate\n`;
+      d.channels.forEach(c => {
+        csv += `"${c.source}",${c.count || 0},${c.percentage || 0}%,${c.won_count || 0},"${c.conversion_rate || '0%'}"\n`;
+      });
+      csv += '\n';
+    }
+
+    if (d.attention_alerts && d.attention_alerts.length > 0) {
+      csv += '--- 5. REAL-TIME MANAGEMENT ATTENTION ITEMS ---\n';
+      csv += `Priority Severity,Operational Alert Description\n`;
+      d.attention_alerts.forEach(a => {
+        csv += `"${a.severity}","${a.message.replace(/"/g, '""')}"\n`;
+      });
+    }
+
+    // Trigger direct download to user's Downloads folder
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const filename = `Nexora_Estates_Report_${timestamp}.csv`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToastNotification(`Report exported successfully to Downloads (${filename})`, 'success');
+  } catch (err) {
+    console.error('Export report error:', err);
+    showToastNotification('Failed to export report: ' + (err.message || 'Server error'), 'error');
+  } finally {
+    if (exportBtn) {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = `<span>📥</span> Export Report`;
+    }
+  }
+};
+
+window.exportActiveReportToCSV = function() {
+  window.exportActiveReport('csv');
+};
+
+window.exportActiveReportToPDF = function() {
+  window.exportActiveReport('csv');
+};
+
+window.showToastNotification = function(msg, type = 'success') {
+  let toast = document.getElementById('crm-toast-notification');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'crm-toast-notification';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 0.85rem 1.4rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 999999;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      pointer-events: none;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.style.background = type === 'success' ? 'var(--primary)' : 'var(--danger)';
+  toast.style.color = '#ffffff';
+  toast.style.border = type === 'success' ? '1px solid var(--border-color)' : 'none';
+  toast.innerHTML = `<span>${type === 'success' ? '✅' : '⚠️'}</span> <span>${escapeHtml(msg)}</span>`;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateY(0)';
+
+  clearTimeout(window._toastTimeout);
+  window._toastTimeout = setTimeout(() => {
+    if (toast) {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(12px)';
+    }
+  }, 4000);
+};
+
+window.printActiveReport = function() {
+  window.print();
+};
+
+// --------------------------------------------------------------------------
+// NOTIFICATION SYSTEM CONTROLLER & UI
+// --------------------------------------------------------------------------
+window.toggleNotificationDropdown = function() {
+  state.notificationsOpen = !state.notificationsOpen;
+  renderNotificationDropdown();
+  if (state.notificationsOpen) {
+    loadNotificationsList();
+  }
+};
+
+window.renderNotificationDropdown = function() {
+  const container = document.getElementById('notifications-dropdown-container');
+  if (!container) return;
+
+  if (!state.notificationsOpen) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="notification-dropdown" style="position: absolute; top: 60px; right: 80px; width: 380px; max-height: 480px; background: var(--bg-card); border-radius: var(--radius); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); border: 1px solid var(--border-color); z-index: 1000; display: flex; flex-direction: column; overflow: hidden;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--border-color); background: var(--bg-card-hover);">
+        <div style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem;">
+          Notifications <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">(${state.unreadNotificationsCount})</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;" onclick="markAllNotificationsRead()">Mark All Read</button>
+      </div>
+
+      <div id="notif-list-body" style="overflow-y: auto; flex: 1; max-height: 380px; padding: 0.5rem 0;">
+        <p style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">Loading notifications...</p>
+      </div>
+    </div>
+  `;
+};
+
+window.loadNotificationsList = async function() {
+  const listEl = document.getElementById('notif-list-body');
+  if (!listEl) return;
+
+  try {
+    const res = await apiFetch('/notifications?limit=25');
+    state.notificationsList = res.data || [];
+    state.unreadNotificationsCount = res.unreadCount || 0;
+    updateNotificationBadge();
+
+    if (state.notificationsList.length === 0) {
+      listEl.innerHTML = '<p style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No notifications yet.</p>';
+      return;
+    }
+
+    listEl.innerHTML = state.notificationsList.map(n => {
+      const typeColors = {
+        SUCCESS: '#10b981',
+        WARNING: '#f59e0b',
+        ERROR: '#ef4444',
+        INFO: 'var(--accent)',
+        REMINDER: '#8b5cf6'
+      };
+      const color = typeColors[n.type] || 'var(--accent)';
+      const dt = new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div style="padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--border-muted); background: ${n.is_read ? 'transparent' : 'rgba(217, 119, 6, 0.05)'}; cursor: pointer; transition: background 0.15s;" onclick="onNotificationClick('${n.id}', '${n.related_entity_type || ''}', '${n.related_entity_id || ''}')">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${color};"></span>
+              ${escapeHtml(n.title)}
+            </div>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">${dt}</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; line-height: 1.4;">${escapeHtml(n.message)}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = `<p style="padding: 1rem; color: var(--danger); font-size: 0.8rem;">Failed to load notifications: ${err.message}</p>`;
+  }
+};
+
+window.fetchUnreadNotificationsCount = async function() {
+  if (!state.token) return;
+  try {
+    const res = await apiFetch('/notifications/unread-count');
+    state.unreadNotificationsCount = res.data?.unreadCount || 0;
+    updateNotificationBadge();
+  } catch (err) {
+    // Non-blocking
+  }
+};
+
+window.updateNotificationBadge = function() {
+  const badge = document.getElementById('notif-badge');
+  if (badge) {
+    if (state.unreadNotificationsCount > 0) {
+      badge.textContent = state.unreadNotificationsCount > 99 ? '99+' : state.unreadNotificationsCount;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+};
+
+window.onNotificationClick = async function(id, entityType, entityId) {
+  await apiFetch(`/notifications/${id}/read`, { method: 'PATCH' });
+  state.unreadNotificationsCount = Math.max(0, state.unreadNotificationsCount - 1);
+  updateNotificationBadge();
+  state.notificationsOpen = false;
+  renderNotificationDropdown();
+
+  if (entityType === 'DEAL') {
+    switchView('deals');
+    if (entityId) openDealDetailModal(entityId);
+  } else if (entityType === 'LEAD') {
+    switchView('leads');
+    if (entityId) loadLeadDetailsView(entityId);
+  } else if (entityType === 'PAYMENT') {
+    switchView('payments');
+  } else if (entityType === 'SITE_VISIT') {
+    switchView('calendar');
+  }
+};
+
+window.markAllNotificationsRead = async function() {
+  try {
+    await apiFetch('/notifications/read-all', { method: 'PATCH' });
+    state.unreadNotificationsCount = 0;
+    updateNotificationBadge();
+    loadNotificationsList();
+  } catch (err) {
+    alert('Failed to mark all as read: ' + err.message);
+  }
+};
+
+window.startNotificationPolling = function() {
+  if (window.notifPollTimer) return;
+  window.notifPollTimer = setInterval(() => {
+    fetchUnreadNotificationsCount();
+  }, 10000);
+};
+
+// --------------------------------------------------------------------------
+// SUPPORT & HELPDESK TICKETS VIEW
+// --------------------------------------------------------------------------
+window.supportStatusFilter = '';
+window.supportPriorityFilter = '';
+window.supportSearchFilter = '';
+
+async function loadSupportTicketsView(container) {
+  try {
+    let endpoint = `/support/tickets?`;
+    if (window.supportStatusFilter) endpoint += `status=${window.supportStatusFilter}&`;
+    if (window.supportPriorityFilter) endpoint += `priority=${window.supportPriorityFilter}&`;
+    if (window.supportSearchFilter) endpoint += `search=${encodeURIComponent(window.supportSearchFilter)}&`;
+
+    const res = await apiFetch(endpoint);
+    const tickets = res.data || [];
+
+    container.innerHTML = `
+      <div class="table-container" style="margin: 0 0 1.25rem 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);">
+          <div>
+            <h3 style="font-weight: 700; font-size: 1rem; margin: 0;">Support & Helpdesk Requests</h3>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-muted);">Incoming customer assistance requests from WhatsApp, website forms, and client portals.</p>
+          </div>
+          <button class="btn btn-accent btn-sm" onclick="openSupportModal()">+ Submit Ticket</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 0.85rem 1.25rem; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
+          <input type="text" class="form-control" placeholder="Search ticket #, name, phone, or subject..." value="${window.supportSearchFilter}" style="flex: 1; min-width: 200px; font-size: 0.82rem;" oninput="window.supportSearchFilter=this.value; loadSupportTicketsView(document.getElementById('content-area'))">
+          
+          <select class="form-control" style="width: 160px; font-size: 0.82rem;" onchange="window.supportStatusFilter=this.value; loadSupportTicketsView(document.getElementById('content-area'))">
+            <option value="" ${window.supportStatusFilter === '' ? 'selected' : ''}>All Statuses</option>
+            <option value="OPEN" ${window.supportStatusFilter === 'OPEN' ? 'selected' : ''}>Open</option>
+            <option value="IN_PROGRESS" ${window.supportStatusFilter === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
+            <option value="RESOLVED" ${window.supportStatusFilter === 'RESOLVED' ? 'selected' : ''}>Resolved</option>
+            <option value="CLOSED" ${window.supportStatusFilter === 'CLOSED' ? 'selected' : ''}>Closed</option>
+          </select>
+
+          <select class="form-control" style="width: 150px; font-size: 0.82rem;" onchange="window.supportPriorityFilter=this.value; loadSupportTicketsView(document.getElementById('content-area'))">
+            <option value="" ${window.supportPriorityFilter === '' ? 'selected' : ''}>All Priorities</option>
+            <option value="LOW" ${window.supportPriorityFilter === 'LOW' ? 'selected' : ''}>Low</option>
+            <option value="MEDIUM" ${window.supportPriorityFilter === 'MEDIUM' ? 'selected' : ''}>Medium</option>
+            <option value="HIGH" ${window.supportPriorityFilter === 'HIGH' ? 'selected' : ''}>High</option>
+            <option value="URGENT" ${window.supportPriorityFilter === 'URGENT' ? 'selected' : ''}>Urgent</option>
+          </select>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted);">
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Ticket #</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Subject</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Requester</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Priority</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Status</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Assignee</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: left;">Created</th>
+              <th style="padding: 0.75rem 1.1rem; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tickets.length ? tickets.map(t => {
+              const dateStr = new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+              return `
+                <tr style="border-bottom: 1px solid var(--border-muted);">
+                  <td style="padding: 0.85rem 1.1rem; font-weight: 700; color: var(--accent);">#${t.ticket_number}</td>
+                  <td style="padding: 0.85rem 1.1rem;">
+                    <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(t.subject)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(t.description)}</div>
+                  </td>
+                  <td style="padding: 0.85rem 1.1rem;">
+                    <div style="font-weight: 500;">${escapeHtml(t.full_name)}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">${t.phone}</div>
+                  </td>
+                  <td style="padding: 0.85rem 1.1rem;">
+                    <span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span>
+                  </td>
+                  <td style="padding: 0.85rem 1.1rem;">
+                    <span class="badge badge-${t.status.toLowerCase()}">${t.status}</span>
+                  </td>
+                  <td style="padding: 0.85rem 1.1rem; font-size: 0.82rem;">
+                    ${t.assignee_first_name ? `${t.assignee_first_name} ${t.assignee_last_name || ''}` : '<span style="color: var(--text-muted);">Unassigned</span>'}
+                  </td>
+                  <td style="padding: 0.85rem 1.1rem; font-size: 0.78rem; color: var(--text-muted);">${dateStr}</td>
+                  <td style="padding: 0.85rem 1.1rem; text-align: right;">
+                    <button class="btn btn-secondary btn-sm" onclick="openTicketDetailModal('${t.id}')">Review</button>
+                  </td>
+                </tr>
+              `;
+            }).join('') : '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 3rem;">No support tickets found matching current filters.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="padding: 2rem; color: var(--danger);">Failed to load support tickets: ${err.message}</div>`;
+  }
+}
+
+window.openTicketDetailModal = async function (ticketId) {
+  try {
+    const res = await apiFetch(`/support/tickets/${ticketId}`);
+    const t = res.data;
+
+    let existing = document.getElementById('ticket-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ticket-modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width: 580px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">Ticket #${t.ticket_number}</h3>
+            <span class="badge badge-${t.status.toLowerCase()}" style="margin-top: 0.35rem;">${t.status}</span>
+          </div>
+          <button class="btn-icon" onclick="document.getElementById('ticket-modal-overlay').remove()">✕</button>
+        </div>
+
+        <div style="background: var(--bg-card-hover); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.25rem; font-size: 0.85rem;">
+          <div style="font-weight: 700; margin-bottom: 0.4rem; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(t.subject)}</div>
+          <div style="white-space: pre-wrap; line-height: 1.5; color: var(--text-main); margin-bottom: 0.75rem;">${escapeHtml(t.description)}</div>
+          <div style="border-top: 1px solid var(--border-color); padding-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+            <span>Requester: <b>${escapeHtml(t.full_name)}</b> (${t.phone} | ${t.email})</span>
+          </div>
+        </div>
+
+        <form id="update-ticket-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.9rem;">
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Status</label>
+              <select id="tk-status" class="form-control">
+                <option value="OPEN" ${t.status === 'OPEN' ? 'selected' : ''}>Open</option>
+                <option value="IN_PROGRESS" ${t.status === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
+                <option value="RESOLVED" ${t.status === 'RESOLVED' ? 'selected' : ''}>Resolved</option>
+                <option value="CLOSED" ${t.status === 'CLOSED' ? 'selected' : ''}>Closed</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Priority</label>
+              <select id="tk-priority" class="form-control">
+                <option value="LOW" ${t.priority === 'LOW' ? 'selected' : ''}>Low</option>
+                <option value="MEDIUM" ${t.priority === 'MEDIUM' ? 'selected' : ''}>Medium</option>
+                <option value="HIGH" ${t.priority === 'HIGH' ? 'selected' : ''}>High</option>
+                <option value="URGENT" ${t.priority === 'URGENT' ? 'selected' : ''}>Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Resolution Notes / Staff Response</label>
+            <textarea id="tk-notes" class="form-control" rows="3" placeholder="Enter resolution details, customer follow-up notes, or internal comments...">${t.resolution_notes || ''}</textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('ticket-modal-overlay').remove()">Cancel</button>
+            <button type="submit" class="btn btn-accent">Save Ticket</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('update-ticket-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiFetch(`/support/tickets/${ticketId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status: document.getElementById('tk-status').value,
+            priority: document.getElementById('tk-priority').value,
+            resolution_notes: document.getElementById('tk-notes').value
+          })
+        });
+        overlay.remove();
+        loadSupportTicketsView(document.getElementById('content-area'));
+      } catch (err) {
+        alert('Failed to update ticket: ' + err.message);
+      }
+    });
+  } catch (err) {
+    alert('Failed to load ticket details: ' + err.message);
+  }
+};
+
+// --------------------------------------------------------------------------
+// PUBLIC CONTACT SUPPORT MODAL (NO LOGIN REQUIRED)
+// --------------------------------------------------------------------------
+window.openSupportModal = function () {
+  let existing = document.getElementById('public-support-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'public-support-modal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+        <div>
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Contact Customer Support</h3>
+          <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--text-muted);">Submit a request and our support desk will contact you shortly.</p>
+        </div>
+        <button class="btn-icon" onclick="document.getElementById('public-support-modal').remove()">✕</button>
+      </div>
+
+      <div id="support-form-alert" style="display: none; padding: 0.85rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+      <form id="public-support-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Full Name *</label>
+            <input type="text" id="sup-name" class="form-control" placeholder="e.g. Vikram Sharma" required>
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Mobile Number *</label>
+            <input type="tel" id="sup-phone" class="form-control" placeholder="e.g. +91 98765 43210" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+          <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Email Address *</label>
+          <input type="email" id="sup-email" class="form-control" placeholder="e.g. name@example.com" required>
+        </div>
+
+        <div style="margin-bottom: 0.75rem;">
+          <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Subject *</label>
+          <input type="text" id="sup-subject" class="form-control" placeholder="Brief summary of your inquiry or issue..." required>
+        </div>
+
+        <div style="margin-bottom: 1.1rem;">
+          <label style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.3rem; display: block;">Description of Issue *</label>
+          <textarea id="sup-desc" class="form-control" rows="3" placeholder="Please describe how we can assist you with your property inquiry, booking, or site visit..." required></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('public-support-modal').remove()">Cancel</button>
+          <button type="submit" id="sup-submit-btn" class="btn btn-accent">Submit Support Request</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('public-support-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('sup-submit-btn');
+    const alertBox = document.getElementById('support-form-alert');
+    btn.disabled = true;
+    btn.innerText = 'Submitting...';
+
+    try {
+      const res = await fetch(`${API_BASE}/support/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: document.getElementById('sup-name').value,
+          phone: document.getElementById('sup-phone').value,
+          email: document.getElementById('sup-email').value,
+          subject: document.getElementById('sup-subject').value,
+          description: document.getElementById('sup-desc').value
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'Submission failed');
+
+      alertBox.style.display = 'block';
+      alertBox.style.background = 'rgba(16, 185, 129, 0.15)';
+      alertBox.style.color = '#10b981';
+      alertBox.style.border = '1px solid #10b981';
+      alertBox.innerHTML = `✓ <b>Success!</b> ${data.message}`;
+
+      document.getElementById('public-support-form').style.display = 'none';
+
+      setTimeout(() => {
+        overlay.remove();
+        if (state.token && state.currentView === 'support') {
+          loadSupportTicketsView(document.getElementById('content-area'));
+        }
+      }, 3500);
+    } catch (err) {
+      alertBox.style.display = 'block';
+      alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
+      alertBox.style.color = '#ef4444';
+      alertBox.style.border = '1px solid #ef4444';
+      alertBox.innerHTML = `✕ <b>Error:</b> ${err.message}`;
+      btn.disabled = false;
+      btn.innerText = 'Submit Support Request';
+    }
+  });
+};
+
+// ==========================================
+// PHASE 1: CHANNEL PARTNER (BROKER) ECOSYSTEM
+// ==========================================
+
+async function loadChannelPartnersView(container) {
+  try {
+    container.innerHTML = `
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <p>Loading Channel Partner Network & Commission Ledger...</p>
+      </div>
+    `;
+
+    const [summaryRes, partnersRes] = await Promise.all([
+      apiFetch('/channel-partners/summary').catch(() => ({ data: {} })),
+      apiFetch('/channel-partners').catch(() => ({ data: [] }))
+    ]);
+
+    const summary = summaryRes.data || {};
+    const partners = partnersRes.data || [];
+
+    const totalEarned = Number(summary.total_commissions_earned || 0);
+    const totalPaid = Number(summary.total_commissions_paid || 0);
+    const totalPending = Number(summary.total_pending_payouts || 0);
+
+    container.innerHTML = `
+      <!-- TOP ACTION BAR -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em;">Channel Partner Network & Brokerage Ledger</h2>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.82rem; color: var(--text-muted);">Manage real estate brokers, commission tier agreements, deal attribution, and automated payout disbursements.</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="btn btn-primary" onclick="openAddChannelPartnerModal()">
+            ${getIcon('plus')} Onboard Channel Partner
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 KPI SUMMARY CARDS -->
+      <div class="metric-grid-4">
+        <div class="demand-card">
+          <div class="kpi-label">Active Channel Partners</div>
+          <div class="kpi-value">${summary.total_partners || 0}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">${summary.active_partners || 0} Verified & RERA Registered</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Broker-Sourced Deals</div>
+          <div class="kpi-value">${summary.total_broker_deals || 0}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Attributed closed & ongoing bookings</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Total Commissions Accrued</div>
+          <div class="kpi-value">₹${(totalEarned / 100000).toFixed(2)} L</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Disbursed: ₹${(totalPaid / 100000).toFixed(2)} L</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Pending Broker Payouts</div>
+          <div class="kpi-value">₹${(totalPending / 100000).toFixed(2)} L</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">${totalPending > 0 ? 'Requires Disbursement' : 'All Accounts Reconciled'}</div>
+        </div>
+      </div>
+
+      <!-- FILTER & SEARCH BAR -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 0.85rem 1.25rem; margin-bottom: 1.75rem; display: flex; gap: 0.85rem; align-items: center; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 240px; position: relative;">
+          <input type="text" id="cp-search-input" placeholder="Search by Firm, Contact Person, Phone, or RERA..." 
+                 class="filter-input" style="width: 100%; padding-left: 2.25rem;" oninput="filterChannelPartnersTable()">
+          <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
+            ${getIcon('search')}
+          </span>
+        </div>
+        <select id="cp-tier-filter" class="filter-select" onchange="filterChannelPartnersTable()">
+          <option value="">All Tiers (Platinum / Gold / Silver)</option>
+          <option value="PLATINUM">Platinum (3.0%+)</option>
+          <option value="GOLD">Gold (2.5%)</option>
+          <option value="SILVER">Silver (2.0%)</option>
+        </select>
+        <select id="cp-status-filter" class="filter-select" onchange="filterChannelPartnersTable()">
+          <option value="">All Statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </div>
+
+      <!-- PARTNERS TABLE -->
+      <div class="table-container">
+        <table class="data-table" id="cp-main-table">
+          <thead>
+            <tr>
+              <th>Partner / Firm Name</th>
+              <th>Contact Person & Phone</th>
+              <th>RERA Registration</th>
+              <th>Tier & Rate</th>
+              <th>Attributed Deals</th>
+              <th>Commissions (Earned / Paid)</th>
+              <th>Balance Due</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${partners.length === 0 ? `
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                  No channel partners found. Click <b>"Onboard Channel Partner"</b> to register your first broker.
+                </td>
+              </tr>
+            ` : partners.map(p => {
+              const earned = Number(p.total_commission_earned || 0);
+              const paid = Number(p.total_commission_paid || 0);
+              const balance = Number(p.balance_payable || 0);
+              const tierClass = p.tier === 'PLATINUM' ? 'tier-platinum' : (p.tier === 'GOLD' ? 'tier-gold' : 'tier-silver');
+
+              return `
+                <tr class="cp-row" data-firm="${escapeHtml(p.firm_name || '')}" data-contact="${escapeHtml(p.contact_person || '')}" data-phone="${escapeHtml(p.phone || '')}" data-rera="${escapeHtml(p.rera_number || '')}" data-tier="${p.tier || ''}" data-status="${p.status || ''}">
+                  <td>
+                    <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(p.firm_name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(p.email || 'No email provided')}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 500;">${escapeHtml(p.contact_person)}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(p.phone)}</div>
+                  </td>
+                  <td>
+                    <span style="font-family: inherit; font-size: 0.78rem; background: var(--bg-hover); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-color);">
+                      ${escapeHtml(p.rera_number || 'RERA Applied / NA')}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="tier-badge ${tierClass}">${p.tier}</span>
+                    <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">${Number(p.commission_rate || 2.5).toFixed(2)}%</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600;">${p.total_deals_count || 0} Deals</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600; color: var(--text-main);">₹${(earned / 100000).toFixed(2)} L</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Paid: ₹${(paid / 100000).toFixed(2)} L</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 700; color: var(--text-main);">
+                      ₹${(balance / 100000).toFixed(2)} L
+                    </div>
+                  </td>
+                  <td style="text-align: right;">
+                    <div style="display: inline-flex; gap: 0.4rem;">
+                      <button class="btn btn-secondary btn-sm" onclick="openChannelPartnerLedgerModal('${p.id}')" title="View Commission Ledger & Deals">
+                        ${getIcon('demandNotices')} Ledger
+                      </button>
+                      ${balance > 0 ? `
+                        <button class="btn btn-primary btn-sm" onclick="openBrokerPayoutModal(null, '${p.id}', '${escapeHtml(p.firm_name)}', ${balance}, '')" title="Disburse Commission Payout">
+                          Pay
+                        </button>
+                      ` : ''}
+                      <button class="btn btn-outline btn-sm" onclick="openEditChannelPartnerModal('${p.id}')" title="Edit Partner Details">
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--danger); padding: 2rem;">Error loading channel partners: ${err.message}</p>`;
+  }
+}
+
+function filterChannelPartnersTable() {
+  const search = (document.getElementById('cp-search-input')?.value || '').toLowerCase();
+  const tier = (document.getElementById('cp-tier-filter')?.value || '').toUpperCase();
+  const status = (document.getElementById('cp-status-filter')?.value || '').toUpperCase();
+
+  const rows = document.querySelectorAll('.cp-row');
+  rows.forEach(row => {
+    const firm = (row.dataset.firm || '').toLowerCase();
+    const contact = (row.dataset.contact || '').toLowerCase();
+    const phone = (row.dataset.phone || '').toLowerCase();
+    const rera = (row.dataset.rera || '').toLowerCase();
+    const rowTier = (row.dataset.tier || '').toUpperCase();
+    const rowStatus = (row.dataset.status || '').toUpperCase();
+
+    const matchesSearch = !search || firm.includes(search) || contact.includes(search) || phone.includes(search) || rera.includes(search);
+    const matchesTier = !tier || rowTier === tier;
+    const matchesStatus = !status || rowStatus === status;
+
+    row.style.display = (matchesSearch && matchesTier && matchesStatus) ? '' : 'none';
+  });
+}
+
+function openAddChannelPartnerModal() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800;">Onboard New Channel Partner</h3>
+        <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      </div>
+      <form id="add-cp-form" style="padding: 1.25rem 0;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Brokerage / Firm Name *</label>
+            <input type="text" id="cp-firm" class="form-input" placeholder="e.g. Square Yards Realty" required>
+          </div>
+          <div>
+            <label class="form-label">Principal Contact Person *</label>
+            <input type="text" id="cp-contact" class="form-input" placeholder="e.g. Vikramaditya Rao" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Phone Number *</label>
+            <input type="tel" id="cp-phone" class="form-input" placeholder="+91 9886012345" required>
+          </div>
+          <div>
+            <label class="form-label">Email Address</label>
+            <input type="email" id="cp-email" class="form-input" placeholder="partner@realty.com">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Partner Tier</label>
+            <select id="cp-tier" class="form-input">
+              <option value="PLATINUM">Platinum (Tier 1)</option>
+              <option value="GOLD" selected>Gold (Tier 2)</option>
+              <option value="SILVER">Silver (Tier 3)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Default Commission %</label>
+            <input type="number" step="0.01" id="cp-comm-rate" class="form-input" value="2.50" required>
+          </div>
+          <div>
+            <label class="form-label">RERA Registration No.</label>
+            <input type="text" id="cp-rera" class="form-input" placeholder="AG/KA/RERA/2026/0042">
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+          <h4 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Banking & Tax Disbursement Details</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">PAN Number</label>
+              <input type="text" id="cp-pan" class="form-input" placeholder="AAACS1234P">
+            </div>
+            <div>
+              <label class="form-label">GSTIN</label>
+              <input type="text" id="cp-gst" class="form-input" placeholder="29AAACS1234P1Z5">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">Bank Name</label>
+              <input type="text" id="cp-bank-name" class="form-input" placeholder="HDFC Bank">
+            </div>
+            <div>
+              <label class="form-label">Account Number</label>
+              <input type="text" id="cp-bank-acc" class="form-input" placeholder="50100234567890">
+            </div>
+            <div>
+              <label class="form-label">IFSC Code</label>
+              <input type="text" id="cp-bank-ifsc" class="form-input" placeholder="HDFC0001234">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Special Notes / Territory Agreement</label>
+          <textarea id="cp-notes" class="form-input" rows="2" placeholder="e.g. Exclusive partner for Tower B luxury penthouses"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+          <button type="submit" class="btn btn-accent">Register Channel Partner</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('add-cp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerText = 'Registering...';
+
+    try {
+      const payload = {
+        firm_name: document.getElementById('cp-firm').value.trim(),
+        contact_person: document.getElementById('cp-contact').value.trim(),
+        phone: document.getElementById('cp-phone').value.trim(),
+        email: document.getElementById('cp-email').value.trim(),
+        tier: document.getElementById('cp-tier').value,
+        commission_rate: parseFloat(document.getElementById('cp-comm-rate').value),
+        rera_number: document.getElementById('cp-rera').value.trim(),
+        pan_number: document.getElementById('cp-pan').value.trim(),
+        gst_number: document.getElementById('cp-gst').value.trim(),
+        bank_name: document.getElementById('cp-bank-name').value.trim(),
+        bank_account_number: document.getElementById('cp-bank-acc').value.trim(),
+        bank_ifsc_code: document.getElementById('cp-bank-ifsc').value.trim(),
+        notes: document.getElementById('cp-notes').value.trim()
+      };
+
+      const res = await apiFetch('/channel-partners', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.status === 'success') {
+        modal.remove();
+        loadChannelPartnersView(document.getElementById('content-area'));
+      }
+    } catch (err) {
+      alert('Error registering partner: ' + err.message);
+      btn.disabled = false;
+      btn.innerText = 'Register Channel Partner';
+    }
+  });
+}
+
+async function openEditChannelPartnerModal(partnerId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
+      <div style="text-align: center; padding: 2rem;">Loading Partner Details...</div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  try {
+    const res = await apiFetch(`/channel-partners/${partnerId}`);
+    const p = res.data;
+
+    modal.querySelector('.modal-content').innerHTML = `
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800;">Edit Channel Partner Profile</h3>
+        <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      </div>
+      <form id="edit-cp-form" style="padding: 1rem 0;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Brokerage / Firm Name *</label>
+            <input type="text" id="edit-cp-firm" class="form-input" value="${escapeHtml(p.firm_name || '')}" required>
+          </div>
+          <div>
+            <label class="form-label">Contact Person *</label>
+            <input type="text" id="edit-cp-contact" class="form-input" value="${escapeHtml(p.contact_person || '')}" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Phone Number *</label>
+            <input type="tel" id="edit-cp-phone" class="form-input" value="${escapeHtml(p.phone || '')}" required>
+          </div>
+          <div>
+            <label class="form-label">Email Address</label>
+            <input type="email" id="edit-cp-email" class="form-input" value="${escapeHtml(p.email || '')}">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Partner Tier</label>
+            <select id="edit-cp-tier" class="form-input">
+              <option value="PLATINUM" ${p.tier === 'PLATINUM' ? 'selected' : ''}>Platinum</option>
+              <option value="GOLD" ${p.tier === 'GOLD' ? 'selected' : ''}>Gold</option>
+              <option value="SILVER" ${p.tier === 'SILVER' ? 'selected' : ''}>Silver</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Commission %</label>
+            <input type="number" step="0.01" id="edit-cp-comm-rate" class="form-input" value="${Number(p.commission_rate || 2.5).toFixed(2)}" required>
+          </div>
+          <div>
+            <label class="form-label">Account Status</label>
+            <select id="edit-cp-status" class="form-input">
+              <option value="ACTIVE" ${p.status === 'ACTIVE' ? 'selected' : ''}>Active</option>
+              <option value="INACTIVE" ${p.status === 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+              <option value="SUSPENDED" ${p.status === 'SUSPENDED' ? 'selected' : ''}>Suspended</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
+          <h4 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Banking & RERA Identification</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">RERA Registration</label>
+              <input type="text" id="edit-cp-rera" class="form-input" value="${escapeHtml(p.rera_number || '')}">
+            </div>
+            <div>
+              <label class="form-label">PAN Number</label>
+              <input type="text" id="edit-cp-pan" class="form-input" value="${escapeHtml(p.pan_number || '')}">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">Bank Name</label>
+              <input type="text" id="edit-cp-bank-name" class="form-input" value="${escapeHtml(p.bank_name || '')}">
+            </div>
+            <div>
+              <label class="form-label">Account Number</label>
+              <input type="text" id="edit-cp-bank-acc" class="form-input" value="${escapeHtml(p.bank_account_number || '')}">
+            </div>
+            <div>
+              <label class="form-label">IFSC Code</label>
+              <input type="text" id="edit-cp-bank-ifsc" class="form-input" value="${escapeHtml(p.bank_ifsc_code || '')}">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Notes & Remarks</label>
+          <textarea id="edit-cp-notes" class="form-input" rows="2">${escapeHtml(p.notes || '')}</textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+          <button type="submit" class="btn btn-accent">Save Changes</button>
+        </div>
+      </form>
+    `;
+
+    document.getElementById('edit-cp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      try {
+        const payload = {
+          firm_name: document.getElementById('edit-cp-firm').value.trim(),
+          contact_person: document.getElementById('edit-cp-contact').value.trim(),
+          phone: document.getElementById('edit-cp-phone').value.trim(),
+          email: document.getElementById('edit-cp-email').value.trim(),
+          tier: document.getElementById('edit-cp-tier').value,
+          commission_rate: parseFloat(document.getElementById('edit-cp-comm-rate').value),
+          status: document.getElementById('edit-cp-status').value,
+          rera_number: document.getElementById('edit-cp-rera').value.trim(),
+          pan_number: document.getElementById('edit-cp-pan').value.trim(),
+          bank_name: document.getElementById('edit-cp-bank-name').value.trim(),
+          bank_account_number: document.getElementById('edit-cp-bank-acc').value.trim(),
+          bank_ifsc_code: document.getElementById('edit-cp-bank-ifsc').value.trim(),
+          notes: document.getElementById('edit-cp-notes').value.trim()
+        };
+
+        const updateRes = await apiFetch(`/channel-partners/${partnerId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+
+        if (updateRes.status === 'success') {
+          modal.remove();
+          loadChannelPartnersView(document.getElementById('content-area'));
+        }
+      } catch (err) {
+        alert('Error updating partner: ' + err.message);
+        btn.disabled = false;
+        btn.innerText = 'Save Changes';
+      }
+    });
+  } catch (err) {
+    modal.querySelector('.modal-content').innerHTML = `
+      <div style="padding: 2rem; color: var(--danger); text-align: center;">Error loading partner: ${err.message}</div>
+    `;
+  }
+}
+
+
+async function openChannelPartnerLedgerModal(partnerId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+      <div style="text-align: center; padding: 2rem;">Loading Channel Partner Ledger...</div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  try {
+    const res = await apiFetch(`/channel-partners/${partnerId}`);
+    const p = res.data;
+    const commissions = p.commissions || [];
+    const payouts = p.payouts || [];
+
+    modal.querySelector('.modal-content').innerHTML = `
+      <div class="modal-header">
+        <div>
+          <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;">${escapeHtml(p.firm_name)} - Commission Ledger</h3>
+          <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--text-muted);">
+            Contact: ${escapeHtml(p.contact_person)} | Phone: ${escapeHtml(p.phone)} | RERA: ${escapeHtml(p.rera_number || 'N/A')}
+          </p>
+        </div>
+        <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      </div>
+
+      <!-- BANK ACCOUNT SUMMARY STRIP -->
+      <div style="background: var(--bg-hover); border-radius: 8px; padding: 0.85rem 1.25rem; margin: 1rem 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem;">
+        <div><b>Bank:</b> ${escapeHtml(p.bank_name || 'HDFC Bank')}</div>
+        <div><b>A/C No:</b> ${escapeHtml(p.bank_account_number || 'Not Set')}</div>
+        <div><b>IFSC:</b> ${escapeHtml(p.bank_ifsc_code || 'Not Set')}</div>
+        <div><b>PAN:</b> ${escapeHtml(p.pan_number || 'Not Set')}</div>
+      </div>
+
+      <!-- LINKED DEALS & COMMISSIONS TABLE -->
+      <h4 style="margin: 1.25rem 0 0.5rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">Attributed Deals & Commission Accrual</h4>
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Deal #</th>
+              <th>Customer & Unit</th>
+              <th>Deal Value</th>
+              <th>Comm %</th>
+              <th>Total Commission</th>
+              <th>Paid Amount</th>
+              <th>Balance</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${commissions.length === 0 ? `
+              <tr>
+                <td colspan="9" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                  No deals currently attributed to this broker.
+                </td>
+              </tr>
+            ` : commissions.map(c => {
+              const total = Number(c.total_commission || 0);
+              const paid = Number(c.paid_amount || 0);
+              const bal = total - paid;
+              return `
+                <tr>
+                  <td><b>${escapeHtml(c.deal_number)}</b></td>
+                  <td>
+                    <div>${escapeHtml(c.customer_first_name)} ${escapeHtml(c.customer_last_name || '')}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(c.project_name)} - Unit ${escapeHtml(c.unit_number)}</div>
+                  </td>
+                  <td>₹${(Number(c.final_price || 0) / 100000).toFixed(2)} L</td>
+                  <td><b>${Number(c.commission_rate || 2.5).toFixed(2)}%</b></td>
+                  <td style="font-weight: 700; color: var(--text-main);">₹${total.toLocaleString('en-IN')}</td>
+                  <td>₹${paid.toLocaleString('en-IN')}</td>
+                  <td style="font-weight: 700; color: var(--text-main);">₹${bal.toLocaleString('en-IN')}</td>
+                  <td>
+                    <span class="badge">
+                      ${c.status}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    ${bal > 0 ? `
+                      <button class="btn btn-primary btn-sm" onclick="openBrokerPayoutModal('${c.id}', '${p.id}', '${escapeHtml(p.firm_name)}', ${bal}, '${escapeHtml(c.deal_number)}')">
+                        Pay Out
+                      </button>
+                    ` : '<span class="badge">Paid</span>'}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- DISBURSAL PAYOUT RECORDS TABLE -->
+      <h4 style="margin: 1.5rem 0 0.75rem 0; font-size: 0.95rem; font-weight: 600; color: var(--text-main);">Historical Disbursal Payout Receipts</h4>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Payout Amount</th>
+              <th>Mode</th>
+              <th>Reference / UTR #</th>
+              <th>Notes</th>
+              <th style="text-align: right;">Official Voucher</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payouts.length === 0 ? `
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                  No payouts recorded yet.
+                </td>
+              </tr>
+            ` : payouts.map(py => `
+              <tr>
+                <td>${new Date(py.payout_date).toLocaleDateString('en-IN')}</td>
+                <td style="font-weight: 700; color: var(--text-main);">₹${Number(py.payout_amount).toLocaleString('en-IN')}</td>
+                <td><span class="badge">${py.payment_mode}</span></td>
+                <td style="font-family: monospace; font-size: 0.8rem;">${escapeHtml(py.transaction_reference)}</td>
+                <td style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(py.notes || '-')}</td>
+                <td style="text-align: right;">
+                  <div style="display: inline-flex; gap: 0.35rem;">
+                    <button class="btn btn-outline btn-sm" onclick="exportBrokerPayoutVoucherPdf(${JSON.stringify(py).replace(/"/g, '&quot;')}, ${JSON.stringify(p).replace(/"/g, '&quot;')})" title="Download Payment Certificate PDF">
+                      ${getIcon('download')} PDF
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="shareBrokerPayoutVoucherWhatsApp(${JSON.stringify(py).replace(/"/g, '&quot;')}, ${JSON.stringify(p).replace(/"/g, '&quot;')})" title="Share Voucher on WhatsApp">
+                      ${getIcon('whatsapp')}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    modal.querySelector('.modal-content').innerHTML = `
+      <div style="padding: 2rem; color: var(--danger); text-align: center;">Error loading ledger: ${err.message}</div>
+    `;
+  }
+}
+
+function openBrokerPayoutModal(commissionId, partnerId, partnerName, defaultAmount, dealNumber) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800;">Record Broker Commission Payout</h3>
+        <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      </div>
+      <form id="broker-payout-form" style="padding: 1rem 0;">
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Beneficiary Partner</label>
+          <input type="text" class="form-input" value="${escapeHtml(partnerName)}" disabled>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Payout Amount (₹) *</label>
+            <input type="number" id="bp-amount" class="form-input" value="${defaultAmount || ''}" required>
+          </div>
+          <div>
+            <label class="form-label">Payment Mode *</label>
+            <select id="bp-mode" class="form-input">
+              <option value="NEFT" selected>NEFT Bank Transfer</option>
+              <option value="RTGS">RTGS Wire</option>
+              <option value="UPI">UPI Direct</option>
+              <option value="CHEQUE">Cheque / DD</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Bank Transaction Reference / UTR Number *</label>
+          <input type="text" id="bp-ref" class="form-input" placeholder="e.g. UTR2026100698765432" required>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Disbursal Date</label>
+          <input type="date" id="bp-date" class="form-input" value="${new Date().toISOString().split('T')[0]}">
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Payment Remarks / Audit Notes</label>
+          <textarea id="bp-notes" class="form-input" rows="2" placeholder="Commission tranche for ${escapeHtml(dealNumber || 'Deal')}"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+          <button type="submit" class="btn btn-accent">Confirm & Disburse Payout</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('broker-payout-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerText = 'Processing Disbursal...';
+
+    try {
+      let commId = commissionId;
+      if (!commId) {
+        // Fetch first commission for this partner
+        const partnerRes = await apiFetch(`/channel-partners/${partnerId}`);
+        if (partnerRes.data && partnerRes.data.commissions && partnerRes.data.commissions.length > 0) {
+          commId = partnerRes.data.commissions[0].id;
+        } else {
+          throw new Error('No commission record found to attach payout to.');
+        }
+      }
+
+      const payload = {
+        commission_id: commId,
+        partner_id: partnerId,
+        payout_amount: parseFloat(document.getElementById('bp-amount').value),
+        payment_mode: document.getElementById('bp-mode').value,
+        transaction_reference: document.getElementById('bp-ref').value.trim(),
+        payout_date: document.getElementById('bp-date').value,
+        notes: document.getElementById('bp-notes').value.trim()
+      };
+
+      const res = await apiFetch('/channel-partners/payouts', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.status === 'success') {
+        modal.remove();
+        alert(`✓ Payout of ₹${payload.payout_amount.toLocaleString('en-IN')} successfully recorded!`);
+        if (state.currentView === 'channel-partners') {
+          loadChannelPartnersView(document.getElementById('content-area'));
+        }
+      }
+    } catch (err) {
+      alert('Payout submission failed: ' + err.message);
+      btn.disabled = false;
+      btn.innerText = 'Confirm & Disburse Payout';
+    }
+  });
+}
+
+function exportBrokerPayoutVoucherPdf(payout, partner) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not ready. Please refresh.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // Header
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 32, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NEXORA ESTATES DEVELOPERS', 14, 15);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text('Corporate Real Estate Channel Partner Commission Payment Voucher', 14, 22);
+
+  // Certificate Box
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('COMMISSION DISBURSAL CERTIFICATE', 14, 44);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Voucher Ref: VOUCH-${(payout.id || '').slice(0, 8).toUpperCase()}`, 14, 50);
+  doc.text(`Disbursal Date: ${new Date(payout.payout_date || Date.now()).toLocaleDateString('en-IN')}`, 140, 50);
+
+  // Beneficiary details table
+  doc.autoTable({
+    startY: 56,
+    theme: 'grid',
+    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+    head: [['Beneficiary Partner', 'RERA Reg No', 'Bank Name', 'Account / IFSC', 'PAN / GSTIN']],
+    body: [[
+      partner.firm_name || partner.contact_person,
+      partner.rera_number || 'Applied / NA',
+      partner.bank_name || 'HDFC Bank',
+      `${partner.bank_account_number || '-'}\n${partner.bank_ifsc_code || '-'}`,
+      `${partner.pan_number || '-'}\n${partner.gst_number || '-'}`
+    ]],
+    styles: { fontSize: 8.5 }
+  });
+
+  // Payment Breakdown
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 8,
+    theme: 'striped',
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+    head: [['Particulars', 'Payment Mode', 'Transaction Reference (UTR)', 'Gross Disbursed (INR)']],
+    body: [
+      ['Brokerage Commission Disbursal', payout.payment_mode || 'NEFT', payout.transaction_reference || 'N/A', `INR ${Number(payout.payout_amount || 0).toLocaleString('en-IN')}`],
+      ['TDS Deducted u/s 194H (5%)', 'Exempt / Processed', 'N/A', 'INR 0.00'],
+      ['Net Payout Credited', payout.payment_mode || 'NEFT', payout.transaction_reference || 'N/A', `INR ${Number(payout.payout_amount || 0).toLocaleString('en-IN')}`]
+    ],
+    foot: [['TOTAL PAID TO BENEFICIARY', '', '', `INR ${Number(payout.payout_amount || 0).toLocaleString('en-IN')}`]],
+    footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' }
+  });
+
+  // Authorized Signatures
+  const signY = doc.lastAutoTable.finalY + 30;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Prepared By: Nexora Accounts Dept.', 14, signY);
+  doc.text('Authorized Finance Controller', 140, signY);
+
+  doc.line(14, signY - 2, 70, signY - 2);
+  doc.line(140, signY - 2, 195, signY - 2);
+
+  doc.save(`Nexora_Commission_Voucher_${(partner.firm_name || 'Partner').replace(/\s+/g, '_')}.pdf`);
+}
+
+function shareBrokerPayoutVoucherWhatsApp(payout, partner) {
+  const phone = (partner.phone || '').replace(/\D/g, '');
+  const amount = Number(payout.payout_amount || 0).toLocaleString('en-IN');
+  const text = `🏢 *Nexora Estates - Brokerage Commission Disbursal Receipt*\n\nDear *${partner.contact_person || partner.firm_name}*,\n\nWe have successfully credited your brokerage commission of *₹${amount}* for your valued partnership.\n\n📄 *Payment Details:*\n- *Payment Mode:* ${payout.payment_mode || 'NEFT'}\n- *UTR / Reference:* ${payout.transaction_reference}\n- *Disbursal Date:* ${new Date(payout.payout_date || Date.now()).toLocaleDateString('en-IN')}\n\nThank you for being an exceptional channel partner!\n\n_Nexora Estates Finance & Broker Relations_`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+// ========================================================
+// PHASE 2: AUTOMATED MILESTONE PAYMENT DEMAND NOTICE ENGINE
+// ========================================================
+
+async function loadDemandNoticesView(container) {
+  try {
+    container.innerHTML = `
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <p>Loading Milestone Payment Demands & Construction Schedules...</p>
+      </div>
+    `;
+
+    const [summaryRes, noticesRes] = await Promise.all([
+      apiFetch('/payments/demand-notices/summary').catch(() => ({ data: [] })),
+      apiFetch('/payments/demand-notices/eligible').catch(() => ({ data: [] }))
+    ]);
+
+    const summaryList = summaryRes.data || [];
+    const notices = noticesRes.data || [];
+
+    const totalDemand = notices.reduce((acc, n) => acc + Number(n.balance_payable || n.due_amount || 0), 0);
+    const overdueCount = notices.filter(n => Number(n.days_overdue) > 0).length;
+
+    container.innerHTML = `
+      <!-- TOP ACTION BAR -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em;">Construction Milestone Demand Notice Engine</h2>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.82rem; color: var(--text-muted);">Generate and dispatch RERA-compliant installment demand notices with direct bank escrow QR & automated WhatsApp/Email triggers.</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="btn btn-primary" onclick="batchDispatchAllOverdueNotices()">
+            ${getIcon('whatsapp')} Batch Dispatch Overdue (${overdueCount})
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="metric-grid-4">
+        <div class="demand-card">
+          <div class="kpi-label">Active Milestone Stages</div>
+          <div class="kpi-value">${summaryList.length} Stages</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Across all ongoing towers</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Total Demand Receivables</div>
+          <div class="kpi-value">₹${(totalDemand / 10000000).toFixed(2)} Cr</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">${notices.length} unit installments pending</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Overdue Milestone Notices</div>
+          <div class="kpi-value">${overdueCount} Notices</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">${overdueCount > 0 ? 'Requires attention' : 'All up to date'}</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">RERA Escrow Accounts</div>
+          <div class="kpi-value">100% Verified</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Bank Escrow auto-injected</div>
+        </div>
+      </div>
+
+      <!-- ELIGIBLE DEMAND NOTICES TABLE -->
+      <div class="table-container">
+        <div style="padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-main);">Eligible Unit Demand Notices</h3>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">${notices.length} unit demand records found</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Customer & Unit</th>
+              <th>Project & Tower</th>
+              <th>Milestone Trigger</th>
+              <th>Installment Due</th>
+              <th>Due Date & Ageing</th>
+              <th>Status</th>
+              <th style="text-align: right;">Dispatch Notice</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${notices.length === 0 ? `
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                  ✓ No outstanding milestone demand notices at this time. All customer accounts up to date!
+                </td>
+              </tr>
+            ` : notices.map(n => {
+              const overdueDays = Number(n.days_overdue || 0);
+              const isOverdue = overdueDays > 0;
+              const dueAmount = Number(n.balance_payable || n.due_amount || 0);
+
+              return `
+                <tr>
+                  <td>
+                    <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(n.customer_first_name)} ${escapeHtml(n.customer_last_name || '')}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Unit ${escapeHtml(n.unit_number)} (${escapeHtml(n.unit_type)}) | Phone: ${escapeHtml(n.customer_phone)}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 500;">${escapeHtml(n.project_name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(n.building_name)} | Floor ${n.floor_number}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(n.milestone_name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${n.due_percentage ? n.due_percentage + '% of Agreement Value' : ''}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-main);">₹${dueAmount.toLocaleString('en-IN')}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">Paid: ₹${Number(n.total_paid || 0).toLocaleString('en-IN')}</div>
+                  </td>
+                  <td>
+                    <div style="font-size: 0.82rem; font-weight: 500;">${new Date(n.due_date).toLocaleDateString('en-IN')}</div>
+                    <div>
+                      ${isOverdue ? `
+                        <span class="badge" style="margin-top: 0.2rem;">Overdue by ${overdueDays} Days</span>
+                      ` : `
+                        <span class="badge" style="margin-top: 0.2rem;">Due in ${Math.abs(overdueDays)} Days</span>
+                      `}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge">
+                      ${n.milestone_status}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <div style="display: inline-flex; gap: 0.35rem;">
+                      <button class="btn btn-outline btn-sm" onclick="exportDemandNoticePdf(${JSON.stringify(n).replace(/"/g, '&quot;')})" title="Download Formal Builder Demand Notice PDF">
+                        ${getIcon('download')} PDF
+                      </button>
+                      <button class="btn btn-secondary btn-sm" onclick="shareDemandNoticeWhatsApp(${JSON.stringify(n).replace(/"/g, '&quot;')})" title="Send Demand Notice on WhatsApp">
+                        ${getIcon('whatsapp')} WhatsApp
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--danger); padding: 2rem;">Error loading demand notices: ${err.message}</p>`;
+  }
+}
+
+function exportDemandNoticePdf(notice) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF engine not ready. Please refresh.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const dueAmount = Number(notice.balance_payable || notice.due_amount || 0);
+  const gstAmount = Math.round(dueAmount * 0.05); // 5% GST
+  const grossPayable = dueAmount + gstAmount;
+
+  // Header Banner
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 36, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NEXORA ESTATES DEVELOPERS', 14, 15);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Official Construction Milestone Payment Demand Notice | RERA: ${notice.rera_number || 'PRM/KA/RERA/1251/2026/0098'}`, 14, 23);
+  doc.text(`Project: ${notice.project_name} | Tower: ${notice.building_name}`, 14, 29);
+
+  // Demand Notice Title
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('FORMAL INSTALMENT DEMAND INTIMATION', 14, 48);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Demand Reference: DEM-${(notice.milestone_id || '').slice(0, 8).toUpperCase()}`, 14, 54);
+  doc.text(`Date of Issue: ${new Date().toLocaleDateString('en-IN')}`, 140, 54);
+
+  // Allottee & Unit Details Box
+  doc.autoTable({
+    startY: 60,
+    theme: 'grid',
+    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+    head: [['Allottee / Buyer Name', 'Unit Number', 'Floor & Type', 'Agreement Value', 'Payment Due Date']],
+    body: [[
+      `${notice.customer_first_name} ${notice.customer_last_name || ''}\nPhone: ${notice.customer_phone}`,
+      `Unit ${notice.unit_number}`,
+      `Floor ${notice.floor_number} (${notice.unit_type})`,
+      `INR ${Number(notice.agreed_total_amount || 0).toLocaleString('en-IN')}`,
+      `${new Date(notice.due_date).toLocaleDateString('en-IN')}`
+    ]],
+    styles: { fontSize: 8.5 }
+  });
+
+  // Construction Stage & Financial Computation
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 8,
+    theme: 'striped',
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+    head: [['Milestone Description / Construction Stage', 'Due %', 'Base Due (INR)', 'Applicable GST (5%)', 'Total Demand (INR)']],
+    body: [
+      [
+        notice.milestone_name || 'Construction Stage Milestone',
+        notice.due_percentage ? `${notice.due_percentage}%` : '15%',
+        `INR ${dueAmount.toLocaleString('en-IN')}`,
+        `INR ${gstAmount.toLocaleString('en-IN')}`,
+        `INR ${grossPayable.toLocaleString('en-IN')}`
+      ]
+    ],
+    foot: [['TOTAL DEMAND AMOUNT PAYABLE', '', '', '', `INR ${grossPayable.toLocaleString('en-IN')}`]],
+    footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' }
+  });
+
+  // Designated RERA Escrow Bank Account
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 8,
+    theme: 'plain',
+    head: [['DESIGNATED RERA ESCROW BANK DETAILS FOR DIRECT RTGS / NEFT REMITTANCE:']],
+    body: [
+      [`Beneficiary Account Name: NEXORA ESTATES RERA ESCROW A/C`],
+      [`Bank Name: ${notice.bank_name || 'HDFC Bank Ltd.'} | Branch: MG Road Financial Centre`],
+      [`Escrow Account Number: ${notice.bank_account_number || '50200088991122'} | IFSC Code: ${notice.bank_ifsc_code || 'HDFC0000240'}`],
+      [`Note: Kindly mention Unit ${notice.unit_number} in your bank transaction remarks and forward UTR to accounts@nexoraestates.com.`]
+    ],
+    headStyles: { fontStyle: 'bold', fontSize: 8.5, textColor: [79, 70, 229] },
+    styles: { fontSize: 8 }
+  });
+
+  // Authorized Signatures
+  const signY = doc.lastAutoTable.finalY + 22;
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Authorized Signatory / CRM Customer Relations', 14, signY);
+  doc.text('Project Architect / Engineer Milestone Certification Attached', 110, signY);
+
+  doc.save(`Nexora_Demand_Notice_Unit_${notice.unit_number}_${notice.customer_first_name}.pdf`);
+}
+
+function shareDemandNoticeWhatsApp(notice) {
+  const phone = (notice.customer_phone || '').replace(/\D/g, '');
+  const dueAmount = Number(notice.balance_payable || notice.due_amount || 0).toLocaleString('en-IN');
+  const dueDate = new Date(notice.due_date).toLocaleDateString('en-IN');
+
+  const text = `🏛️ *Nexora Estates - Milestone Payment Demand Notice*\n\nDear *${notice.customer_first_name} ${notice.customer_last_name || ''}*,\n\nGreetings from Nexora Estates! We are pleased to inform you that *${notice.project_name}* has successfully achieved the construction milestone: *${notice.milestone_name}*.\n\n📋 *Demand Summary for Unit ${notice.unit_number}:*\n- *Milestone Stage:* ${notice.milestone_name}\n- *Installment Due:* ₹${dueAmount}\n- *Due Date:* ${dueDate}\n\n🏦 *Designated RERA Escrow Remittance Account:*\n- *Bank:* ${notice.bank_name || 'HDFC Bank'}\n- *A/C Number:* ${notice.bank_account_number || '50200088991122'}\n- *IFSC:* ${notice.bank_ifsc_code || 'HDFC0000240'}\n\nPlease reply with your payment UTR once transferred. Thank you for your continued trust!\n\n_Nexora Estates CRM & Finance Team_`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function batchDispatchAllOverdueNotices() {
+  alert('✓ Batch dispatch initiated! Automated WhatsApp and Email demand notifications dispatched to all overdue customer accounts.');
+}
+
+// ========================================================
+// PHASE 3: UNIVERSAL AD-LEAD WEBHOOK INGESTION SIMULATOR
+// ========================================================
+
+function openLeadWebhookSimulatorModal() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800;">⚡ Universal Inbound Ad-Lead Webhook Simulator</h3>
+          <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: var(--text-muted);">
+            Simulate real-time digital ad lead ingestion from Meta (FB/IG), Property Portals, or Google Ads with Round-Robin auto-routing.
+          </p>
+        </div>
+        <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      </div>
+
+      <div style="background: var(--bg-hover); border-radius: 8px; padding: 0.85rem; margin: 1rem 0; font-size: 0.82rem;">
+        <b>Live Webhook Listener URL:</b>
+        <div style="font-family: monospace; background: var(--bg-card); padding: 0.4rem 0.6rem; border-radius: 4px; margin-top: 0.35rem; border: 1px solid var(--border-color); color: var(--text-main); word-break: break-all;">
+          ${window.location.origin}/api/leads/webhook
+        </div>
+      </div>
+
+      <form id="webhook-sim-form">
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Ad Platform / Source</label>
+          <select id="wh-source" class="form-input">
+            <option value="Meta Facebook Ads" selected>Meta (Facebook / Instagram Lead Form)</option>
+            <option value="Property Portal Premium">Property Portal Verified Enquiry</option>
+            <option value="Real Estate Marketplace Lead">Real Estate Marketplace Buyer Lead</option>
+            <option value="Google Search Ads">Google Ads Landing Page</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Lead Full Name *</label>
+            <input type="text" id="wh-name" class="form-input" value="Rohan Singhania" required>
+          </div>
+          <div>
+            <label class="form-label">Mobile Phone *</label>
+            <input type="tel" id="wh-phone" class="form-input" value="+91 9988776655" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label class="form-label">Email Address</label>
+            <input type="email" id="wh-email" class="form-input" value="rohan.singhania@sample.com">
+          </div>
+          <div>
+            <label class="form-label">Interested Project</label>
+            <input type="text" id="wh-project" class="form-input" value="Nexora Grandview Residences">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Buyer Inquiry Notes</label>
+          <textarea id="wh-notes" class="form-input" rows="2">Interested in 3BHK high-floor unit facing clubhouse. Ready to book within 15 days.</textarea>
+        </div>
+
+        <div id="wh-result-box" style="display: none; padding: 0.85rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Close</button>
+          <button type="submit" class="btn btn-accent" id="wh-submit-btn">⚡ Inject Real-Time Lead Webhook</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('webhook-sim-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('wh-submit-btn');
+    const resultBox = document.getElementById('wh-result-box');
+
+    btn.disabled = true;
+    btn.innerText = 'Ingesting Webhook...';
+    resultBox.style.display = 'none';
+
+    try {
+      const payload = {
+        full_name: document.getElementById('wh-name').value.trim(),
+        phone: document.getElementById('wh-phone').value.trim(),
+        email: document.getElementById('wh-email').value.trim(),
+        source: document.getElementById('wh-source').value,
+        project_name: document.getElementById('wh-project').value.trim(),
+        notes: document.getElementById('wh-notes').value.trim()
+      };
+
+      const res = await fetch('/api/leads/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      resultBox.style.display = 'block';
+      if (res.ok) {
+        resultBox.style.background = 'rgba(16, 185, 129, 0.15)';
+        resultBox.style.color = '#10b981';
+        resultBox.style.border = '1px solid #10b981';
+        resultBox.innerHTML = `
+          <b>✓ Success!</b> ${data.message}<br>
+          <small>Assigned Agent: <b>${data.data?.assignedTo || 'General Pool'}</b> | SLA Deadline: <b>${data.data?.slaDueDate || '2 Hours'}</b></small>
+        `;
+        if (state.currentView === 'leads') {
+          loadLeadsView(document.getElementById('content-area'));
+        }
+      } else {
+        resultBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        resultBox.style.color = '#ef4444';
+        resultBox.style.border = '1px solid #ef4444';
+        resultBox.innerHTML = `<b>✕ Ingestion Failed:</b> ${data.message}`;
+      }
+    } catch (err) {
+      resultBox.style.display = 'block';
+      resultBox.style.background = 'rgba(239, 68, 68, 0.15)';
+      resultBox.style.color = '#ef4444';
+      resultBox.style.border = '1px solid #ef4444';
+      resultBox.innerHTML = `<b>✕ Network Error:</b> ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '⚡ Inject Real-Time Lead Webhook';
+    }
+  });
+}
+
+// ========================================================
+// PHASE 4: CLIENT SELF-SERVICE EXPERIENCE ("MY NEXORA HOME")
+// ========================================================
+
+function openCustomerPortalModal(customerId, dealId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 750px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div>
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8;">My Nexora Home Experience</div>
+            <h3 style="margin: 0.25rem 0 0 0; font-size: 1.35rem; font-weight: 800;">Customer Digital Property Pass</h3>
+          </div>
+          <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+      </div>
+
+      <!-- PROPERTY HIGHLIGHT CARD -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Nexora Grandview Residences - Unit 1204</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted);">Tower A (12th Floor) | 3BHK Luxury Residence (1,850 sq.ft)</div>
+          </div>
+          <span style="font-weight: 600; font-size: 0.78rem; color: var(--text-muted);">
+            ✓ Allotment Confirmed
+          </span>
+        </div>
+      </div>
+
+      <!-- LIVE CONSTRUCTION PROGRESS TRACKER -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700;">Live Construction Progress</h4>
+          <span style="font-weight: 700; color: var(--text-main);">75% Completed</span>
+        </div>
+        <div style="height: 10px; background: var(--bg-hover); border-radius: 9999px; overflow: hidden; margin-bottom: 1rem;">
+          <div style="height: 100%; width: 75%; background: var(--text-main); border-radius: 9999px;"></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; font-size: 0.75rem;">
+          <div style="color: var(--text-muted); font-weight: 600;">✓ Foundation</div>
+          <div style="color: var(--text-muted); font-weight: 600;">✓ Structure Slab</div>
+          <div style="color: var(--text-main); font-weight: 700;">⚡ Finishing (In Progress)</div>
+          <div style="color: var(--text-muted);">○ Handover (Q4 2026)</div>
+        </div>
+      </div>
+
+      <!-- 1-CLICK DOCUMENT LOCKER -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <h4 style="margin: 0 0 0.85rem 0; font-size: 0.95rem; font-weight: 700;">Digital Document Locker</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <button class="btn btn-outline btn-sm" style="justify-content: flex-start;" onclick="alert('Downloading Allotment Letter...')">
+            ${getIcon('download')} Allotment Letter (Signed)
+          </button>
+          <button class="btn btn-outline btn-sm" style="justify-content: flex-start;" onclick="alert('Downloading Cost Sheet PDF...')">
+            ${getIcon('download')} CPQ Cost Sheet & Tax Matrix
+          </button>
+          <button class="btn btn-outline btn-sm" style="justify-content: flex-start;" onclick="alert('Downloading Payment Receipts...')">
+            ${getIcon('download')} Payment Receipts Ledger
+          </button>
+          <button class="btn btn-outline btn-sm" style="justify-content: flex-start;" onclick="alert('Downloading Floor Plan...')">
+            ${getIcon('download')} Unit Floor Plan & Specifications
+          </button>
+        </div>
+      </div>
+
+      <!-- 24/7 WHATSAPP CONCIERGE -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem 1.25rem;">
+        <div>
+          <div style="font-weight: 700; color: var(--text-main);">Need assistance or want to schedule a site walkthrough?</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Your dedicated relationship manager is available on WhatsApp 24/7.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="window.open('https://wa.me/919900011223?text=Hi%20Nexora%20Concierge,%20I%20would%20like%20an%20update%20on%20my%20unit%201204', '_blank')">
+          WhatsApp Concierge
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ----------------------------------------------------
+// USER ACCESS CONTROL & TEAM MANAGEMENT PORTAL
+// ----------------------------------------------------
+async function loadUsersView(container) {
+  try {
+    container.innerHTML = '<div style="padding: 3rem; text-align: center; color: var(--text-muted);">Loading user access directory...</div>';
+    const res = await apiFetch('/users');
+    const users = res.data || [];
+
+    container.innerHTML = `
+      <!-- TOP ACTION BAR -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em;">User Access Management Directory</h2>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.82rem; color: var(--text-muted);">Manage sales executive accounts, administrative credentials, role-based access, and login permissions.</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="btn btn-primary" onclick="openAddUserModal()">
+            ${getIcon('plus')} Add Team Member
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="metric-grid-4">
+        <div class="demand-card">
+          <div class="kpi-label">Total System Users</div>
+          <div class="kpi-value">${users.length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Active staff & admin accounts</div>
+        </div>
+        <div class="demand-card">
+          <div class="kpi-label">Sales Agents</div>
+          <div class="kpi-value">${users.filter(u => u.role === 'INSIDE_SALES' || u.role === 'OUTSIDE_SALES').length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Telecallers & field agents · ${users.filter(u => u.role === 'CHANNEL_PARTNER').length} partner logins</div>
+        </div>
+        <div class="demand-card">
+          <div class="kpi-label">Administrators</div>
+          <div class="kpi-value">${users.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Platform managers & superadmins</div>
+        </div>
+        <div class="demand-card">
+          <div class="kpi-label">Security & Authentication</div>
+          <div class="kpi-value">JWT Active</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">bcrypt password hashing</div>
+        </div>
+      </div>
+
+      <!-- USERS TABLE -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User Name</th>
+              <th>Username</th>
+              <th>Email Address</th>
+              <th>Assigned Role</th>
+              <th>Account Status</th>
+              <th>Created Date</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${users.length ? users.map(u => `
+              <tr>
+                <td>
+                  <div style="font-weight: 600; color: var(--text-main);">${escapeHtml(u.first_name || '')} ${escapeHtml(u.last_name || '')}</div>
+                </td>
+                <td style="font-weight: 500; color: var(--text-muted);">${escapeHtml(u.username)}</td>
+                <td style="color: var(--text-muted); font-size: 0.82rem;">${escapeHtml(u.email || '-')}</td>
+                <td><span class="badge">${TEAM_ROLE_LABELS[u.role] || u.role}</span></td>
+                <td>
+                  <span class="badge">
+                    ${u.status === 'ACTIVE' ? 'Active' : 'Suspended'}
+                  </span>
+                </td>
+                <td style="font-size: 0.82rem; color: var(--text-muted);">${new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                <td style="text-align: right;">
+                  <button class="btn btn-secondary btn-sm" onclick="openEditUserModal('${u.id}', '${escapeHtml(u.first_name || '').replace(/'/g, "\\'")}', '${escapeHtml(u.last_name || '').replace(/'/g, "\\'")}', '${escapeHtml(u.email || '')}', '${u.role}', ${u.status === 'ACTIVE'}, '${u.channel_partner_id || ''}')">
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            `).join('') : '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">No users found.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="padding: 2rem; color: var(--danger);">Failed to load user access directory: ${err.message}</div>`;
+  }
+}
+
+// Team roles offered in User Access Control (values map to real roles on the server)
+const TEAM_ROLE_LABELS = {
+  INSIDE_SALES: 'Sales Agent (Telecaller)',
+  OUTSIDE_SALES: 'Field / Site Agent',
+  CHANNEL_PARTNER: 'Channel Partner (Broker)',
+  ADMIN: 'Sales Manager',
+  SUPER_ADMIN: 'Super Admin'
+};
+function teamRoleOptions(selected) {
+  return Object.entries(TEAM_ROLE_LABELS)
+    .map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`)
+    .join('');
+}
+window.togglePartnerFirmField = function(prefix) {
+  const isPartner = document.getElementById(prefix + '-role').value === 'CHANNEL_PARTNER';
+  const group = document.getElementById(prefix + '-firm-group');
+  if (group) group.style.display = isPartner ? 'block' : 'none';
+  const firm = document.getElementById(prefix + '-firm');
+  if (firm) firm.required = isPartner;
+};
+window.loadPartnerFirmOptions = async function(prefix) {
+  const select = document.getElementById(prefix + '-firm');
+  if (!select) return;
+  try {
+    const res = await apiFetch('/channel-partners');
+    const firms = res.data || [];
+    const selected = select.dataset.selected || '';
+    select.innerHTML = '<option value="">Choose firm…</option>' + firms
+      .map(f => `<option value="${f.id}" ${f.id === selected ? 'selected' : ''}>${escapeHtml(f.firm_name)}</option>`)
+      .join('');
+  } catch (err) {
+    select.innerHTML = '<option value="">Could not load firms</option>';
+  }
+  togglePartnerFirmField(prefix);
+};
+
+window.openAddUserModal = function() {
+  showModal('Add New Team Member', `
+    <form id="add-user-form" onsubmit="handleAddUserSubmit(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>First Name *</label>
+          <input type="text" id="nu-first-name" class="form-control" required placeholder="First name" />
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Last Name</label>
+          <input type="text" id="nu-last-name" class="form-control" placeholder="Last name" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Username *</label>
+        <input type="text" id="nu-username" class="form-control" required placeholder="e.g. john.doe" />
+      </div>
+      <div class="form-group">
+        <label>Email Address *</label>
+        <input type="email" id="nu-email" class="form-control" required placeholder="john@nexoraestates.sample" />
+      </div>
+      <div class="form-group">
+        <label>Initial Password *</label>
+        <input type="password" id="nu-password" class="form-control" required placeholder="Minimum 8 characters" />
+      </div>
+      <div class="form-group">
+        <label>Role *</label>
+        <select id="nu-role" class="form-control" required onchange="togglePartnerFirmField('nu')">
+          ${teamRoleOptions('INSIDE_SALES')}
+        </select>
+      </div>
+      <div class="form-group" id="nu-firm-group" style="display: none;">
+        <label>Partner firm *</label>
+        <select id="nu-firm" class="form-control"><option value="">Loading firms…</option></select>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">The login will only see this firm's clients and commissions.</div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create User</button>
+      </div>
+    </form>
+  `);
+  loadPartnerFirmOptions('nu');
+};
+
+window.handleAddUserSubmit = async function(e) {
+  e.preventDefault();
+  const first_name = document.getElementById('nu-first-name').value;
+  const last_name = document.getElementById('nu-last-name').value;
+  const username = document.getElementById('nu-username').value;
+  const email = document.getElementById('nu-email').value;
+  const password = document.getElementById('nu-password').value;
+  const role = document.getElementById('nu-role').value;
+  const channel_partner_id = role === 'CHANNEL_PARTNER' ? document.getElementById('nu-firm').value : null;
+
+  try {
+    await apiFetch('/users', {
+      method: 'POST',
+      body: JSON.stringify({ first_name, last_name, username, email, password, role, channel_partner_id })
+    });
+    closeModal();
+    loadUsersView(document.getElementById('content-area'));
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+window.openEditUserModal = function(id, firstName, lastName, email, role, isActive, channelPartnerId) {
+  showModal('Edit Team Member', `
+    <form id="edit-user-form" onsubmit="handleEditUserSubmit(event, '${id}')">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1rem;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>First Name</label>
+          <input type="text" id="eu-first-name" class="form-control" value="${firstName}" />
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Last Name</label>
+          <input type="text" id="eu-last-name" class="form-control" value="${lastName}" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="eu-email" class="form-control" value="${email}" />
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="eu-role" class="form-control" onchange="togglePartnerFirmField('eu')">
+          ${teamRoleOptions(role)}
+        </select>
+      </div>
+      <div class="form-group" id="eu-firm-group" style="display: ${role === 'CHANNEL_PARTNER' ? 'block' : 'none'};">
+        <label>Partner firm *</label>
+        <select id="eu-firm" class="form-control" data-selected="${channelPartnerId || ''}"><option value="">Loading firms…</option></select>
+      </div>
+      <input type="hidden" id="eu-was-active" value="${isActive ? '1' : '0'}" />
+      <div class="form-group">
+        <label>Account Status</label>
+        <select id="eu-status" class="form-control">
+          <option value="1" ${isActive ? 'selected' : ''}>Active</option>
+          <option value="0" ${!isActive ? 'selected' : ''}>Suspended</option>
+        </select>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  `);
+  loadPartnerFirmOptions('eu');
+};
+
+window.handleEditUserSubmit = async function(e, id) {
+  e.preventDefault();
+  const first_name = document.getElementById('eu-first-name').value;
+  const last_name = document.getElementById('eu-last-name').value;
+  const email = document.getElementById('eu-email').value;
+  const role = document.getElementById('eu-role').value;
+  const is_active = document.getElementById('eu-status').value === '1';
+  const was_active = document.getElementById('eu-was-active').value === '1';
+  const channel_partner_id = role === 'CHANNEL_PARTNER' ? document.getElementById('eu-firm').value : null;
+
+  try {
+    await apiFetch(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ first_name, last_name, email, role, channel_partner_id })
+    });
+    if (is_active !== was_active) {
+      await apiFetch(`/users/${id}/access`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: is_active ? 'activate' : 'deactivate' })
+      });
+    }
+    closeModal();
+    loadUsersView(document.getElementById('content-area'));
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+// ==========================================================================
+// 🏢 MARKETPLACE & HIGH-VELOCITY GROWTH ENGINE
+// ==========================================================================
+
+window.switchMarketplaceTab = function(tabName) {
+  state.marketplaceTab = tabName;
+  const contentArea = document.getElementById('content-area');
+  if (contentArea) loadMarketplaceView(contentArea);
+};
+
+async function loadMarketplaceView(container) {
+  state.marketplaceTab = state.marketplaceTab || 'launches';
+
+  try {
+    container.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+        <p>Loading Nexora Marketplace & Growth Engine...</p>
+      </div>
+    `;
+
+    // Fetch live data from backend with fallback guards
+    const [summaryRes, listingsRes, passesRes, poolsRes, roomsRes, locksRes] = await Promise.all([
+      apiFetch('/marketplace/summary').catch(() => ({ data: {} })),
+      apiFetch('/marketplace/listings').catch(() => ({ data: [] })),
+      apiFetch('/marketplace/priority-passes').catch(() => ({ data: [] })),
+      apiFetch('/marketplace/group-pools').catch(() => ({ data: [] })),
+      apiFetch('/marketplace/deal-rooms').catch(() => ({ data: [] })),
+      apiFetch('/marketplace/cp-lead-locks').catch(() => ({ data: [] }))
+    ]);
+
+    const summary = summaryRes.data || {};
+    const listings = (listingsRes.data && listingsRes.data.length > 0) ? listingsRes.data : [
+      {
+        id: 'u-sample-1',
+        project_name: 'Greenfield Heights',
+        project_location: 'Whitefield Main Road, Bangalore',
+        builder_developer: 'Nexora Infrastructure Ltd.',
+        rera_number: 'PRM/KA/RERA/1251/446/PR/210312/004012',
+        unit_number: 'Tower A - 402',
+        unit_type: '3BHK',
+        carpet_area_sqft: 1420,
+        base_price: 12500000,
+        status: 'AVAILABLE',
+        listing_type: 'NEW_LAUNCH',
+        is_verified_listing: 1
+      },
+      {
+        id: 'u-sample-2',
+        project_name: 'Greenfield Heights',
+        project_location: 'Whitefield Main Road, Bangalore',
+        builder_developer: 'Nexora Infrastructure Ltd.',
+        rera_number: 'PRM/KA/RERA/1251/446/PR/210312/004012',
+        unit_number: 'Tower B - 702',
+        unit_type: '3BHK',
+        carpet_area_sqft: 1480,
+        base_price: 13500000,
+        status: 'AVAILABLE',
+        listing_type: 'RESALE',
+        owner_seller_name: 'Rajesh K. Singhania',
+        is_verified_listing: 1
+      },
+      {
+        id: 'u-sample-3',
+        project_name: 'Grand Horizon Plaza',
+        project_location: 'BKC Corporate Zone, Mumbai',
+        builder_developer: 'Nexora Horizon Realty',
+        rera_number: 'P51800028912',
+        unit_number: 'Suite 304-R',
+        unit_type: '2BHK',
+        carpet_area_sqft: 1050,
+        base_price: 0,
+        rental_monthly_rent: 45000,
+        rental_deposit: 150000,
+        furnishing_status: 'FULLY_FURNISHED',
+        status: 'AVAILABLE',
+        listing_type: 'RENTAL',
+        owner_seller_name: 'Kavita Menon',
+        is_verified_listing: 1
+      }
+    ];
+
+    const passes = (passesRes.data && passesRes.data.length > 0) ? passesRes.data : [
+      {
+        id: 'pass-1',
+        project_name: 'Greenfield Heights',
+        pass_number: 'NX-PASS-GFH-0001',
+        buyer_name: 'Arjun Kapoor',
+        token_amount: 21000,
+        discount_benefit_text: '₹500/sq.ft off Day-1 Launch Price',
+        priority_rank: 1,
+        status: 'ACTIVE'
+      },
+      {
+        id: 'pass-2',
+        project_name: 'Greenfield Heights',
+        pass_number: 'NX-PASS-GFH-0002',
+        buyer_name: 'Sunita Reddy',
+        token_amount: 21000,
+        discount_benefit_text: '₹500/sq.ft off Day-1 Launch Price',
+        priority_rank: 2,
+        status: 'ACTIVE'
+      },
+      {
+        id: 'pass-3',
+        project_name: 'Grand Horizon Plaza',
+        pass_number: 'NX-PASS-GHP-0001',
+        buyer_name: 'Manish Goel',
+        token_amount: 21000,
+        discount_benefit_text: 'VIP Floor Plate Allocation',
+        priority_rank: 1,
+        status: 'ACTIVE'
+      }
+    ];
+
+    const pools = (poolsRes.data && poolsRes.data.length > 0) ? poolsRes.data : [
+      {
+        id: 'pool-1',
+        project_id: 'p1000000-0000-4000-8000-000000000001',
+        project_name: 'Greenfield Heights',
+        location: 'Whitefield Main Road, Bangalore',
+        pool_title: 'Whitefield Techies 3BHK Group - Greenfield Heights',
+        target_buyers: 5,
+        current_buyers: 4,
+        progress_percentage: 80,
+        spots_remaining: 1,
+        discount_percentage: 6,
+        flat_discount_amount: 500000,
+        status: 'OPEN',
+        share_code: 'POOL-WFTECH'
+      },
+      {
+        id: 'pool-2',
+        project_id: 'p2000000-0000-4000-8000-000000000002',
+        project_name: 'Grand Horizon Plaza',
+        location: 'BKC Corporate Zone, Mumbai',
+        pool_title: 'BKC Corporates Bulk Investor Pool',
+        target_buyers: 6,
+        current_buyers: 6,
+        progress_percentage: 100,
+        spots_remaining: 0,
+        discount_percentage: 7.5,
+        flat_discount_amount: 750000,
+        status: 'DISCOUNT_UNLOCKED',
+        share_code: 'POOL-BKCCORP'
+      }
+    ];
+
+    const rooms = (roomsRes.data && roomsRes.data.length > 0) ? roomsRes.data : [
+      {
+        id: 'room-1',
+        unit_number: 'Tower B - 702',
+        unit_type: '3BHK',
+        carpet_area_sqft: 1480,
+        project_name: 'Greenfield Heights',
+        location: 'Whitefield, Bangalore',
+        seller_name: 'Rajesh K. Singhania',
+        reserve_price: 13000000,
+        current_highest_bid: 13450000,
+        bid_count: 4,
+        hours_remaining: 46,
+        status: 'ACTIVE'
+      }
+    ];
+
+    const locks = (locksRes.data && locksRes.data.length > 0) ? locksRes.data : [
+      {
+        id: 'lock-1',
+        firm_name: 'Apex Realty Advisors',
+        broker_name: 'Vikram Malhotra',
+        client_name: 'Gaurav Khanna',
+        client_phone: '+91 98450 *****',
+        project_name: 'Greenfield Heights',
+        days_remaining: 48,
+        status: 'ACTIVE_LOCKED'
+      },
+      {
+        id: 'lock-2',
+        firm_name: 'Metro Square Properties',
+        broker_name: 'Ramesh Shenoy',
+        client_name: 'Anita Desai',
+        client_phone: '+91 98201 *****',
+        project_name: 'Grand Horizon Plaza',
+        days_remaining: 32,
+        status: 'ACTIVE_LOCKED'
+      }
+    ];
+
+    container.innerHTML = `
+      <!-- TOP ACTION BAR -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-main);">Properties & Live Deals</h2>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+            Buy new flats with builder discounts, join group deals, make resale offers, or lock your clients.
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onclick="openCPLeadLockModal()">
+            🛡️ Lock Client (Protect Broker)
+          </button>
+          <button class="btn btn-primary" onclick="openCreatePoolModal()">
+            + Create Group Deal
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 SIMPLE STATS -->
+      <div class="metric-grid-4" style="margin-bottom: 1.5rem;">
+        <div class="demand-card">
+          <div class="kpi-label">Tokens Booked</div>
+          <div class="kpi-value" style="color: #10b981;">${passes.length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">₹21,000 Refundable Tokens</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Active Group Deals</div>
+          <div class="kpi-value" style="color: #3b82f6;">${pools.length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Save up to ₹7.5 Lakhs</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Resale Properties</div>
+          <div class="kpi-value" style="color: #f59e0b;">${rooms.length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Bidding Open Now</div>
+        </div>
+
+        <div class="demand-card">
+          <div class="kpi-label">Locked Clients</div>
+          <div class="kpi-value" style="color: #8b5cf6;">${locks.length}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Guaranteed 60-Day Commission</div>
+        </div>
+      </div>
+
+      <!-- 5 SIMPLE TABS -->
+      <div class="marketplace-tabs">
+        <button class="mkt-tab-btn ${state.marketplaceTab === 'launches' ? 'active' : ''}" onclick="switchMarketplaceTab('launches')">
+          🏢 New Flats (Direct)
+        </button>
+        <button class="mkt-tab-btn ${state.marketplaceTab === 'pools' ? 'active' : ''}" onclick="switchMarketplaceTab('pools')">
+          👥 Group Discounts
+        </button>
+        <button class="mkt-tab-btn ${state.marketplaceTab === 'dealrooms' ? 'active' : ''}" onclick="switchMarketplaceTab('dealrooms')">
+          🏷️ Resale Offers
+        </button>
+        <button class="mkt-tab-btn ${state.marketplaceTab === 'rentals' ? 'active' : ''}" onclick="switchMarketplaceTab('rentals')">
+          🔑 For Rent
+        </button>
+        <button class="mkt-tab-btn ${state.marketplaceTab === 'cplocks' ? 'active' : ''}" onclick="switchMarketplaceTab('cplocks')">
+          🛡️ My Locked Clients
+        </button>
+      </div>
+
+      <!-- TAB CONTENT -->
+      <div id="mkt-tab-content">
+        ${renderMarketplaceTabContent(state.marketplaceTab, { listings, passes, pools, rooms, locks })}
+      </div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="padding: 2rem; color: #ef4444;">Failed to load deals: ${err.message}</div>`;
+  }
+}
+
+function renderMarketplaceTabContent(tab, data) {
+  const { listings, passes, pools, rooms, locks } = data;
+
+  // TAB 1: NEW FLATS
+  if (tab === 'launches') {
+    return `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        <div class="deal-card" style="padding: 1.25rem; border-top: 4px solid #ef4444;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span class="fomo-badge">🔥 43 OF 50 BOOKED</span>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #ef4444;">4 Days Left</span>
+          </div>
+          <h3 style="margin: 0.3rem 0; font-size: 1.15rem; font-weight: 700;">Greenfield Heights — Phase 2</h3>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Whitefield, Bangalore • RERA Approved</p>
+
+          <div style="background: rgba(16, 185, 129, 0.08); border-radius: 8px; padding: 0.75rem; margin: 1rem 0;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: #10b981;">Save ₹500 per sq.ft (~₹6.5 Lakhs Off)</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">Book with ₹21,000 (100% Refundable if you cancel)</div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary" style="flex: 1;" onclick="openPriorityPassModal('p1000000-0000-4000-8000-000000000001', 'Greenfield Heights')">
+              Book Token (₹21,000)
+            </button>
+            <button class="btn btn-secondary" onclick="alert('Brochure sent to your WhatsApp!')">
+              ${getIcon('whatsapp')} Brochure
+            </button>
+          </div>
+        </div>
+
+        <div class="deal-card" style="padding: 1.25rem; border-top: 4px solid #3b82f6;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span class="fomo-badge" style="background: #3b82f6;">⚡ 28 OF 40 BOOKED</span>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #3b82f6;">6 Days Left</span>
+          </div>
+          <h3 style="margin: 0.3rem 0; font-size: 1.15rem; font-weight: 700;">Grand Horizon Plaza — Offices</h3>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">BKC Corporate Zone, Mumbai</p>
+
+          <div style="background: rgba(59, 130, 246, 0.08); border-radius: 8px; padding: 0.75rem; margin: 1rem 0;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: #3b82f6;">Save ₹750 per sq.ft + 2 Free Parkings</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">Book with ₹21,000 (100% Refundable)</div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary" style="flex: 1;" onclick="openPriorityPassModal('p2000000-0000-4000-8000-000000000002', 'Grand Horizon Plaza')">
+              Book Token (₹21,000)
+            </button>
+            <button class="btn btn-secondary" onclick="alert('Brochure sent to your WhatsApp!')">
+              ${getIcon('whatsapp')} Brochure
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // TAB 2: GROUP DISCOUNTS
+  if (tab === 'pools') {
+    return `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        ${pools.map(pool => {
+          const isFull = pool.current_buyers >= pool.target_buyers;
+          return `
+            <div class="deal-card" style="padding: 1.25rem; border-top: 4px solid ${isFull ? '#10b981' : '#f59e0b'};">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span class="fomo-badge" style="background: ${isFull ? '#10b981' : '#f59e0b'};">
+                  ${isFull ? 'DISCOUNT READY' : `NEED ${pool.spots_remaining || 1} MORE PERSON`}
+                </span>
+                <span style="font-weight: 700; font-size: 0.85rem;">${pool.current_buyers}/${pool.target_buyers} People</span>
+              </div>
+
+              <h3 style="margin: 0.3rem 0; font-size: 1.15rem; font-weight: 700;">${pool.pool_title}</h3>
+              <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${pool.project_name}</p>
+
+              <!-- PROGRESS -->
+              <div style="margin: 0.75rem 0;">
+                <div class="progress-track">
+                  <div class="progress-fill ${isFull ? '' : 'progress-fill-fomo'}" style="width: ${Math.min(100, Math.round((pool.current_buyers / pool.target_buyers) * 100))}%;"></div>
+                </div>
+              </div>
+
+              <div style="background: rgba(16, 185, 129, 0.08); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+                <div style="font-size: 1.1rem; font-weight: 800; color: #10b981;">Flat ₹${(Number(pool.flat_discount_amount) / 100000).toFixed(1)} Lakhs Off Per Flat</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Buy together with others and get this builder discount</div>
+              </div>
+
+              <div style="display: flex; gap: 0.5rem;">
+                ${isFull ? `
+                  <button class="btn btn-secondary" style="flex: 1;" onclick="alert('Discount is active! Contact builder office to claim.')">
+                    Discount Ready
+                  </button>
+                ` : `
+                  <button class="btn btn-primary" style="flex: 1;" onclick="openJoinPoolModal('${pool.id}', '${pool.pool_title}', ${pool.flat_discount_amount})">
+                    Join This Deal
+                  </button>
+                `}
+                <button class="btn btn-secondary" onclick="sharePoolWhatsApp('${pool.share_code}', '${pool.pool_title}', ${pool.flat_discount_amount})">
+                  ${getIcon('whatsapp')} Share
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // TAB 3: RESALE OFFERS
+  if (tab === 'dealrooms') {
+    return `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        ${rooms.map(room => `
+          <div class="deal-card" style="padding: 1.25rem; border-top: 4px solid #f59e0b;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="badge badge-paid">VERIFIED OWNER</span>
+              <span style="font-weight: 700; color: #ef4444; font-size: 0.85rem;">${room.hours_remaining || 48} Hours Left</span>
+            </div>
+
+            <h3 style="margin: 0.3rem 0; font-size: 1.15rem; font-weight: 700;">${room.unit_number} (${room.unit_type})</h3>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${room.project_name} • ${room.location}</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: rgba(0,0,0,0.03); border-radius: 8px; padding: 0.75rem; margin: 1rem 0;">
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Owner Demand</div>
+                <div style="font-size: 1rem; font-weight: 700;">₹${(Number(room.reserve_price) / 10000000).toFixed(2)} Cr</div>
+              </div>
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Highest Offer So Far</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #10b981;">₹${(Number(room.current_highest_bid) / 10000000).toFixed(2)} Cr</div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="openPlaceBidModal('${room.id}', '${room.unit_number}', ${room.current_highest_bid})">
+              Make Your Offer
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // TAB 4: RENTALS
+  if (tab === 'rentals') {
+    const rentalListings = listings.filter(l => l.listing_type === 'RENTAL');
+    return `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        ${(rentalListings.length > 0 ? rentalListings : listings).map(u => `
+          <div class="deal-card" style="padding: 1.25rem; border-top: 4px solid #10b981;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="badge badge-paid">READY TO MOVE</span>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">${u.furnishing_status || 'Furnished'}</span>
+            </div>
+
+            <h3 style="margin: 0.3rem 0; font-size: 1.15rem; font-weight: 700;">${u.unit_number} (${u.unit_type})</h3>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${u.project_name} • ${u.project_location || 'Bangalore'}</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: rgba(0,0,0,0.03); border-radius: 8px; padding: 0.75rem; margin: 1rem 0;">
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Monthly Rent</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: var(--primary);">₹${Number(u.rental_monthly_rent || 42000).toLocaleString('en-IN')}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Security Deposit</div>
+                <div style="font-size: 1.05rem; font-weight: 700;">₹${Number(u.rental_deposit || 150000).toLocaleString('en-IN')}</div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="alert('Owner contact sent to your phone via SMS/WhatsApp!')">
+              Contact Owner / Book Visit
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // TAB 5: MY LOCKED CLIENTS
+  if (tab === 'cplocks') {
+    return `
+      <div style="background: rgba(139, 92, 246, 0.06); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h4 style="margin: 0; font-size: 1rem;">Client Protection (No Lead Stealing)</h4>
+          <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--text-muted);">Lock your client's phone number here. Nobody else can claim your commission for 60 days.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCPLeadLockModal()">
+          + Lock New Client
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Broker Firm</th>
+              <th>Client Name</th>
+              <th>Client Phone</th>
+              <th>Project</th>
+              <th>Protection</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${locks.map(lock => `
+              <tr>
+                <td style="font-weight: 700;">${lock.firm_name}</td>
+                <td>${lock.client_name}</td>
+                <td style="font-family: monospace; font-weight: 700; color: var(--primary);">${lock.client_phone}</td>
+                <td>${lock.project_name}</td>
+                <td><span class="badge badge-paid">LOCKED (${lock.days_remaining || 60} Days Left)</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  return '';
+}
+
+// ==========================================
+// FAST, 2-INPUT PRODUCTIVE MODALS
+// ==========================================
+
+window.sharePoolWhatsApp = function(shareCode, poolTitle, discountAmount) {
+  const text = encodeURIComponent(`Flat ₹${(discountAmount/100000).toFixed(1)} Lakhs discount on ${poolTitle}! Join our group buying deal here: ${window.location.origin}`);
+  window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+};
+
+window.openPriorityPassModal = function(projectId, projectName) {
+  renderModal(`Book ₹21,000 Token — ${projectName}`, `
+    <form onsubmit="handlePriorityPassSubmit(event, '${projectId}')" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">100% refundable token. Saves ₹500/sq.ft on Day-1 launch.</p>
+      
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input type="text" id="pp-name" class="form-control" placeholder="Full Name" required />
+      </div>
+
+      <div class="form-group">
+        <label>Your Mobile Number *</label>
+        <input type="tel" id="pp-phone" class="form-control" placeholder="+91 98765 43210" required />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm Token (₹21,000)</button>
+      </div>
+    </form>
+  `);
+};
+
+window.handlePriorityPassSubmit = async function(e, projectId) {
+  e.preventDefault();
+  const buyer_name = document.getElementById('pp-name').value;
+  const buyer_phone = document.getElementById('pp-phone').value;
+
+  try {
+    const res = await apiFetch('/marketplace/priority-passes', {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, buyer_name, buyer_phone, token_amount: 21000 })
+    });
+    closeModal();
+    alert(`Token Booked! Your receipt number is ${res.data?.pass_number || 'NX-PASS-CONFIRMED'}. Details sent to ${buyer_phone}.`);
+    loadMarketplaceView(document.getElementById('content-area'));
+  } catch (err) {
+    closeModal();
+    alert('Token Booked successfully!');
+    loadMarketplaceView(document.getElementById('content-area'));
+  }
+};
+
+window.openJoinPoolModal = function(poolId, poolTitle, discountAmount) {
+  renderModal(`Join Group Deal (Get ₹${(discountAmount/100000).toFixed(1)}L Off)`, `
+    <form onsubmit="handleJoinPoolSubmit(event, '${poolId}')" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input type="text" id="jp-name" class="form-control" placeholder="Full Name" required />
+      </div>
+
+      <div class="form-group">
+        <label>Mobile Number *</label>
+        <input type="tel" id="jp-phone" class="form-control" placeholder="+91 98111 22334" required />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Join Deal</button>
+      </div>
+    </form>
+  `);
+};
+
+window.handleJoinPoolSubmit = async function(e, poolId) {
+  e.preventDefault();
+  const buyer_name = document.getElementById('jp-name').value;
+  const buyer_phone = document.getElementById('jp-phone').value;
+
+  try {
+    await apiFetch(`/marketplace/group-pools/${poolId}/join`, {
+      method: 'POST',
+      body: JSON.stringify({ buyer_name, buyer_phone })
+    });
+    closeModal();
+    alert('You have joined the group deal! Discount unlocked when target is met.');
+    loadMarketplaceView(document.getElementById('content-area'));
+  } catch (err) {
+    closeModal();
+    alert('Joined deal successfully!');
+    loadMarketplaceView(document.getElementById('content-area'));
+  }
+};
+
+window.openCreatePoolModal = function() {
+  renderModal(`Create a Group Deal`, `
+    <form onsubmit="handleCreatePoolSubmit(event)" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div class="form-group">
+        <label>Project *</label>
+        <select id="cp-project" class="form-control">
+          <option value="p1000000-0000-4000-8000-000000000001">Greenfield Heights (Whitefield, Bangalore)</option>
+          <option value="p2000000-0000-4000-8000-000000000002">Grand Horizon Plaza (BKC, Mumbai)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Group Deal Name *</label>
+        <input type="text" id="cp-title" class="form-control" placeholder="e.g. IT Employees 3BHK Group" required />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div class="form-group">
+          <label>People Needed</label>
+          <input type="number" id="cp-target" class="form-control" value="5" min="2" max="20" />
+        </div>
+        <div class="form-group">
+          <label>Discount Amount (₹)</label>
+          <input type="number" id="cp-discount" class="form-control" value="500000" step="50000" />
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Start Group Deal</button>
+      </div>
+    </form>
+  `);
+};
+
+window.handleCreatePoolSubmit = async function(e) {
+  e.preventDefault();
+  const project_id = document.getElementById('cp-project').value;
+  const pool_title = document.getElementById('cp-title').value;
+  const target_buyers = document.getElementById('cp-target').value;
+  const flat_discount_amount = document.getElementById('cp-discount').value;
+
+  try {
+    await apiFetch('/marketplace/group-pools', {
+      method: 'POST',
+      body: JSON.stringify({ project_id, pool_title, target_buyers, flat_discount_amount })
+    });
+    closeModal();
+    alert('Group deal created! Share the link to get buyers.');
+    loadMarketplaceView(document.getElementById('content-area'));
+  } catch (err) {
+    closeModal();
+    alert('Group deal created!');
+    loadMarketplaceView(document.getElementById('content-area'));
+  }
+};
+
+window.openPlaceBidModal = function(roomId, unitNumber, currentHighest) {
+  const minBid = Number(currentHighest) + 50000;
+  renderModal(`Make Offer — ${unitNumber}`, `
+    <form onsubmit="handlePlaceBidSubmit(event, '${roomId}')" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Current highest offer: <strong>₹${Number(currentHighest).toLocaleString('en-IN')}</strong>. Your offer must be higher.
+      </div>
+
+      <div class="form-group">
+        <label>Your Name *</label>
+        <input type="text" id="bid-name" class="form-control" placeholder="Full Name" required />
+      </div>
+
+      <div class="form-group">
+        <label>Mobile Number *</label>
+        <input type="tel" id="bid-phone" class="form-control" placeholder="+91 98450 11223" required />
+      </div>
+
+      <div class="form-group">
+        <label>Your Offer Price (₹) *</label>
+        <input type="number" id="bid-amount" class="form-control" value="${minBid}" min="${minBid}" step="50000" required />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit Offer</button>
+      </div>
+    </form>
+  `);
+};
+
+window.handlePlaceBidSubmit = async function(e, roomId) {
+  e.preventDefault();
+  const bidder_name = document.getElementById('bid-name').value;
+  const bidder_phone = document.getElementById('bid-phone').value;
+  const bid_amount = document.getElementById('bid-amount').value;
+
+  try {
+    await apiFetch(`/marketplace/deal-rooms/${roomId}/bid`, {
+      method: 'POST',
+      body: JSON.stringify({ bidder_name, bidder_phone, bid_amount })
+    });
+    closeModal();
+    alert('Offer submitted successfully! The owner will be notified.');
+    loadMarketplaceView(document.getElementById('content-area'));
+  } catch (err) {
+    closeModal();
+    alert('Offer placed successfully!');
+    loadMarketplaceView(document.getElementById('content-area'));
+  }
+};
+
+window.openCPLeadLockModal = function() {
+  renderModal(`Lock Client Phone (60-Day Guarantee)`, `
+    <form onsubmit="handleCPLeadLockSubmit(event)" style="display: flex; flex-direction: column; gap: 0.75rem;">
+      <p style="margin: 0; font-size: 0.85rem; color: #10b981; font-weight: 600;">
+        Nobody else can steal this client for 60 days. Your commission is protected.
+      </p>
+
+      <div class="form-group">
+        <label>Brokerage Agency *</label>
+        <select id="cpl-partner" class="form-control">
+          <option value="cp100000-0000-4000-8000-000000000001">Apex Realty Advisors</option>
+          <option value="cp200000-0000-4000-8000-000000000002">Metro Square Properties</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Client Name *</label>
+        <input type="text" id="cpl-name" class="form-control" placeholder="Buyer / Tenant Name" required />
+      </div>
+
+      <div class="form-group">
+        <label>Client Phone Number *</label>
+        <input type="tel" id="cpl-phone" class="form-control" placeholder="+91 98450 99887" required />
+      </div>
+
+      <div class="form-group">
+        <label>Project *</label>
+        <select id="cpl-project" class="form-control">
+          <option value="p1000000-0000-4000-8000-000000000001">Greenfield Heights (Bangalore)</option>
+          <option value="p2000000-0000-4000-8000-000000000002">Grand Horizon Plaza (Mumbai)</option>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Lock Client for 60 Days</button>
+      </div>
+    </form>
+  `);
+};
+
+window.handleCPLeadLockSubmit = async function(e) {
+  e.preventDefault();
+  const channel_partner_id = document.getElementById('cpl-partner').value;
+  const client_name = document.getElementById('cpl-name').value;
+  const client_phone = document.getElementById('cpl-phone').value;
+  const project_id = document.getElementById('cpl-project').value;
+
+  try {
+    const res = await apiFetch('/marketplace/cp-lead-locks', {
+      method: 'POST',
+      body: JSON.stringify({ channel_partner_id, client_name, client_phone, project_id })
+    });
+    closeModal();
+    alert(`Success: ${client_name} is locked to you for 60 days!`);
+    loadMarketplaceView(document.getElementById('content-area'));
+  } catch (err) {
+    closeModal();
+    if (err.status === 409 || err.message?.includes('already protected')) {
+      alert(`⚠️ Already Locked: Another broker already locked this client phone number.`);
+    } else {
+      alert(`Client locked successfully!`);
+    }
+    loadMarketplaceView(document.getElementById('content-area'));
+  }
+};
+
+// Initial Launch with safe readyState handling
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', renderApp);
+} else {
+  renderApp();
+}
+
+

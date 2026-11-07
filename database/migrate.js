@@ -33,6 +33,11 @@ async function runMigrations() {
     connection = await mysql.createConnection(dbConfig);
     console.log(`[Migration] Successfully connected to database '${dbConfig.database}'.`);
 
+    // Hosts can start several copies of the app at once (AUTO_MIGRATE): run one migration pass at a time.
+    // The lock belongs to this connection, so it is released when the run ends or crashes.
+    const [[{ got }]] = await connection.query('SELECT GET_LOCK(?, 120) AS got', [`nexora_migrate:${dbConfig.database}`.slice(0, 64)]);
+    if (Number(got) !== 1) throw new Error('Another migration run is still going after 2 minutes.');
+
     // Ensure migration tracker table exists
     await connection.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (

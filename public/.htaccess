@@ -6,6 +6,14 @@
 <IfModule mod_mime.c>
   AddType text/css .css
   AddType application/javascript .js
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# The service worker must never be cached by the browser, or app updates stall
+<IfModule mod_headers.c>
+  <Files "sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </Files>
 </IfModule>
 
 <IfModule mod_rewrite.c>

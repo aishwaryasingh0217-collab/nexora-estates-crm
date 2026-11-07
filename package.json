@@ -10,7 +10,15 @@
     "dev": "node backend/server.js --open",
     "migrate": "node database/migrate.js",
     "seed": "node database/seed_super_admin.js && node database/seed_demo_data.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/run.js",
+    "seed:workspace": "node database/seed_sales_team.js",
+    "test:all": "node tests/run.js --ui",
+    "test:ui": "node tests/ui.test.js",
+    "test:reset": "node tests/reset-demo.js",
+    "setup": "node database/setup.js",
+    "demo:reset": "node database/demo_reset.js --yes",
+    "build": "node -e \"console.log('Nothing to build: plain Node.js server')\"",
+    "deploy:hostinger": "node scripts/deploy-hostinger.js"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +32,13 @@
     "googleapis": "^174.0.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-    "mysql2": "^3.23.3"
+    "mysql2": "^3.23.3",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

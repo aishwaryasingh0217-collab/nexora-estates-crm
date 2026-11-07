@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const pool = require('../config/db');
 const { createNotification, broadcastToAdmins } = require('../services/notificationService');
+const { captureEnquiry, EnquiryError } = require('../services/enquiryService');
+const { logActivity, notifyPartner } = require('../services/salesWorkspace');
 
 /**
  * GET /api/leads
@@ -259,8 +261,8 @@ async function executeLeadBooking({
     const finalToken = Number(bookingTokenAmount) || Math.round(finalTotal * 0.1);
 
     await connection.query(
-      `INSERT INTO deals (id, deal_number, customer_id, lead_id, unit_id, base_price, plc_charges, parking_charges, taxes_amount, discount_amount, maintenance_deposit, agreed_total_amount, booking_token_amount, status, created_by, closing_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED', ?, ?)`,
+      `INSERT INTO deals (id, deal_number, customer_id, lead_id, unit_id, base_price, plc_charges, parking_charges, taxes_amount, discount_amount, maintenance_deposit, agreed_total_amount, booking_token_amount, status, created_by, closing_date, channel_partner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED', ?, ?, ?)`,
       [
         dealId,
         dealNumber,
@@ -276,9 +278,32 @@ async function executeLeadBooking({
         finalTotal,
         finalToken,
         userId,
-        closingDate
+        closingDate,
+        lead.channel_partner_id || null
       ]
     );
+
+    // 4b. Partner-sourced lead → commission is earned at booking, at the partner's agreed rate
+    let commission = null;
+    if (lead.channel_partner_id) {
+      const [partners] = await connection.query(
+        'SELECT commission_rate FROM channel_partners WHERE id = ?',
+        [lead.channel_partner_id]
+      );
+      if (partners.length > 0) {
+        const rate = Number(partners[0].commission_rate) || 0;
+        commission = {
+          id: crypto.randomUUID(),
+          rate,
+          amount: Math.round(finalTotal * rate) / 100
+        };
+        await connection.query(
+          `INSERT INTO broker_commissions (id, partner_id, deal_id, deal_amount, commission_rate, total_commission, paid_amount, status)
+           VALUES (?, ?, ?, ?, ?, ?, 0, 'PENDING')`,
+          [commission.id, lead.channel_partner_id, dealId, finalTotal, rate, commission.amount]
+        );
+      }
+    }
 
     // 5. Update Unit Status to BOOKED
     await connection.query(`UPDATE units SET status = 'BOOKED' WHERE id = ?`, [unit.id]);
@@ -286,12 +311,30 @@ async function executeLeadBooking({
     // 6. Update Lead Stage to Booking Done
     const targetProjId = projectId || unit.project_id;
     await connection.query(
-      `UPDATE leads SET stage = 'Booking Done', preferred_project_id = ? WHERE id = ?`,
+      `UPDATE leads SET stage = 'Booking Done', preferred_project_id = ?, next_follow_up_at = NULL WHERE id = ?`,
       [targetProjId, lead.id]
     );
+    await logActivity({
+      leadId: lead.id,
+      userId,
+      type: 'BOOKING',
+      outcome: 'BOOKED',
+      note: `Unit ${unit.unit_number} booked — Deal #${dealNumber}, ₹${finalTotal.toLocaleString('en-IN')}`
+    }, connection);
 
     // 7. Commit Transaction
     await connection.commit();
+
+    if (lead.channel_partner_id) {
+      await notifyPartner(lead.channel_partner_id, {
+        type: 'SUCCESS',
+        title: `🎉 Booking confirmed: ${lead.first_name} ${lead.last_name || ''}`.trim(),
+        message: commission
+          ? `Unit ${unit.unit_number} booked. Your commission of ₹${commission.amount.toLocaleString('en-IN')} (${commission.rate}%) is now in your earnings.`
+          : `Unit ${unit.unit_number} has been booked for your client.`,
+        leadId: lead.id
+      });
+    }
 
     // 8. Trigger Notifications
     const notifMsg = `Booking completed for Unit ${unit.unit_number} (${lead.first_name} ${lead.last_name || ''}) - Deal #${dealNumber} (₹${finalTotal.toLocaleString()}).`;
@@ -594,164 +637,17 @@ const convertLeadToCustomer = async (req, res, next) => {
 };
 
 /**
- * POST /api/leads/webhook
- * Universal Ad-Lead Ingestion Webhook (Meta Ads, 99acres, MagicBricks, Google Ads, Zapier)
- * Features intelligent Round-Robin sales agent auto-assignment & instant notification dispatch
+ * POST /api/leads/webhook — public intake for website forms and ad platforms (Meta, Google, 99acres…).
+ * All the rules (dedupe, routing, visit booking, notifications) live in services/enquiryService.js.
  */
 const handleLeadWebhook = async (req, res, next) => {
   try {
-    const payload = req.body || {};
-
-    // Normalize name
-    let firstName = payload.first_name || payload.name || payload.client_name || '';
-    let lastName = payload.last_name || '';
-    if (!lastName && payload.full_name) {
-      const parts = payload.full_name.trim().split(' ');
-      firstName = parts[0] || 'Prospective';
-      lastName = parts.slice(1).join(' ') || 'Buyer';
-    } else if (!lastName && firstName && firstName.includes(' ')) {
-      const parts = firstName.trim().split(' ');
-      firstName = parts[0];
-      lastName = parts.slice(1).join(' ');
-    }
-
-    if (!firstName) firstName = 'Prospective';
-    if (!lastName) lastName = 'Buyer';
-
-    // Normalize phone & email
-    const rawPhone = payload.phone || payload.phone_number || payload.mobile || payload.contact || '+91 9900000000';
-    const email = payload.email || payload.email_address || null;
-
-    // Normalize source
-    let source = (payload.source || payload.platform || payload.lead_source || 'DIGITAL_ADS').toUpperCase();
-    if (source.includes('META') || source.includes('FB') || source.includes('FACEBOOK') || source.includes('INSTAGRAM')) {
-      source = 'FACEBOOK_ADS';
-    } else if (source.includes('99ACRES')) {
-      source = '99ACRES';
-    } else if (source.includes('MAGIC') || source.includes('MAGICBRICKS')) {
-      source = 'MAGICBRICKS';
-    } else if (source.includes('GOOGLE')) {
-      source = 'GOOGLE_ADS';
-    } else if (source.includes('WEB') || source.includes('LANDING')) {
-      source = 'WEBSITE';
-    }
-
-    // Identify project preference if passed
-    let preferredProjectId = payload.project_id || null;
-    if (!preferredProjectId && payload.project_name) {
-      const [projRows] = await pool.query('SELECT id FROM projects WHERE name LIKE ? LIMIT 1', [`%${payload.project_name}%`]);
-      if (projRows.length > 0) {
-        preferredProjectId = projRows[0].id;
-      }
-    }
-
-    // Deduplication check: check if phone number already exists
-    const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
-    const [existing] = await pool.query(
-      `SELECT id, first_name, last_name, assigned_agent_id, stage FROM leads WHERE phone LIKE ? LIMIT 1`,
-      [`%${cleanDigits}%`]
-    );
-
-    if (existing.length > 0) {
-      const existingLead = existing[0];
-      // Append note and notify agent
-      await pool.query(
-        `UPDATE leads SET notes = CONCAT(COALESCE(notes, ''), '\n[Re-Enquiry from ${source} at ', NOW(), ']: ', ?) WHERE id = ?`,
-        [payload.notes || payload.message || payload.comments || 'Customer submitted another ad lead form.', existingLead.id]
-      );
-
-      if (existingLead.assigned_agent_id) {
-        await createNotification({
-          userId: existingLead.assigned_agent_id,
-          type: 'WARNING',
-          title: `Re-Enquiry: ${existingLead.first_name} ${existingLead.last_name}`,
-          message: `Existing lead re-enquired via ${source}. Follow up immediately.`,
-          relatedEntityType: 'LEAD',
-          relatedEntityId: existingLead.id
-        });
-      }
-
-      return res.status(200).json({
-        status: 'success',
-        action: 'DUPLICATE_UPDATED',
-        message: 'Lead already exists. Re-enquiry recorded and assigned agent alerted.',
-        leadId: existingLead.id
-      });
-    }
-
-    // Round-Robin Assignment: find active sales executive with the lowest lead count or least recently assigned
-    const [agents] = await pool.query(`
-      SELECT u.id, u.first_name, u.last_name, u.email,
-             COUNT(l.id) AS active_leads_count,
-             MAX(l.created_at) AS last_lead_assigned_at
-      FROM users u
-      JOIN roles r ON u.role_id = r.id
-      LEFT JOIN leads l ON u.id = l.assigned_agent_id AND l.stage NOT IN ('Booking Done', 'WON', 'Lost', 'LOST')
-      WHERE u.status = 'ACTIVE' AND (r.name IN ('SALES_EXECUTIVE', 'SALES_MANAGER', 'SUPER_ADMIN'))
-      GROUP BY u.id
-      ORDER BY active_leads_count ASC, last_lead_assigned_at ASC
-      LIMIT 1
-    `);
-
-    const assignedAgent = agents.length > 0 ? agents[0] : null;
-    const assignedAgentId = assignedAgent ? assignedAgent.id : null;
-
-    // Create New Lead
-    const leadId = crypto.randomUUID();
-    const budgetMin = payload.budget_min ? parseFloat(payload.budget_min) : null;
-    const budgetMax = payload.budget_max ? parseFloat(payload.budget_max) : null;
-    const notes = payload.notes || payload.message || payload.comments || `Ingested via ${source} Webhook Integration`;
-
-    // SLA Due: 2 hours from now
-    const slaDueDate = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
-
-    await pool.query(`
-      INSERT INTO leads (
-        id, first_name, last_name, phone, email, source, stage,
-        budget_min, budget_max, preferred_project_id, assigned_agent_id,
-        sla_due_date, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, 'New Lead', ?, ?, ?, ?, ?, ?)
-    `, [
-      leadId, firstName, lastName, rawPhone, email, source,
-      budgetMin, budgetMax, preferredProjectId, assignedAgentId,
-      slaDueDate, notes
-    ]);
-
-    // Send instant notification to assigned agent
-    if (assignedAgentId) {
-      await createNotification({
-        userId: assignedAgentId,
-        type: 'SUCCESS',
-        title: `🔥 New Ad Lead Assigned: ${firstName} ${lastName}`,
-        message: `High-intent lead received from ${source}. SLA Target: 2 hours. Call: ${rawPhone}`,
-        relatedEntityType: 'LEAD',
-        relatedEntityId: leadId
-      });
-    }
-
-    await broadcastToAdmins({
-      type: 'INFO',
-      title: `Ad Lead Ingested: ${firstName} ${lastName}`,
-      message: `Lead auto-routed to ${assignedAgent ? assignedAgent.first_name + ' ' + assignedAgent.last_name : 'Unassigned'} via Round-Robin.`,
-      relatedEntityType: 'LEAD',
-      relatedEntityId: leadId
-    });
-
-    res.status(201).json({
-      status: 'success',
-      action: 'LEAD_INGESTED',
-      message: `Lead ingested successfully and auto-assigned to ${assignedAgent ? assignedAgent.first_name + ' ' + assignedAgent.last_name : 'General Pool'}.`,
-      data: {
-        leadId,
-        firstName,
-        lastName,
-        phone: rawPhone,
-        source,
-        assignedTo: assignedAgent ? `${assignedAgent.first_name} ${assignedAgent.last_name}` : 'Unassigned',
-        slaDueDate
-      }
-    });
+    const result = await captureEnquiry(req.body || {});
+    res.status(result.status).json(result.body);
   } catch (error) {
+    if (error instanceof EnquiryError) {
+      return res.status(error.statusCode).json({ status: 'error', message: error.message });
+    }
     next(error);
   }
 };
@@ -763,6 +659,7 @@ module.exports = {
   updateLead,
   bookLead,
   convertLeadToCustomer,
-  handleLeadWebhook
+  handleLeadWebhook,
+  executeLeadBooking
 };
 

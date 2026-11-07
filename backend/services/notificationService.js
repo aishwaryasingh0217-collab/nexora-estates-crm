@@ -28,6 +28,12 @@ async function createNotification({
        VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, NOW())`,
       [id, recipientUserId, type, title, message, relatedEntityType, relatedEntityId]
     );
+    // Mirror to the person's phone / desktop (no-op if they haven't turned alerts on)
+    require('./pushService').sendToUser(recipientUserId, {
+      title,
+      body: message,
+      leadId: relatedEntityType === 'LEAD' ? relatedEntityId : null
+    });
     return { id, recipientUserId, type, title, message, relatedEntityType, relatedEntityId };
   } catch (err) {
     console.error('[Notification Service Error]: Failed to create notification:', err.message);
@@ -36,7 +42,7 @@ async function createNotification({
 }
 
 /**
- * Broadcasts a notification to all Super Admin users
+ * Broadcasts a notification to the owner (Super Admin) and every Sales Manager (Admin)
  */
 async function broadcastToAdmins({
   type = 'INFO',
@@ -49,7 +55,7 @@ async function broadcastToAdmins({
     const [admins] = await pool.query(
       `SELECT u.id FROM users u
        JOIN roles r ON u.role_id = r.id
-       WHERE r.name = 'SUPER_ADMIN' AND u.status = 'ACTIVE'`
+       WHERE r.name IN ('SUPER_ADMIN', 'ADMIN') AND u.status = 'ACTIVE'`
     );
 
     const promises = admins.map(admin =>

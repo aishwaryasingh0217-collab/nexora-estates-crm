@@ -9,6 +9,10 @@
  * Refuses to run unless DEMO_MODE=true is set explicitly — it must never touch a real company's data.
  * Hosts may run several copies of the app at once, so a database lock makes sure only one rebuild
  * runs at a time; the others step aside.
+ *
+ * On the demo server the app starts this as a detached process (backend/services/bootTasks.js), so it
+ * finishes even if the host stops the web process. Its output goes to the temp folder, in
+ * nexora-demo-rebuild-<database>.log, and the next app start prints the end of it.
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env'), quiet: true });
 process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Kolkata';

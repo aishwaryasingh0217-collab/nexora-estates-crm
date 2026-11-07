@@ -173,10 +173,26 @@ app.get(['/manifest.webmanifest', '/nexora-crm/manifest.webmanifest'], async (re
   }
 });
 
-app.use(express.static(publicDir));
-app.use('/nexora-crm', express.static(publicDir));
-app.use(express.static(distDir));
-app.use('/nexora-crm', express.static(distDir));
+const setStaticCacheHeaders = (res, filePath) => {
+  if (filePath.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  } else if (filePath.match(/\.(jpg|jpeg|png|gif|ico|webp|svg|mp4|webm|woff|woff2|ttf|eot)$/i)) {
+    res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+  } else if (filePath.match(/\.(js|css)$/i)) {
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+  }
+};
+
+const staticOptions = {
+  maxAge: '1h',
+  etag: true,
+  setHeaders: setStaticCacheHeaders
+};
+
+app.use(express.static(publicDir, staticOptions));
+app.use('/nexora-crm', express.static(publicDir, staticOptions));
+app.use(express.static(distDir, staticOptions));
+app.use('/nexora-crm', express.static(distDir, staticOptions));
 
 // Fallback to SPA index.html for non-API requests
 app.use((req, res, next) => {
@@ -186,8 +202,10 @@ app.use((req, res, next) => {
   const publicIndex = path.join(__dirname, '../public/index.html');
   const distIndex = path.join(__dirname, '../dist/index.html');
   if (require('fs').existsSync(publicIndex)) {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
     res.sendFile(publicIndex);
   } else if (require('fs').existsSync(distIndex)) {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
     res.sendFile(distIndex);
   } else {
     res.status(404).json({ status: 'error', message: 'Endpoint not found' });

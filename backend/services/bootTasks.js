@@ -116,8 +116,20 @@ function startWorkflowJobs() {
   }).catch(() => {});
 }
 
+/** In the testing environment, keep the Testing Center's checklists in step with this release. */
+async function syncTestCases() {
+  try {
+    if (!(await require('../controllers/suite/testingController').enabled())) return;
+    const r = await require('../testing/syncCases').syncCases(pool);
+    if (r.added || r.updated || r.removed) console.log(`[testing] checklists: ${r.added} added, ${r.updated} updated, ${r.removed} removed (${r.total} total)`);
+  } catch (err) {
+    console.warn('[testing] checklists not loaded:', err.message);
+  }
+}
+
 function startBootTasks() {
   startWorkflowJobs();
+  syncTestCases();
   if (isPublicDemo()) {
     printLastRebuild();
     const tick = () => checkDemo().catch((err) => console.error('[boot] demo check failed:', err.message));

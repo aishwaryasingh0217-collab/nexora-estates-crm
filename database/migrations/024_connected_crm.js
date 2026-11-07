@@ -133,6 +133,11 @@ async function up(c) {
   // ---------------------------------------------------------------- site visits
   await extendEnum(c, 'site_visits', 'status',
     ['REQUESTED', 'PENDING_APPROVAL', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'RESCHEDULED', 'MISSED']);
+  // A requested visit has no field agent yet (and a rejected one goes back to having none)
+  const agentCol = await columnInfo(c, 'site_visits', 'assigned_agent_id');
+  if (agentCol && agentCol.nullable === 'NO') {
+    await c.query(`ALTER TABLE site_visits MODIFY COLUMN assigned_agent_id ${agentCol.type} NULL`);
+  }
   await addColumn(c, 'site_visits', 'requested_by', 'VARCHAR(36) NULL');
   await addColumn(c, 'site_visits', 'client_confirmed', 'TINYINT(1) NOT NULL DEFAULT 0');
   await addColumn(c, 'site_visits', 'approved_by', 'VARCHAR(36) NULL');

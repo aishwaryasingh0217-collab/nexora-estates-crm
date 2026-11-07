@@ -16,6 +16,7 @@ const inv = require('../controllers/suite/inventoryController');
 const mkt = require('../controllers/suite/marketingController');
 const crm = require('../controllers/suite/crmController');
 const owner = require('../controllers/suite/ownerController');
+const testing = require('../controllers/suite/testingController');
 
 router.use(authenticateToken);
 
@@ -168,5 +169,24 @@ router.post('/crm/possession', need('crm.manage'), crm.addPossession);
 router.get('/owner/dashboard', need('owner.dashboard'), owner.dashboard);
 router.get('/owner/drilldown/:metric', need('owner.dashboard'), owner.drilldown);
 router.get('/owner/employees', need('owner.dashboard'), owner.employees);
+
+// ------------------------------------------------------------------ manual testing center (testing environment only)
+const tc = [need('testing.use'), testing.requireTestingEnv];
+router.get('/testing/summary', ...tc, testing.summary);
+router.get('/testing/cases', ...tc, testing.listCases);
+router.get('/testing/cases/:id', ...tc, testing.getCase);
+router.patch('/testing/cases/:id', ...tc, testing.recordResult);
+router.post('/testing/cases/:id/evidence', ...tc, uploadTo('test-evidence', { types: ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'] }), testing.addEvidence);
+router.delete('/testing/evidence/:evidenceId', ...tc, testing.deleteEvidence);
+router.get('/testing/bugs', ...tc, testing.listBugs);
+router.post('/testing/bugs', ...tc, testing.createBug);
+router.get('/testing/bugs/:bugId', ...tc, testing.getBug);
+router.patch('/testing/bugs/:bugId', ...tc, testing.updateBug);
+router.post('/testing/bugs/:bugId/evidence', ...tc, uploadTo('test-evidence', { types: ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'] }), testing.addEvidence);
+router.get('/testing/accounts', ...tc, testing.accounts);
+router.get('/testing/leads', ...tc, testing.testLeads);
+router.get('/testing/notifications', ...tc, testing.notifications);
+router.get('/testing/activity', ...tc, testing.activity);
+router.get('/testing/export.csv', ...tc, testing.exportResults);
 
 module.exports = router;

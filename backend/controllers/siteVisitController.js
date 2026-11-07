@@ -42,7 +42,7 @@ const getSiteVisits = async (req, res, next) => {
              c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.phone AS customer_phone, c.email AS customer_email
       FROM site_visits sv
       JOIN projects p ON sv.project_id = p.id
-      JOIN users u ON sv.assigned_agent_id = u.id
+      LEFT JOIN users u ON sv.assigned_agent_id = u.id
       LEFT JOIN leads l ON sv.lead_id = l.id
       LEFT JOIN customers c ON sv.customer_id = c.id
       WHERE 1=1
@@ -103,7 +103,7 @@ const getSiteVisitById = async (req, res, next) => {
               c.phone AS customer_phone, c.email AS customer_email
        FROM site_visits sv
        JOIN projects p ON sv.project_id = p.id
-       JOIN users u ON sv.assigned_agent_id = u.id
+       LEFT JOIN users u ON sv.assigned_agent_id = u.id
        LEFT JOIN leads l ON sv.lead_id = l.id
        LEFT JOIN customers c ON sv.customer_id = c.id
        WHERE sv.id = ?${visitScopeSql(req.user)}`,

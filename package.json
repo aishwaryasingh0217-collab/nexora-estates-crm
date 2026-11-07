@@ -18,7 +18,13 @@
     "setup": "node database/setup.js",
     "demo:reset": "node database/demo_reset.js --yes",
     "build": "node -e \"console.log('Nothing to build: plain Node.js server')\"",
-    "deploy:hostinger": "node scripts/deploy-hostinger.js"
+    "deploy:hostinger": "node scripts/deploy-hostinger.js",
+    "testenv:setup": "node scripts/testenv.js setup",
+    "testenv:start": "node scripts/testenv.js start",
+    "testenv:export": "node scripts/testenv.js export",
+    "testenv:cleanup": "node scripts/testenv.js cleanup",
+    "testenv:reset": "node scripts/testenv.js reset",
+    "testenv:status": "node scripts/testenv.js status"
   },
   "keywords": [],
   "author": "",

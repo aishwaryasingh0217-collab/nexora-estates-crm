@@ -32,7 +32,7 @@ const me = wrap(async (req, res) => {
     capabilities: capabilitiesFor(user), portals: portalsFor(user), homePortal: (ROLE_INFO[u.role] || {}).portal || 'workspace',
     counts: { unreadNotifications: await notifications.getUnreadCount(u.id), pendingApprovals, openEscalations },
     company: await settings.getSettings(),
-    testingCenter: String(process.env.TESTING_CENTER || '').toLowerCase() !== 'false'
+    testingCenter: await require('./testingController').enabled()
   });
 });
 

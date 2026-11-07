@@ -91,7 +91,7 @@ const getLeadById = async (req, res, next) => {
       `SELECT sv.*, p.name AS project_name, u.first_name AS agent_first_name
        FROM site_visits sv
        JOIN projects p ON sv.project_id = p.id
-       JOIN users u ON sv.assigned_agent_id = u.id
+       LEFT JOIN users u ON sv.assigned_agent_id = u.id
        WHERE sv.lead_id = ?
        ORDER BY sv.scheduled_time DESC`,
       [req.params.id]

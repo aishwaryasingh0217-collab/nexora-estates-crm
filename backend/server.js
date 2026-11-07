@@ -48,6 +48,9 @@ const apiRouter = express.Router();
 apiRouter.get('/health', async (req, res, next) => {
   try {
     const [result] = await pool.query('SELECT 1 + 1 AS db_check, NOW() AS server_time');
+    const production = process.env.NODE_ENV === 'production';
+    const { demoHealth } = require('./services/bootTasks');
+    const demo = await demoHealth();
 
     res.status(200).json({
       status: 'healthy',
@@ -56,10 +59,12 @@ apiRouter.get('/health', async (req, res, next) => {
       database: {
         status: 'connected',
         type: 'MySQL 9.6',
-        database_name: process.env.DB_NAME || 'realestate_crm',
+        // The database name includes the hosting account id, so it's only shown outside production
+        ...(production ? {} : { database_name: process.env.DB_NAME || 'realestate_crm' }),
         db_check: result[0].db_check === 2,
         db_timestamp: result[0].server_time
-      }
+      },
+      ...(demo ? { demo } : {})
     });
   } catch (error) {
     res.status(500).json({
@@ -68,7 +73,7 @@ apiRouter.get('/health', async (req, res, next) => {
       timestamp: new Date().toISOString(),
       database: {
         status: 'disconnected',
-        error: error.message
+        ...(process.env.NODE_ENV === 'production' ? {} : { error: error.message })
       }
     });
   }

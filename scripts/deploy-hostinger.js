@@ -235,6 +235,15 @@ async function resolveIp(host) {
       let cfg = { status: 0, body: '' };
       for (let i = 0; i < 10 && !/demoLogins":true/.test(cfg.body); i++) { await sleep(5000); cfg = await probe(DOMAIN, parentIp, '/api/auth/config'); }
       say(`Demo logins on: ${/demoLogins":true/.test(cfg.body) ? '✓' : '✗ ' + cfg.body.slice(0, 120)}`);
+      // The server rebuilds the demo by itself after a deploy that changes its data; wait for it
+      let demo = null;
+      for (let i = 0; i < 30; i++) {
+        const h = await probe(DOMAIN, parentIp, '/api/health');
+        try { demo = JSON.parse(h.body).demo || null; } catch { demo = null; }
+        if (demo && demo.ready) break;
+        await sleep(5000);
+      }
+      say(`Demo data: ${demo && demo.ready ? `✓ ready (last rebuilt ${demo.lastRebuild})` : `✗ not ready yet ${JSON.stringify(demo)}`}`);
     }
   }
   const logs = await api('GET', `${base}/nodejs/runtime-logs?period=1h&limit=40`).catch(() => null);

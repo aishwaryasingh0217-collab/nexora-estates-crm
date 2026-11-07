@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Nexora AI Assistant</title>
+  <!--
+    The Kratu chat widget (iamkratu.ai), as a page that can sit in an iframe:
+      <iframe src="/ai-chat.html" title="Nexora AI Assistant"></iframe>
+    The homepage bot drawer (js/ai-bot.js) loads it this way. The chat fills the frame, without its own
+    floating button or header (the drawer has its own), and is styled to match the drawer.
+    Kratu only answers on the websites listed for this widget key in the Kratu dashboard.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* "body" in front of each rule outranks the widget's own styles, which it adds when it loads */
+    :root { color-scheme: light; }
+    html, body { margin: 0; height: 100%; background: transparent; }
+
+    body .ai-chat-button,
+    body .ai-chat-header { display: none; }
+
+    body .ai-chat-widget-container { inset: 0; }
+    body .ai-chat-widget-container * { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    body .ai-chat-window {
+      display: flex;
+      position: absolute; inset: 0;
+      width: auto; height: auto;
+      background: transparent; border: 0; border-radius: 0; box-shadow: none;
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+    }
+
+    body .ai-chat-messages { padding: 14px; gap: 10px; }
+    body .ai-message { max-width: 86%; }
+    body .ai-message-bubble {
+      padding: 9px 13px; font-size: 13px; line-height: 1.45;
+      background: rgba(255, 255, 255, 0.95); color: #0f172a;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 16px 16px 16px 4px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+    body .ai-message-bubble a { color: #0369a1; }
+    body .ai-message.user .ai-message-bubble {
+      background: #0284c7; color: #ffffff; border-color: #0284c7;
+      border-radius: 16px 16px 4px 16px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+    body .ai-message.user .ai-message-bubble a { color: #ffffff; }
+
+    body .ai-typing-indicator { background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(226, 232, 240, 0.9); }
+    body .ai-typing-dot { background: #94a3b8; }
+
+    body .ai-chat-input {
+      padding: 10px 14px; gap: 8px; align-items: center;
+      background: rgba(255, 255, 255, 0.9);
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    body .ai-chat-input input {
+      padding: 8px 14px; font-size: 13px; color: #0f172a;
+      background: #f8fafc; border: 1px solid #cbd5e1;
+    }
+    body .ai-chat-input input::placeholder { color: #64748b; }
+    body .ai-chat-input input:focus { border-color: #0284c7; background: #ffffff; }
+    body .ai-chat-input button { width: 36px; height: 36px; flex-shrink: 0; background: #0284c7; font-size: 14px; }
+    body .ai-chat-input button:hover { background: #0369a1; }
+    body .ai-chat-input button:disabled { opacity: 0.6; }
+
+    /* Phones zoom into text boxes smaller than 16px when you tap them */
+    @media (pointer: coarse) { body .ai-chat-input input { font-size: 16px; } }
+  </style>
+</head>
+<body>
+  <script src="https://iamkratu.ai/customer-chat/widget.js" data-key="3b381ebe07ec22f42ee075e82e45e330"></script>
+  <script>
+    if (window.aiWidget) {
+      window.aiWidget.isOpen = true;
+      window.aiWidget.addMessage('Hello! 👋 I am your Nexora AI Concierge. How can I help you today? Ask me about newly launched projects, prices, floor plans or site visits.', 'ai');
+    }
+  </script>
+</body>
+</html>

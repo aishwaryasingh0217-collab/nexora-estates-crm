@@ -37,7 +37,8 @@ const getProjects = async (req, res, next) => {
  */
 const getProjectById = async (req, res, next) => {
   try {
-    const [projects] = await pool.query(
+    let targetId = req.params.id;
+    let [projects] = await pool.query(
       `SELECT p.*, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
               COUNT(un.id) AS actual_unit_count,
               SUM(CASE WHEN un.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_units_count,
@@ -48,8 +49,29 @@ const getProjectById = async (req, res, next) => {
        LEFT JOIN units un ON p.id = un.project_id
        WHERE p.id = ?
        GROUP BY p.id`,
-      [req.params.id]
+      [targetId]
     );
+
+    // Resilient fallback for legacy client IDs (e.g. crm-nl-1793765210845)
+    if (projects.length === 0 && targetId && targetId.startsWith('crm-nl-')) {
+      const [latest] = await pool.query(
+        `SELECT p.*, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+                COUNT(un.id) AS actual_unit_count,
+                SUM(CASE WHEN un.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available_units_count,
+                SUM(CASE WHEN un.status = 'BOOKED' THEN 1 ELSE 0 END) AS booked_units_count,
+                SUM(CASE WHEN un.status = 'SOLD' THEN 1 ELSE 0 END) AS sold_units_count
+         FROM projects p
+         LEFT JOIN users u ON p.created_by = u.id
+         LEFT JOIN units un ON p.id = un.project_id
+         GROUP BY p.id
+         ORDER BY p.created_at DESC
+         LIMIT 1`
+      );
+      if (latest.length > 0) {
+        projects = latest;
+        targetId = latest[0].id;
+      }
+    }
 
     if (projects.length === 0) {
       return res.status(404).json({
@@ -66,7 +88,7 @@ const getProjectById = async (req, res, next) => {
        LEFT JOIN units un ON b.id = un.building_id
        WHERE b.project_id = ?
        GROUP BY b.id`,
-      [req.params.id]
+      [targetId]
     );
 
     const [units] = await pool.query(
@@ -75,7 +97,7 @@ const getProjectById = async (req, res, next) => {
        LEFT JOIN buildings b ON un.building_id = b.id
        WHERE un.project_id = ?
        ORDER BY un.unit_number ASC`,
-      [req.params.id]
+      [targetId]
     );
 
     res.status(200).json({

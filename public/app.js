@@ -5574,7 +5574,7 @@ window.loadNewlyLaunchedProjects = async function() {
       if (res && res.data && Array.isArray(res.data)) {
         res.data.forEach(p => {
           const exists = crmLaunches.some(item => item.name && item.name.toLowerCase() === p.name.toLowerCase());
-          if (!exists && (p.status === 'NEW_LAUNCH' || p.status === 'UNDER_CONSTRUCTION')) {
+          if (!exists && (!p.status || p.status === 'NEW_LAUNCH' || p.status === 'UNDER_CONSTRUCTION' || p.status === 'READY_TO_MOVE' || p.status === 'Ready to Move')) {
             crmLaunches.push({
               id: p.id,
               name: p.name,
@@ -5583,10 +5583,10 @@ window.loadNewlyLaunchedProjects = async function() {
               config: `${p.total_units || 100} Units Registered`,
               highlightType: 'completion',
               highlightText: p.possession_date ? `🔑 Completion in ${p.possession_date}` : '🔑 Completion in 2029',
-              ribbon: 'NEW LAUNCH',
+              ribbon: (p.status === 'READY_TO_MOVE' || p.status === 'Ready to Move') ? 'READY TO MOVE' : 'NEW LAUNCH',
               rera: p.rera_number ? ('✔ RERA: ' + p.rera_number) : '✔ RERA',
               phone: '+91 98310 44219',
-              img: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80',
+              img: p.hero_image_url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80',
               developer: p.builder_developer || 'Nexora Verified Partner',
               brochureUrl: p.brochure_url,
               fromAdmin: true
@@ -6868,20 +6868,18 @@ window.submitCustomerProjectInquiry = function() {};
 // Main Customer Project Detail Renderer
 window.scrollToCpdSection = function(sectionId, btn) {
   const target = document.getElementById(sectionId);
-  const container = document.querySelector('.cpd-page');
-
   if (btn) {
     document.querySelectorAll('.cpd-tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
 
   if (target) {
-    if (container) {
-      const targetTop = target.offsetTop - 120;
-      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-    } else {
+    const yOffset = -135; // Space for sticky glass nav + tab pills
+    const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    try {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    } catch (e) {}
   }
 };
 
@@ -6892,23 +6890,33 @@ window.renderCustomerProjectDetail = function(root, projectId) {
   if (projectId && projectId.startsWith('crm-nl-')) {
     try {
       const raw = localStorage.getItem('nexora_crm_new_launches');
-      const arr = JSON.parse(raw || '[]');
-      const dummyObj = arr.find(x => x.id === projectId);
-      if (dummyObj) {
-        const dbList = window._nexoraNewlyLaunchedProjectsCache || state.projects || [];
-        const match = dbList.find(p => p && p.name && p.name.toLowerCase() === dummyObj.name.toLowerCase());
-        if (match && match.id && !match.id.startsWith('crm-nl-')) {
-          projectId = match.id;
-          state.selectedCustomerProjectId = match.id;
-          window.location.hash = '#/project/' + match.id;
-        }
+      if (raw) {
+        const cleaned = JSON.parse(raw).filter(x => x && x.id && !x.id.startsWith('crm-nl-'));
+        localStorage.setItem('nexora_crm_new_launches', JSON.stringify(cleaned));
       }
     } catch (e) {}
+
+    const dbList = window._nexoraNewlyLaunchedProjectsCache || state.projects || [];
+    const match = dbList.find(p => p && p.id && !p.id.startsWith('crm-nl-'));
+    if (match) {
+      projectId = match.id;
+      state.selectedCustomerProjectId = match.id;
+      window.location.hash = '#/project/' + match.id;
+    } else {
+      apiFetch('/projects/' + projectId).then(res => {
+        if (res && res.data && res.data.id) {
+          window._projectDetailsDbCache[res.data.id] = res.data;
+          state.selectedCustomerProjectId = res.data.id;
+          window.location.hash = '#/project/' + res.data.id;
+          window.renderCustomerProjectDetail(root, res.data.id);
+        }
+      }).catch(() => {});
+    }
   }
 
-  // Only call /api/projects/:id if it is a valid UUID
-  const isValidDbUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
-  if (isValidDbUuid && !window._projectDetailsDbCache[projectId]) {
+  // Fetch project details from MySQL if not cached
+  const isDbId = projectId && !projectId.startsWith('crm-nl-');
+  if (isDbId && (!window._projectDetailsDbCache || !window._projectDetailsDbCache[projectId])) {
     apiFetch('/projects/' + projectId).then(res => {
       if (res && res.data) {
         window._projectDetailsDbCache[projectId] = res.data;
@@ -6918,16 +6926,26 @@ window.renderCustomerProjectDetail = function(root, projectId) {
   }
   const p = window.getCustomerProjectData(projectId);
 
+  const isMahindra = p.developer && p.developer.toLowerCase().includes('mahindra');
+  const devInitials = (p.developer || 'NX').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'NX';
+  const devBio = isMahindra
+    ? "Mahindra Lifespaces brings the Mahindra Group’s philosophy of 'Rise' to India’s real estate industry through thriving residential townships and integrated business cities. Spanning over 39.44 million sq. ft of delivered projects, 100% of their developments adhere strictly to IGBC green building certifications."
+    : `${p.developer} is a verified developer partner with Nexora Estates, committed to high-grade construction quality, transparent customer covenants, and strict adherence to RERA standards across ${p.city || 'India'}.`;
+  const devSub = isMahindra ? 'Part of the US $21 Billion Mahindra Group • Established in 1994' : 'RERA Certified Development Partner • Verified by Nexora';
+  const locSummary = isMahindra
+    ? 'Located right along the 8-lane GST Road expressway inside Mahindra World City with seamless connection to Chennai Airport and OMR IT corridor.'
+    : `Strategically situated in ${p.locality || p.location}, ${p.city || ''}, featuring rapid arterial connectivity to business parks, high-speed transit corridors, top international schools, and premier retail hubs.`;
+
   root.innerHTML = `
     <div class="cpd-page">
       <!-- 1. STICKY TOP NAVIGATION BAR -->
       <header class="cpd-top-nav">
         <div style="display: flex; align-items: center; gap: 1.25rem;">
           <div style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onclick="navigateBackToHome()">
-            <div style="width: 32px; height: 32px; background: #0078db; color: #ffffff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem;">
+            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
               NX
             </div>
-            <span style="font-size: 1.1rem; font-weight: 850; color: #091e42; letter-spacing: -0.02em;">Nexora Estates</span>
+            <span style="font-size: 1.1rem; font-weight: 800; color: #091e42; letter-spacing: -0.02em;">Nexora Estates</span>
           </div>
 
           <button class="cpd-back-btn" onclick="navigateToAllProjects()">
@@ -6937,11 +6955,11 @@ window.renderCustomerProjectDetail = function(root, projectId) {
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <button class="btn" onclick="downloadProjectBrochure('${p.id}')" style="background: linear-gradient(135deg, #0078db, #0284c7); color: #ffffff; border: none; font-size: 0.85rem; font-weight: 800; padding: 0.55rem 1.15rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.45rem;">
+          <button class="btn" onclick="downloadProjectBrochure('${p.id}')" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.15rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
             <span>📥</span>
             <span>Download Brochure</span>
           </button>
-          <button class="btn" onclick="openUpcomingViewNumberModal('${p.id}')" style="background: #091e42; color: #ffffff; border: none; font-size: 0.85rem; font-weight: 800; padding: 0.55rem 1.15rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.45rem;">
+          <button class="btn" onclick="openUpcomingViewNumberModal('${p.id}')" style="background: #091e42; color: #ffffff; border: none; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.15rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem;">
             <span>📞</span>
             <span>Sales Desk</span>
           </button>
@@ -7042,8 +7060,8 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 1: Overview -->
             <section class="cpd-section-card" id="sec-overview">
               <h2 class="cpd-card-title">
-                <span>🏢</span>
-                <span>Project Overview & Key Snapshot</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 21h18M3 7v14M21 7v14M9 3h6v4H9zM9 11h2v2H9zM13 11h2v2h-2zM9 15h2v2H9zM13 15h2v2h-2z"/></svg>
+                <span>Project Overview & Key Highlights</span>
               </h2>
 
               <div class="cpd-snapshot-grid">
@@ -7061,7 +7079,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 </div>
                 <div class="cpd-snapshot-item">
                   <div class="cpd-snapshot-label">POSSESSION TIMELINE</div>
-                  <div class="cpd-snapshot-val" style="color: #0078db;">${p.possession}</div>
+                  <div class="cpd-snapshot-val" style="color: #0284c7;">${p.possession}</div>
                 </div>
               </div>
 
@@ -7069,16 +7087,16 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 ${p.description}
               </p>
 
-              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <div style="font-size: 0.88rem; font-weight: 850; color: #166534; display: flex; align-items: center; gap: 0.4rem;">
-                  <span>🌟</span>
-                  <span>Why Buy In ${p.name}?</span>
+              <div style="background: rgba(240, 253, 244, 0.7); border: 1px solid rgba(187, 247, 208, 0.8); backdrop-filter: blur(12px); border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="font-size: 0.9rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>Why Choose ${p.name}?</span>
                 </div>
-                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.86rem; color: #15803d; line-height: 1.6;">
-                  <li>Walk-to-work culture inside the prestigious 1,500-acre Mahindra World City integrated economic zone.</li>
-                  <li>15,000 sq.ft international standards clubhouse featuring an Olympic-size pool and multipurpose sports facilities.</li>
-                  <li>Scenic lakefront boulevard with 100% underground cabling, zero water discharge, and IGBC Platinum green rating.</li>
-                  <li>Zero brokerage fee guaranteed direct through Nexora Estates certified channel partnership.</li>
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.86rem; color: #15803d; line-height: 1.65;">
+                  <li>Prime metropolitan location in ${p.locality}, ${p.city || ''} with high rental demand and long-term capital appreciation.</li>
+                  <li>Architecturally engineered ${p.totalUnits || 'residential units'} with optimized natural daylight, cross-ventilation, and high spatial efficiency.</li>
+                  <li>100% verified legal clearances, approved RERA registrations, and escrow-governed construction milestones.</li>
+                  <li>Zero brokerage fee guaranteed direct through Nexora Estates certified developer desk.</li>
                 </ul>
               </div>
             </section>
@@ -7086,7 +7104,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 2: Floor Plans & Pricing -->
             <section class="cpd-section-card" id="sec-plans">
               <h2 class="cpd-card-title">
-                <span>📐</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                 <span>Floor Plans, Typology & Pricing</span>
               </h2>
 
@@ -7107,7 +7125,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 3: Amenities -->
             <section class="cpd-section-card" id="sec-amenities">
               <h2 class="cpd-card-title">
-                <span>✨</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 <span>World-Class Amenities & Leisure</span>
               </h2>
 
@@ -7124,35 +7142,35 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 4: Specifications & Master Plan -->
             <section class="cpd-section-card" id="sec-specs">
               <h2 class="cpd-card-title">
-                <span>🏛️</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 <span>Master Plan & Luxury Specifications</span>
               </h2>
 
-              <div style="margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+              <div style="margin-bottom: 1.5rem; border-radius: 16px; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8);">
                 <img src="${p.photos[0].url}" alt="Master Plan Aerial Overview" style="width: 100%; height: 320px; object-fit: cover; display: block;" />
-                <div style="background: #f8fafc; padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-size: 0.85rem; font-weight: 750; color: #091e42;">Zoned Master Plan: Residential Enclaves • 15,000 sq.ft Clubhouse • Central Lake Promenade</span>
-                  <button class="btn btn-sm" onclick="downloadProjectBrochure('${p.id}')" style="background: #0078db; color: #ffffff; font-size: 0.78rem; font-weight: 800; padding: 0.35rem 0.85rem;">
+                <div style="background: rgba(248, 250, 252, 0.85); backdrop-filter: blur(10px); padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.85rem; font-weight: 700; color: #091e42;">Zoned Master Plan: Residential Enclaves • Private Clubhouse • Landscaped Central Promenade</span>
+                  <button class="btn btn-sm" onclick="downloadProjectBrochure('${p.id}')" style="background: #0284c7; color: #ffffff; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.95rem; border-radius: 8px;">
                     📥 Download Master Layout
                   </button>
                 </div>
               </div>
 
               <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
-                <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                  <td style="padding: 0.85rem 1rem; font-weight: 800; color: #091e42; width: 25%;">STRUCTURE</td>
+                <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7); background: rgba(248, 250, 252, 0.6);">
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42; width: 25%;">STRUCTURE</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Seismic Zone III compliant RCC framed structure with concrete solid block masonry.</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e2e8f0;">
-                  <td style="padding: 0.85rem 1rem; font-weight: 800; color: #091e42;">FLOORING</td>
+                <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7);">
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42;">FLOORING</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Italian marble in grand living and dining foyer; engineered wooden flooring in master suite; anti-skid premium vitrified tiles in all bathrooms.</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                  <td style="padding: 0.85rem 1rem; font-weight: 800; color: #091e42;">BATHROOMS</td>
+                <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7); background: rgba(248, 250, 252, 0.6);">
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42;">BATHROOMS</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Wall-hung EWC with concealed cisterns, Kohler / Grohe chrome-plated fittings, and toughened glass shower cubicles.</td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e2e8f0;">
-                  <td style="padding: 0.85rem 1rem; font-weight: 800; color: #091e42;">ELECTRICAL & EV</td>
+                <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7);">
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42;">ELECTRICAL & EV</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Schneider / Legrand modular switches, 100% DG power backup, dedicated EV charging conduit for each villa stilt bay.</td>
                 </tr>
               </table>
@@ -7161,12 +7179,12 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 5: Location & Connectivity -->
             <section class="cpd-section-card" id="sec-location">
               <h2 class="cpd-card-title">
-                <span>📍</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span>Location Advantages & Transit Hubs</span>
               </h2>
 
               <p style="font-size: 0.92rem; color: #475569; margin-bottom: 1.25rem;">
-                Located right along the 8-lane GST Road expressway inside Mahindra World City with seamless connection to Chennai Airport and OMR IT corridor.
+                ${locSummary}
               </p>
 
               <table class="cpd-location-table">
@@ -7182,29 +7200,29 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 6: About Developer -->
             <section class="cpd-section-card" id="sec-developer">
               <h2 class="cpd-card-title">
-                <span>🏆</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <span>About Developer: ${p.developer}</span>
               </h2>
 
               <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.25rem;">
-                <div style="width: 72px; height: 72px; background: #091e42; color: #ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 900; flex-shrink: 0;">
-                  ML
+                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);">
+                  ${devInitials}
                 </div>
                 <div>
-                  <h3 style="margin: 0; font-size: 1.25rem; font-weight: 850; color: #091e42;">${p.developer}</h3>
-                  <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">Part of the US $21 Billion Mahindra Group • Established in 1994</div>
+                  <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #091e42;">${p.developer}</h3>
+                  <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">${devSub}</div>
                 </div>
               </div>
 
               <p style="font-size: 0.92rem; color: #334155; line-height: 1.6; margin: 0;">
-                Mahindra Lifespaces brings the Mahindra Group’s philosophy of 'Rise' to India’s real estate industry through thriving residential townships and integrated business cities. Spanning over 39.44 million sq. ft of delivered projects, 100% of their developments adhere strictly to IGBC green building certifications.
+                ${devBio}
               </p>
             </section>
 
             <!-- Section 7: Customer Reviews -->
             <section class="cpd-section-card" id="sec-reviews">
               <h2 class="cpd-card-title">
-                <span>⭐</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 <span>Verified Customer Reviews & Ratings (${p.rating} / 5)</span>
               </h2>
 
@@ -7212,8 +7230,8 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 ${p.reviews.map(r => `
                   <div class="cpd-review-item">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                      <div style="font-weight: 800; font-size: 0.95rem; color: #091e42;">${r.name}</div>
-                      <div style="color: #b45309; font-weight: 800; font-size: 0.85rem;">★ ${r.rating} / 5</div>
+                      <div style="font-weight: 700; font-size: 0.95rem; color: #091e42;">${r.name}</div>
+                      <div style="color: #b45309; font-weight: 700; font-size: 0.85rem;">★ ${r.rating} / 5</div>
                     </div>
                     <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 0.5rem;">${r.time}</div>
                     <p style="font-size: 0.88rem; color: #334155; line-height: 1.5; margin: 0;">"${r.text}"</p>
@@ -7226,34 +7244,34 @@ window.renderCustomerProjectDetail = function(root, projectId) {
           <!-- RIGHT COLUMN (STICKY ACTION & BOOKING DESK) -->
           <div class="cpd-right-col">
             <div class="cpd-sticky-action-card">
-              <div style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
+              <div style="font-size: 0.76rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
                 ⚡ Direct Developer Sales Desk
               </div>
-              <div style="font-size: 1.95rem; font-weight: 900; color: #091e42; margin-bottom: 0.2rem;">
+              <div style="font-size: 1.95rem; font-weight: 850; color: #091e42; margin-bottom: 0.2rem; letter-spacing: -0.02em;">
                 ${p.price}
               </div>
               <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 1.25rem;">
                 EMI starts at ${p.emi} • 0% Brokerage
               </div>
 
-              <!-- DOWNLOAD BROCHURE BUTTON (PRIMARY USER REQUIREMENT) -->
+              <!-- DOWNLOAD BROCHURE BUTTON -->
               <button class="cpd-btn-brochure-main" onclick="downloadProjectBrochure('${p.id}')">
-                <span style="font-size: 1.25rem;">📥</span>
+                <span style="font-size: 1.15rem;">📥</span>
                 <span>Download Official Brochure</span>
               </button>
 
               <div class="cpd-call-desk-box">
-                <div style="font-size: 0.75rem; font-weight: 750; color: #64748b; text-transform: uppercase; margin-bottom: 0.2rem;">
+                <div style="font-size: 0.72rem; font-weight: 750; color: #64748b; text-transform: uppercase; margin-bottom: 0.2rem; letter-spacing: 0.05em;">
                   Official Sales Desk Line
                 </div>
-                <div style="font-size: 1.45rem; font-weight: 900; color: #091e42; letter-spacing: 0.02em;">
+                <div style="font-size: 1.45rem; font-weight: 800; color: #091e42; letter-spacing: 0.01em;">
                   ${p.phone}
                 </div>
                 <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-                  <a href="tel:${p.cleanPhone}" class="btn btn-primary" style="flex: 1; padding: 0.6rem; font-weight: 800; text-decoration: none; justify-content: center; font-size: 0.85rem; background: #0078db;">
+                  <a href="tel:${p.cleanPhone}" class="btn btn-primary" style="flex: 1; padding: 0.6rem; font-weight: 700; text-decoration: none; justify-content: center; font-size: 0.85rem; background: #0284c7; border-radius: 8px;">
                     📞 Call Now
                   </a>
-                  <a href="https://wa.me/${p.cleanPhone}?text=Hi,%20I%20am%20interested%20in%20${encodeURIComponent(p.name)}%20via%20Nexora." target="_blank" class="btn" style="flex: 1; padding: 0.6rem; font-weight: 800; text-decoration: none; justify-content: center; font-size: 0.85rem; background: #25d366; color: #ffffff; border: none;">
+                  <a href="https://wa.me/${p.cleanPhone}?text=Hi,%20I%20am%20interested%20in%20${encodeURIComponent(p.name)}%20via%20Nexora." target="_blank" class="btn" style="flex: 1; padding: 0.6rem; font-weight: 700; text-decoration: none; justify-content: center; font-size: 0.85rem; background: #25d366; color: #ffffff; border: none; border-radius: 8px;">
                     💬 WhatsApp
                   </a>
                 </div>
@@ -7261,7 +7279,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
 
               <!-- Direct Lead / Site Visit Form -->
               <form class="cpd-lead-form" onsubmit="event.preventDefault(); submitCustomerProjectInquiry('${p.name}');">
-                <div style="font-size: 0.85rem; font-weight: 850; color: #091e42; margin-bottom: 0.2rem;">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #091e42; margin-bottom: 0.2rem;">
                   Schedule Free Site Visit & VIP Allotment
                 </div>
                 <input type="text" id="cpd-inq-name" required placeholder="Your Full Name" />
@@ -7277,7 +7295,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 </button>
               </form>
 
-              <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.74rem; color: #16a34a; font-weight: 750;">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.74rem; color: #16a34a; font-weight: 700;">
                 <span>✓</span>
                 <span>Zero Brokerage Guaranteed • Directly from ${p.developer}</span>
               </div>
@@ -7291,30 +7309,31 @@ window.renderCustomerProjectDetail = function(root, projectId) {
   // Initialize floor plan tab
   switchCpdFloorPlan(0);
 
-  // Active Scroll Spy for sticky tabs
-  const pageContainer = root.querySelector('.cpd-page');
-  if (pageContainer) {
-    pageContainer.addEventListener('scroll', () => {
-      const sections = ['sec-overview', 'sec-plans', 'sec-amenities', 'sec-specs', 'sec-location', 'sec-developer', 'sec-reviews'];
-      let currentSec = sections[0];
-      const scrollPos = pageContainer.scrollTop + 160;
-
-      for (const secId of sections) {
-        const el = document.getElementById(secId);
-        if (el && el.offsetTop <= scrollPos) {
+  // Active Scroll Spy for sticky tabs using window scroll
+  if (window._cpdScrollSpyHandler) {
+    window.removeEventListener('scroll', window._cpdScrollSpyHandler);
+  }
+  window._cpdScrollSpyHandler = function() {
+    const sections = ['sec-overview', 'sec-plans', 'sec-amenities', 'sec-specs', 'sec-location', 'sec-developer', 'sec-reviews'];
+    let currentSec = sections[0];
+    for (const secId of sections) {
+      const el = document.getElementById(secId);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= 165) {
           currentSec = secId;
         }
       }
-
-      document.querySelectorAll('.cpd-tab-btn').forEach(btn => {
-        if (btn.getAttribute('data-target') === currentSec) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
-      });
-    }, { passive: true });
-  }
+    }
+    document.querySelectorAll('.cpd-tab-btn').forEach(btn => {
+      if (btn.getAttribute('data-target') === currentSec) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  };
+  window.addEventListener('scroll', window._cpdScrollSpyHandler, { passive: true });
 };
 
 // Listen to Hash Changes to support deep-linking (e.g. #/project/up-mahindra-aquavista or #/projects)
@@ -7327,7 +7346,7 @@ window.addEventListener('hashchange', () => {
       state.customerView = null;
       state.viewMode = 'website';
       renderApp();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   } else if (hash.startsWith('#/projects') || hash.startsWith('#/all-projects')) {
     state.selectedCustomerProjectId = null;

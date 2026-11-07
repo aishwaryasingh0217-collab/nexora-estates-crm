@@ -5,3 +5,6 @@ scratch/
 .DS_Store
 *.log
 realestate_crm_backup.sql
+
+# Private uploads (customer documents, project documents, test evidence) — never committed
+storage/

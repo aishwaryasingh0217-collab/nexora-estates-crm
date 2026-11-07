@@ -84,7 +84,40 @@ function runMigrations() {
   child.on('close', (code) => { if (code !== 0) console.error(`[boot] migrate.js exited with code ${code}`); });
 }
 
+/**
+ * Reminders, escalations and overdue checks (services/workflowJobs.js) every 5 minutes, plus the
+ * one-live-booking-per-unit database guard (switched on as soon as the data allows it).
+ * Several app copies may run; the jobs take a database lock so only one does the work.
+ */
+const WORKFLOW_EVERY_MS = 5 * 60 * 1000;
+let workflowErrorShown = false;
+function startWorkflowJobs() {
+  if (String(process.env.WORKFLOW_JOBS).toLowerCase() === 'false') return;
+  const run = () => require('./workflowJobs').runOnce()
+    .then(() => { workflowErrorShown = false; })
+    .catch((err) => {
+      if (!workflowErrorShown) console.warn('[workflow] checks skipped:', err.message);
+      workflowErrorShown = true;
+    });
+  setTimeout(run, 20 * 1000).unref();
+  setInterval(run, WORKFLOW_EVERY_MS).unref();
+
+  pool.getConnection().then(async (conn) => {
+    try {
+      const guard = await require('../../database/integrity').ensureBookingGuard(conn);
+      if (!guard.guarded) {
+        console.warn(`[integrity] ${guard.duplicates.length} unit(s) already have more than one live booking (${guard.duplicates.map((d) => d.unit).join(', ')}); cancel the extras to switch on the double-booking guard.`);
+      }
+    } catch (err) {
+      console.warn('[integrity] booking guard not checked:', err.message);
+    } finally {
+      conn.release();
+    }
+  }).catch(() => {});
+}
+
 function startBootTasks() {
+  startWorkflowJobs();
   if (isPublicDemo()) {
     printLastRebuild();
     const tick = () => checkDemo().catch((err) => console.error('[boot] demo check failed:', err.message));

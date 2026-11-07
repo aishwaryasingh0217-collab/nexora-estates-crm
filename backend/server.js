@@ -28,6 +28,7 @@ const channelPartnerRoutes = require('./routes/channelPartnerRoutes');
 const marketplaceRoutes = require('./routes/marketplaceRoutes');
 const rentalNewsRoutes = require('./routes/rentalNewsRoutes');
 const workspaceRoutes = require('./routes/workspaceRoutes');
+const suiteRoutes = require('./routes/suiteRoutes');
 const { fieldRoleGate } = require('./middleware/accessGate');
 
 const app = express();
@@ -95,6 +96,7 @@ apiRouter.use(fieldRoleGate);
 
 // API Routes Mounting on apiRouter
 apiRouter.use('/workspace', workspaceRoutes);
+apiRouter.use('/suite', suiteRoutes);
 apiRouter.use('/auth', authRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/projects', projectRoutes);

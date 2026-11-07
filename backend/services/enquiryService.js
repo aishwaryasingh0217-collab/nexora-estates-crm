@@ -103,12 +103,12 @@ async function bookRequestedVisit({ lead, project, when, ownerId, clientName, so
   await logActivity({ leadId: lead.id, type: 'VISIT', outcome: 'SCHEDULED', note: `Client booked a site visit online: ${project.name}, ${slot}. Call to confirm.` });
 
   if (agent.id !== ownerId) {
-    await notifyUser(agent.id, { type: 'REMINDER', title: `📍 New site visit: ${clientName}`, message: `${project.name}, ${slot} — booked by the client on the website.`, leadId: lead.id });
+    await notifyUser(agent.id, { type: 'REMINDER', title: `📍 New site visit: ${clientName}`, message: `${project.name}, ${slot} — booked by the client on the website.`, leadId: lead.id, category: 'VISIT_ASSIGNED' });
   }
-  await notifyUser(ownerId, { type: 'REMINDER', title: `📍 ${clientName} booked a visit`, message: `${project.name}, ${slot}${agent.id !== ownerId ? ` with ${agent.first_name}` : ''}. Call now to confirm.`, leadId: lead.id });
-  await notifyManagers({ type: 'INFO', title: `Site visit booked online: ${clientName}`, message: `${project.name}, ${slot} — ${fullName(agent.first_name, agent.last_name)}.`, leadId: lead.id });
+  await notifyUser(ownerId, { type: 'REMINDER', title: `📍 ${clientName} booked a visit`, message: `${project.name}, ${slot}${agent.id !== ownerId ? ` with ${agent.first_name}` : ''}. Call now to confirm.`, leadId: lead.id, category: 'VISIT_UPDATE' });
+  await notifyManagers({ type: 'INFO', title: `Site visit booked online: ${clientName}`, message: `${project.name}, ${slot} — ${fullName(agent.first_name, agent.last_name)}.`, leadId: lead.id, category: 'VISIT_UPDATE' });
   if (lead.channel_partner_id) {
-    await notifyPartner(lead.channel_partner_id, { type: 'REMINDER', title: `Visit booked for ${clientName}`, message: `${project.name}, ${slot}.`, leadId: lead.id });
+    await notifyPartner(lead.channel_partner_id, { type: 'REMINDER', title: `Visit booked for ${clientName}`, message: `${project.name}, ${slot}.`, leadId: lead.id, category: 'VISIT_UPDATE' });
   }
   return { id: visitId, when, agent };
 }
@@ -154,7 +154,7 @@ async function captureEnquiry(payload = {}) {
       booked = await bookRequestedVisit({ lead: existing, project, when: visit.when, ownerId: owner, clientName: existingName, source });
     }
     if (!booked) {
-      await notifyUser(owner, { type: 'WARNING', title: `🔁 Re-enquiry: ${existingName}`, message: `Enquired again via ${sourceText(source)}${project ? ` about ${project.name}` : ''}. They're warm — call back soon.`, leadId: existing.id });
+      await notifyUser(owner, { type: 'WARNING', title: `🔁 Re-enquiry: ${existingName}`, message: `Enquired again via ${sourceText(source)}${project ? ` about ${project.name}` : ''}. They're warm — call back soon.`, leadId: existing.id, category: 'LEAD_ASSIGNED' });
     }
     const [[ownerRow]] = owner ? await pool.query('SELECT first_name FROM users WHERE id = ?', [owner]) : [[null]];
     return {
@@ -230,11 +230,12 @@ async function captureEnquiry(payload = {}) {
       type: owner ? 'INFO' : 'WARNING',
       title: owner ? `New enquiry: ${clientName}` : `Unassigned enquiry: ${clientName}`,
       message: owner ? `Via ${sourceText(source)}${project ? ` · ${project.name}` : ''} → ${fullName(owner.first_name, owner.last_name)}.` : `No agent is available right now. Please assign this enquiry from ${sourceText(source)}.`,
-      leadId
+      leadId,
+      category: 'LEAD_NEW'
     });
   }
   if (partnerId) {
-    await notifyPartner(partnerId, { type: 'SUCCESS', title: `New client from your link: ${clientName}`, message: `Registered under your firm and protected for ${CP_PROTECTION_DAYS} days.`, leadId });
+    await notifyPartner(partnerId, { type: 'SUCCESS', title: `New client from your link: ${clientName}`, message: `Registered under your firm and protected for ${CP_PROTECTION_DAYS} days.`, leadId, category: 'LEAD_NEW' });
   }
 
   return {

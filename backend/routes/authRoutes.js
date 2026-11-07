@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, getMe } = require('../controllers/authController');
+const { login, getMe, logout } = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { isDemoMode } = require('../services/demoMode');
 
@@ -12,6 +12,9 @@ router.get('/config', (req, res) => {
 
 // POST /api/auth/login
 router.post('/login', login);
+
+// POST /api/auth/logout — ends this device's session
+router.post('/logout', authenticateToken, logout);
 
 // GET /api/auth/me (Protected Route)
 router.get('/me', authenticateToken, getMe);

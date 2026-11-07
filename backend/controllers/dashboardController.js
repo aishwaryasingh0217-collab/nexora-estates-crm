@@ -74,10 +74,10 @@ const getDashboardStats = async (req, res, next) => {
     const [[siteVisitStats]] = await pool.query(`
       SELECT 
         COUNT(*) AS total_site_visits,
-        SUM(CASE WHEN status = 'SCHEDULED' THEN 1 ELSE 0 END) AS scheduled_visits,
+        SUM(CASE WHEN status IN ('ASSIGNED', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'RESCHEDULED') THEN 1 ELSE 0 END) AS scheduled_visits,
         SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_visits,
         SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_visits,
-        SUM(CASE WHEN status = 'NO_SHOW' THEN 1 ELSE 0 END) AS no_show_visits
+        SUM(CASE WHEN status IN ('NO_SHOW', 'MISSED') THEN 1 ELSE 0 END) AS no_show_visits
       FROM site_visits
     `);
 

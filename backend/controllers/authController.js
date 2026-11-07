@@ -43,7 +43,7 @@ const login = async (req, res, next) => {
     let users = [];
     try {
       const [dbUsers] = await pool.query(
-        `SELECT u.id, u.role_id, u.username, u.email, u.password_hash, u.first_name, u.last_name, u.phone, u.status, r.name AS role
+        `SELECT u.id, u.role_id, u.username, u.email, u.password_hash, u.first_name, u.last_name, u.phone, u.status, u.job_level, r.name AS role
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.username = ? OR u.email = ?`,
@@ -126,16 +126,24 @@ const login = async (req, res, next) => {
     const secret = process.env.JWT_SECRET || 'super_secret_jwt_key_realestate_crm_2026';
     const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
 
+    // Each sign-in is a session the user (or an administrator) can end from another device
+    const sessionId = crypto.randomUUID();
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
-        role_id: user.role_id
+        role_id: user.role_id,
+        sid: sessionId
       },
       secret,
       { expiresIn }
+    );
+    const { exp } = jwt.decode(token);
+    await pool.query(
+      `INSERT INTO user_sessions (id, user_id, ip_address, user_agent, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+      [sessionId, user.id, String(ipAddress).slice(0, 64), String(req.headers['user-agent'] || '').slice(0, 255), new Date(exp * 1000)]
     );
 
     // 7. Return response with token and user profile
@@ -151,6 +159,7 @@ const login = async (req, res, next) => {
         lastName: user.last_name,
         phone: user.phone,
         role: user.role,
+        jobLevel: user.job_level || 'EXECUTIVE',
         status: user.status
       }
     });
@@ -189,7 +198,23 @@ const getMe = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/auth/logout — ends this device's session (the token stops working immediately)
+ */
+const logout = async (req, res, next) => {
+  try {
+    if (req.user && req.user.sessionId) {
+      await pool.query('UPDATE user_sessions SET revoked_at = NOW(), revoked_by = ? WHERE id = ? AND revoked_at IS NULL', [req.user.id, req.user.sessionId]);
+    }
+    await recordAuditLog(req.user.id, req.user.id, 'LOGOUT', req.ip, {}).catch(() => {});
+    res.json({ status: 'success', message: 'Signed out.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  logout,
   login,
   getMe
 };

@@ -29,7 +29,8 @@ const SEEDS = [
   'seed_demo_data.js',
   'seed_channel_partners.js',
   'seed_marketplace_data.js',
-  'seed_sales_team.js'
+  'seed_sales_team.js',
+  'seed_business_suite.js'
 ];
 const KEEP_SETTINGS = ['vapid_public', 'vapid_private'];
 const connect = () => mysql.createConnection({

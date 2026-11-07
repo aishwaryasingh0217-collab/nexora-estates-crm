@@ -231,7 +231,7 @@ const getExecutiveAnalytics = async (req, res, next) => {
       `SELECT 
         COUNT(sv.id) AS total_visits,
         SUM(CASE WHEN sv.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_visits,
-        SUM(CASE WHEN sv.status = 'SCHEDULED' THEN 1 ELSE 0 END) AS scheduled_visits,
+        SUM(CASE WHEN sv.status IN ('ASSIGNED', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'RESCHEDULED') THEN 1 ELSE 0 END) AS scheduled_visits,
         SUM(CASE WHEN sv.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_visits
        FROM site_visits sv
        ${visitFilter} AND (sv.scheduled_time BETWEEN ? AND ?)`,

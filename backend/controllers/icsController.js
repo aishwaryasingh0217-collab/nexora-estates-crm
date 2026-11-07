@@ -51,13 +51,13 @@ function visitEvent(v, brand) {
   const client = fullName(v.first_name, v.last_name) || 'Client';
   const agent = fullName(v.agent_first_name, v.agent_last_name);
   const where = [v.project_name, v.location, v.city].filter(Boolean).join(', ');
-  const status = { CANCELLED: 'CANCELLED', NO_SHOW: 'CANCELLED' }[v.status] || 'CONFIRMED';
-  const prefix = v.status === 'COMPLETED' ? '✓ ' : v.status === 'CANCELLED' || v.status === 'NO_SHOW' ? '✗ ' : '';
+  const status = { CANCELLED: 'CANCELLED', NO_SHOW: 'CANCELLED', MISSED: 'CANCELLED', REQUESTED: 'TENTATIVE', PENDING_APPROVAL: 'TENTATIVE', ASSIGNED: 'TENTATIVE', RESCHEDULED: 'TENTATIVE' }[v.status] || 'CONFIRMED';
+  const prefix = v.status === 'COMPLETED' ? '✓ ' : ['CANCELLED', 'NO_SHOW', 'MISSED'].includes(v.status) ? '✗ ' : '';
   const description = [
     `Client: ${client}${v.phone ? ` (${v.phone})` : ''}`,
     agent ? `Site agent: ${agent}${v.agent_phone ? ` (${v.agent_phone})` : ''}` : null,
     v.partner_firm ? `Channel partner: ${v.partner_firm}` : null,
-    v.status && v.status !== 'SCHEDULED' ? `Status: ${v.status.replace('_', ' ').toLowerCase()}` : null,
+    v.status && v.status !== 'SCHEDULED' ? `Status: ${v.status.replace(/_/g, ' ').toLowerCase()}` : null,
     `— ${brand}`
   ].filter(Boolean).join('\n');
   const lines = [
@@ -71,7 +71,7 @@ function visitEvent(v, brand) {
     `DESCRIPTION:${icsEscape(description)}`,
     `STATUS:${status}`
   ];
-  if (status === 'CONFIRMED' && v.status === 'SCHEDULED') {
+  if (status === 'CONFIRMED' && ['SCHEDULED', 'ACCEPTED'].includes(v.status)) {
     lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEscape(`Site visit with ${client} in 1 hour`)}`, 'TRIGGER:-PT60M', 'END:VALARM');
   }
   lines.push('END:VEVENT');

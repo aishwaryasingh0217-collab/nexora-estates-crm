@@ -9,16 +9,25 @@
 (function () {
   'use strict';
 
-  // Configurable iframe URL (can be set by user, in-page settings, or localStorage)
+  // Storage can be blocked (some private modes); the widget must still work
+  const readStored = (store, key) => { try { return store.getItem(key); } catch { return null; } };
+
+  // The trained Kratu bot, as an iframe page (public/ai-chat.html). The in-page settings can switch
+  // this browser to another bot URL, or to the built-in concierge (saved as '').
+  const DEFAULT_IFRAME_URL = '/ai-chat.html';
+  const savedIframeUrl = readStored(localStorage, 'nexora_ai_iframe_url');
+
   window.NEXORA_AI_BOT_CONFIG = {
-    iframeUrl: localStorage.getItem('nexora_ai_iframe_url') || '',
+    iframeUrl: savedIframeUrl !== null ? savedIframeUrl : DEFAULT_IFRAME_URL,
     videoSrc: '/video/gemini_generated_video_759b32b2.mp4',
     title: 'Nexora AI Assistant',
     subtitle: 'Live AI Concierge • Instant Help',
   };
 
+  const attr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
   let isOpen = false;
-  let bubbleDismissed = sessionStorage.getItem('nx_bot_bubble_dismissed') === 'true';
+  let bubbleDismissed = readStored(sessionStorage, 'nx_bot_bubble_dismissed') === 'true';
   let videoEl = null;
   let canvasEl = null;
   let ctx = null;
@@ -52,9 +61,9 @@
           <div class="nx-bot-bubble-tail"></div>
         </div>
 
-        <!-- Transparent Chroma Video Canvas Avatar (No Circle, No Outline, Center of Attraction) -->
+        <!-- Transparent Chroma Video Canvas Avatar (Full Body & Waving Hand Visible, No Outline) -->
         <button class="nx-bot-avatar-btn" id="nx-bot-avatar-btn" aria-label="Open Nexora AI Assistant Chat">
-          <canvas id="nx-bot-canvas" class="nx-bot-canvas" width="320" height="320"></canvas>
+          <canvas id="nx-bot-canvas" class="nx-bot-canvas" width="440" height="345"></canvas>
           <div class="nx-bot-status-pill">
             <span class="nx-bot-pulse-dot"></span>
             <span class="nx-bot-status-text">AI Online</span>
@@ -95,7 +104,7 @@
           <div class="nx-bot-config-inner">
             <div class="nx-bot-config-label">🔗 Embed Your Trained Bot (Paste Iframe Code or URL):</div>
             <div class="nx-bot-config-input-group">
-              <input type="text" id="nx-bot-iframe-input" class="nx-bot-config-input" placeholder="e.g. https://... or <iframe src=...></iframe>" value="${window.NEXORA_AI_BOT_CONFIG.iframeUrl}">
+              <input type="text" id="nx-bot-iframe-input" class="nx-bot-config-input" placeholder="e.g. https://... or <iframe src=...></iframe>" value="${attr(window.NEXORA_AI_BOT_CONFIG.iframeUrl)}">
               <button type="button" class="nx-bot-config-save-btn" id="nx-bot-config-save-btn">Embed</button>
             </div>
             ${window.NEXORA_AI_BOT_CONFIG.iframeUrl ? `<button type="button" class="nx-bot-config-reset-btn" id="nx-bot-config-reset-btn">Reset to Built-in AI Concierge</button>` : ''}
@@ -134,10 +143,11 @@
 
   function renderChatBodyContent() {
     if (window.NEXORA_AI_BOT_CONFIG.iframeUrl) {
+      // Loaded when the chat first opens (openChat), so visitors who never open it don't load the bot
       return `
         <div class="nx-bot-iframe-container">
           <iframe
-            src="${window.NEXORA_AI_BOT_CONFIG.iframeUrl}"
+            ${isOpen ? 'src' : 'data-src'}="${attr(window.NEXORA_AI_BOT_CONFIG.iframeUrl)}"
             title="Nexora AI Assistant"
             class="nx-bot-iframe"
             allow="clipboard-write; microphone; camera"
@@ -205,12 +215,11 @@
 
     function renderFrame() {
       if (videoEl.readyState >= 2) {
-        const vw = videoEl.videoWidth || 1280;
-        const vh = videoEl.videoHeight || 720;
-        const cropW = 460;
-        const cropH = 460;
-        const cropX = (vw - cropW) / 2;
-        const cropY = 135;
+        // Full character crop: includes waving hand, both shoulders, headset, and upper torso
+        const cropX = 180;
+        const cropY = 30;
+        const cropW = 900;
+        const cropH = 690;
 
         ctx.drawImage(videoEl, cropX, cropY, cropW, cropH, 0, 0, canvasEl.width, canvasEl.height);
         
@@ -228,9 +237,11 @@
           const sat = max - min;
           const bright = (r + g + b) / 3;
 
-          // Background chroma removal: grey backdrop detection with subtle hair feathering
-          const isBackground = (sat <= 14 && bright >= 40 && bright <= 85) || 
-                               (sat <= 18 && bright >= 44 && bright <= 75 && Math.abs(g - b) <= 4);
+          // Studio background: Cool slate grey where r <= g + 3 and r <= b + 3
+          // Preserves brunette hair, warm skin tones, waving hand, headset and turquoise jacket
+          const isCoolGrey = (r <= g + 3) && (r <= b + 3);
+          const isBackground = isCoolGrey && ((sat <= 14 && bright >= 40 && bright <= 85) || 
+                               (sat <= 18 && bright >= 44 && bright <= 75 && Math.abs(g - b) <= 4));
 
           if (isBackground) {
             if (sat > 11 || bright < 43 || bright > 80) {
@@ -244,10 +255,13 @@
 
         ctx.putImageData(frame, 0, 0);
 
-        // Also duplicate onto the small header canvas if visible
+        // Header thumbnail: crop neatly onto face
         if (headerCtx && isOpen) {
           headerCtx.clearRect(0, 0, headerCanvas.width, headerCanvas.height);
-          headerCtx.drawImage(canvasEl, 0, 0, headerCanvas.width, headerCanvas.height);
+          const faceCropX = Math.round(canvasEl.width * 0.28);
+          const faceCropY = 0;
+          const faceSize = Math.round(canvasEl.width * 0.44);
+          headerCtx.drawImage(canvasEl, faceCropX, faceCropY, faceSize, faceSize, 0, 0, headerCanvas.width, headerCanvas.height);
         }
       }
       animationId = requestAnimationFrame(renderFrame);
@@ -302,7 +316,7 @@
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         window.NEXORA_AI_BOT_CONFIG.iframeUrl = '';
-        localStorage.removeItem('nexora_ai_iframe_url');
+        localStorage.setItem('nexora_ai_iframe_url', ''); // '' = built-in concierge, not the default bot
         const input = document.getElementById('nx-bot-iframe-input');
         if (input) input.value = '';
         updateChatBody();
@@ -390,6 +404,8 @@
     const trigger = document.getElementById('nx-bot-trigger-wrapper');
     if (drawer) drawer.style.display = 'flex';
     if (trigger) trigger.classList.add('is-chat-open');
+    const frame = document.querySelector('#nx-bot-chat-body iframe[data-src]');
+    if (frame) { frame.src = frame.dataset.src; frame.removeAttribute('data-src'); }
     dismissBubble();
   }
 

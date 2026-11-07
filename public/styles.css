@@ -8413,7 +8413,7 @@ tr:hover td {
 /* Floating Trigger Container at Bottom-Right */
 .nx-bot-trigger-wrapper {
   position: fixed;
-  right: 18px;
+  right: 12px;
   bottom: 0px;
   z-index: 99990;
   display: flex;
@@ -8432,8 +8432,8 @@ tr:hover td {
 .nx-bot-speech-bubble {
   pointer-events: auto;
   position: absolute;
-  right: 158px;
-  bottom: 38px;
+  right: 210px;
+  bottom: 45px;
   width: 265px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(24px) saturate(190%);
@@ -8524,8 +8524,8 @@ tr:hover td {
 }
 
 .nx-bot-canvas {
-  width: 155px;
-  height: 155px;
+  width: 210px;
+  height: 165px;
   display: block;
   object-fit: contain;
   filter: drop-shadow(0 14px 28px rgba(10, 25, 55, 0.36)) drop-shadow(0 2px 8px rgba(2, 132, 199, 0.22));
@@ -8937,16 +8937,16 @@ tr:hover td {
 
 @media (max-width: 640px) {
   .nx-bot-trigger-wrapper {
-    right: 14px;
-    bottom: 14px;
+    right: 4px;
+    bottom: 0px;
   }
   .nx-bot-canvas {
-    width: 115px;
-    height: 115px;
+    width: 170px;
+    height: 133px;
   }
   .nx-bot-speech-bubble {
-    right: 120px;
-    bottom: 24px;
+    right: 170px;
+    bottom: 30px;
     width: 200px;
     padding: 10px 12px;
   }

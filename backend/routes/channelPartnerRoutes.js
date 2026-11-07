@@ -13,10 +13,11 @@ const { authorizeRoles } = require('../middleware/roleMiddleware');
 
 router.use(authenticateToken);
 
-router.get('/summary', getBrokerSummary);
-router.get('/commissions', getBrokerSummary);
+const { denyFieldRoles } = require('../services/recordScope');
+router.get('/summary', denyFieldRoles(), getBrokerSummary);
+router.get('/commissions', denyFieldRoles(), getBrokerSummary);
 router.get('/leaderboard', getChannelPartners);
-router.get('/payouts', getBrokerSummary);
+router.get('/payouts', denyFieldRoles(), getBrokerSummary);
 router.get('/', getChannelPartners);
 router.get('/:id', getChannelPartnerById);
 

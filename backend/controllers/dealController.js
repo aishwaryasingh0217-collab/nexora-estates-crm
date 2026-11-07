@@ -1,6 +1,13 @@
 const crypto = require('crypto');
 const pool = require('../config/db');
 const { createNotification, broadcastToAdmins } = require('../services/notificationService');
+const { leadIdScope } = require('../services/recordScope');
+/** Bookings an agent or partner may see on the older screens (null = no limit). */
+const dealScope = (user) => {
+  if (user && user.role === 'CHANNEL_PARTNER') return { sql: 'd.channel_partner_id = ?', params: [user.channelPartnerId || '__none__'] };
+  const s = leadIdScope(user, 'd.lead_id');
+  return s ? { sql: `(d.created_by = ? OR ${s.sql})`, params: [user.id, ...s.params] } : null;
+};
 
 /**
  * GET /api/deals
@@ -22,7 +29,7 @@ const getDeals = async (req, res, next) => {
       JOIN units un ON d.unit_id = un.id
       JOIN projects p ON un.project_id = p.id
       JOIN users u ON d.created_by = u.id
-      LEFT JOIN payments py ON d.id = py.deal_id
+      LEFT JOIN payments py ON d.id = py.deal_id AND py.verification_status = 'VERIFIED'
       WHERE 1=1
     `;
     const params = [];
@@ -42,6 +49,13 @@ const getDeals = async (req, res, next) => {
     if (search) {
       query += ` AND (d.deal_number LIKE ? OR c.first_name LIKE ? OR c.last_name LIKE ? OR un.unit_number LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    // Agents see bookings for their own clients; partners see their firm's bookings
+    const scope = dealScope(req.user);
+    if (scope) {
+      query += ` AND ${scope.sql}`;
+      params.push(...scope.params);
     }
 
     query += ` GROUP BY d.id ORDER BY d.created_at DESC`;
@@ -75,8 +89,8 @@ const getDealById = async (req, res, next) => {
        JOIN units un ON d.unit_id = un.id
        JOIN projects p ON un.project_id = p.id
        JOIN users u ON d.created_by = u.id
-       WHERE d.id = ?`,
-      [req.params.id]
+       WHERE d.id = ?${dealScope(req.user) ? ` AND ${dealScope(req.user).sql}` : ''}`,
+      [req.params.id, ...(dealScope(req.user) ? dealScope(req.user).params : [])]
     );
 
     if (deals.length === 0) {

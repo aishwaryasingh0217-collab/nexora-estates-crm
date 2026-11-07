@@ -58,7 +58,7 @@ const getDashboardStats = async (req, res, next) => {
       FROM deals
     `);
 
-    const [[paymentStats]] = await pool.query('SELECT COALESCE(SUM(amount_received), 0) AS total_revenue_realized FROM payments');
+    const [[paymentStats]] = await pool.query('SELECT COALESCE(SUM(amount_received), 0) AS total_revenue_realized FROM payments WHERE verification_status = \'VERIFIED\'');
 
     // 5. Recent Audit Activity Logs
     const [recentActivity] = await pool.query(`

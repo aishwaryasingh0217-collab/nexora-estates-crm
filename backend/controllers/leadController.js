@@ -3,6 +3,7 @@ const pool = require('../config/db');
 const { createNotification, broadcastToAdmins } = require('../services/notificationService');
 const { captureEnquiry, EnquiryError } = require('../services/enquiryService');
 const { logActivity, notifyPartner } = require('../services/salesWorkspace');
+const { leadScope } = require('../services/recordScope');
 
 /**
  * GET /api/leads
@@ -42,6 +43,13 @@ const getLeads = async (req, res, next) => {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
+    // Agents and partners only ever see their own leads here
+    const scope = leadScope(req.user, 'l');
+    if (scope) {
+      query += ` AND ${scope.sql}`;
+      params.push(...scope.params);
+    }
+
     query += ` ORDER BY l.created_at DESC`;
 
     const [leads] = await pool.query(query, params);
@@ -61,14 +69,15 @@ const getLeads = async (req, res, next) => {
  */
 const getLeadById = async (req, res, next) => {
   try {
+    const scope = leadScope(req.user, 'l');
     const [leads] = await pool.query(
       `SELECT l.*, p.name AS preferred_project_name,
               u.first_name AS agent_first_name, u.last_name AS agent_last_name
        FROM leads l
        LEFT JOIN projects p ON l.preferred_project_id = p.id
        LEFT JOIN users u ON l.assigned_agent_id = u.id
-       WHERE l.id = ?`,
-      [req.params.id]
+       WHERE l.id = ?${scope ? ` AND ${scope.sql}` : ''}`,
+      [req.params.id, ...(scope ? scope.params : [])]
     );
 
     if (leads.length === 0) {

@@ -64,7 +64,7 @@ const getDealMilestones = async (req, res, next) => {
     const [milestones] = await pool.query(
       `SELECT pm.*, COALESCE(SUM(py.amount_received), 0) AS total_paid
        FROM payment_milestones pm
-       LEFT JOIN payments py ON pm.id = py.milestone_id
+       LEFT JOIN payments py ON pm.id = py.milestone_id AND py.verification_status = 'VERIFIED'
        WHERE pm.deal_id = ?
        GROUP BY pm.id
        ORDER BY pm.due_date ASC`,
@@ -166,6 +166,7 @@ const getDemandNoticesSummary = async (req, res, next) => {
       LEFT JOIN (
         SELECT milestone_id, SUM(amount_received) AS paid_sum
         FROM payments
+        WHERE verification_status = 'VERIFIED'
         GROUP BY milestone_id
       ) paid_tbl ON pm.id = paid_tbl.milestone_id
       WHERE pm.status IN ('PENDING', 'PARTIAL')
@@ -231,6 +232,7 @@ const getEligibleDemandNotices = async (req, res, next) => {
       LEFT JOIN (
         SELECT milestone_id, SUM(amount_received) AS paid_sum
         FROM payments
+        WHERE verification_status = 'VERIFIED'
         GROUP BY milestone_id
       ) paid_tbl ON pm.id = paid_tbl.milestone_id
       WHERE pm.status IN ('PENDING', 'PARTIAL')

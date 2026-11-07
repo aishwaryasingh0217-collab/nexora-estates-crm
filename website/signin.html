@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — Nexora Estates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="signin.css" />
+</head>
+<body>
+
+  <!-- ── Nav ── -->
+  <header class="nav">
+    <div class="nav__inner">
+      <a href="index.html" class="nav__logo">Nexora Estates</a>
+    </div>
+  </header>
+
+  <!-- ── Sign-in card ── -->
+  <main class="main">
+    <div class="card">
+      <div class="card__header">
+        <h1 class="card__title">Sign in</h1>
+        <p class="card__sub">Access your CRM workspace</p>
+      </div>
+
+      <form class="form" id="signinForm" novalidate>
+
+        <div class="field">
+          <label class="field__label" for="email">Email address</label>
+          <input
+            class="field__input"
+            type="email"
+            id="email"
+            name="email"
+            placeholder="you@nexoraestates.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="password">
+            Password
+          </label>
+          <div class="field__input-wrap">
+            <input
+              class="field__input"
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" class="field__toggle" id="togglePassword" aria-label="Show password">
+              <!-- Eye icon -->
+              <svg id="eyeOpen" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <!-- Eye-off icon -->
+              <svg id="eyeClosed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <p class="form__error" id="formError" aria-live="polite"></p>
+
+        <button type="submit" class="btn btn--dark btn--full" id="submitBtn">
+          <span id="btnLabel">Continue</span>
+          <span id="btnSpinner" class="spinner" aria-hidden="true" style="display:none"></span>
+        </button>
+
+      </form>
+
+      <p class="card__footer-note">
+        Your account is managed by your organisation's administrator.
+      </p>
+    </div>
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <span class="footer__copy">© 2026 Nexora Estates. All rights reserved.</span>
+  </footer>
+
+  <script>
+    // ── Toggle password visibility ──
+    const toggleBtn = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const eyeOpen = document.getElementById('eyeOpen');
+    const eyeClosed = document.getElementById('eyeClosed');
+
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = passwordInput.type === 'password';
+      passwordInput.type = isHidden ? 'text' : 'password';
+      eyeOpen.style.display = isHidden ? 'none' : 'block';
+      eyeClosed.style.display = isHidden ? 'block' : 'none';
+    });
+
+    // ── Form submit → redirect to CRM ──
+    const form = document.getElementById('signinForm');
+    const formError = document.getElementById('formError');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnLabel = document.getElementById('btnLabel');
+    const btnSpinner = document.getElementById('btnSpinner');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      formError.textContent = '';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        formError.textContent = 'Please fill in all fields.';
+        return;
+      }
+
+      // Loading state
+      btnLabel.style.display = 'none';
+      btnSpinner.style.display = 'inline-block';
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Invalid credentials.');
+        }
+
+        // Store token and redirect to CRM
+        if (data.token) {
+          localStorage.setItem('nexora_token', data.token);
+        }
+        window.location.href = '/';
+
+      } catch (err) {
+        formError.textContent = err.message || 'Something went wrong. Please try again.';
+        btnLabel.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+
+</body>
+</html>

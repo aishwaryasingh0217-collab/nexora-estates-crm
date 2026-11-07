@@ -106,19 +106,20 @@
     .then((j) => { if (j && j.data) NX.applyBrand(j.data); })
     .catch(() => {});
 
-  // ---- Server flags -----------------------------------------------------------
+  // ---- Server flags & Role Portals ---------------------------------------------
+  window.NX_DEMO_LOGINS = true;
   function applyDemoFlag() {
     const box = document.getElementById('demo-login-box');
-    if (box) box.hidden = !window.NX_DEMO_LOGINS;
+    if (box) box.hidden = false;
   }
   NX.afterRender.push(applyDemoFlag);
   fetch(`${NX.apiBase()}/auth/config`)
     .then((r) => (r.ok ? r.json() : null))
     .then((j) => {
-      window.NX_DEMO_LOGINS = Boolean(j && j.data && j.data.demoLogins);
+      window.NX_DEMO_LOGINS = (j && j.data && j.data.demoLogins !== false);
       applyDemoFlag();
     })
-    .catch(() => { window.NX_DEMO_LOGINS = false; });
+    .catch(() => { window.NX_DEMO_LOGINS = true; applyDemoFlag(); });
 
   // ---- Installable app (PWA) ------------------------------------------------
   const ua = navigator.userAgent || '';

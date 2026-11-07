@@ -194,6 +194,11 @@ app.use('/nexora-crm', express.static(publicDir, staticOptions));
 app.use(express.static(distDir, staticOptions));
 app.use('/nexora-crm', express.static(distDir, staticOptions));
 
+const websiteDir = path.join(__dirname, '../website');
+if (fs.existsSync(websiteDir)) {
+  app.use('/website', express.static(websiteDir, staticOptions));
+}
+
 // Fallback to SPA index.html for non-API requests
 app.use((req, res, next) => {
   if (req.path.includes('/api/')) {

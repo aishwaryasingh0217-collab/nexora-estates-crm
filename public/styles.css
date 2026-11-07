@@ -4618,7 +4618,18 @@ tr:hover td {
 }
 
 /* ── CUSTOMER PROJECT DETAIL PAGE (NEXORA LUXURY GLASSMORPHISM & SMOOTH SCROLL) ── */
+html:has(.cpd-page),
+body:has(.cpd-page) {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scroll-behavior: smooth !important;
+}
+
 #app:has(.cpd-page) {
+  display: block !important;
+  width: 100% !important;
   height: auto !important;
   min-height: 100vh !important;
   overflow: visible !important;
@@ -4634,8 +4645,8 @@ tr:hover td {
     radial-gradient(ellipse 50% 50% at 10% 70%, rgba(16, 185, 129, 0.04) 0%, transparent 50%),
     #F8FAFC;
   color: #0F172A;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Plus Jakarta Sans", sans-serif;
-  letter-spacing: -0.015em;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Plus Jakarta Sans", "Inter", sans-serif;
+  letter-spacing: -0.018em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -4980,9 +4991,9 @@ tr:hover td {
 }
 
 .cpd-section-card:hover {
-  box-shadow: 0 20px 44px -10px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+  box-shadow: 0 24px 48px -10px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+  border-color: rgba(2, 132, 199, 0.25);
+  transform: translateY(-2px);
 }
 
 .cpd-card-title {

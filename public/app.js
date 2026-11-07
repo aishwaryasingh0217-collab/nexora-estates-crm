@@ -121,9 +121,8 @@ function setViewMode(mode) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 1-Click Role Demo Login Helper
+// 1-Click Role Portal Login Helper (Super Admin, Admin, Inside Sales, Outside Sales, Channel Partner)
 async function quickLoginAs(roleName) {
-  if (!window.NX_DEMO_LOGINS) return;
   const creds = {
     SUPER_ADMIN: { u: 'admin', p: 'AdminPassword123!', r: 'Super Admin' },
     ADMIN: { u: 'admin_ops', p: 'AdminPassword123!', r: 'Admin' },
@@ -164,10 +163,9 @@ async function quickLoginAs(roleName) {
     }
     login(res.token, res.user);
   } catch (e) {
-    // No fake sessions: a mock token only fails on the next API call and logs the user out.
     const errDiv = document.getElementById('login-error');
     const hint = /invalid credentials/i.test(e.message)
-      ? `Demo account "${target.u}" is not set up yet. Run: npm run migrate && npm run seed:workspace`
+      ? `Account "${target.u}" is not set up yet. Run: npm run migrate && npm run seed:workspace`
       : e.message;
     if (errDiv) {
       errDiv.innerText = hint;
@@ -181,6 +179,56 @@ async function quickLoginAs(roleName) {
     }
   }
 }
+
+// Global Portal Switcher (Switch between Super Admin, Sales Manager, Telecaller, Site Agent, Partner)
+window.switchPortalAs = async function(roleName) {
+  const creds = {
+    SUPER_ADMIN: { u: 'admin', p: 'AdminPassword123!', r: 'Super Admin' },
+    ADMIN: { u: 'admin_ops', p: 'AdminPassword123!', r: 'Admin' },
+    INSIDE_SALES: { u: 'telecaller', p: 'Telecaller123!', r: 'Inside Sales' },
+    OUTSIDE_SALES: { u: 'siteagent', p: 'Siteagent123!', r: 'Outside Sales' },
+    CHANNEL_PARTNER: { u: 'partner', p: 'Partner123!', r: 'Channel Partner' }
+  };
+  const target = creds[roleName] || creds.SUPER_ADMIN;
+  try {
+    const res = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ identifier: target.u, password: target.p })
+    });
+    if (res && res.token && res.user) {
+      try { localStorage.setItem('crm_surface', 'crm'); } catch (e) {}
+      if (res.user.role === 'INSIDE_SALES') {
+        state.currentView = 'leads';
+      } else if (res.user.role === 'OUTSIDE_SALES') {
+        state.currentView = 'calendar';
+      } else if (res.user.role === 'CHANNEL_PARTNER') {
+        state.currentView = 'channel-partners';
+      } else {
+        state.currentView = 'dashboard';
+      }
+      login(res.token, res.user);
+      if (typeof showToastNotification === 'function') {
+        showToastNotification(`✓ Switched to ${target.r} Portal`, 'success');
+      }
+    }
+  } catch (err) {
+    console.error('Portal switch failed:', err);
+    alert('Could not switch portal: ' + err.message);
+  }
+};
+
+window.togglePortalSwitcher = function() {
+  const menu = document.getElementById('portal-switcher-menu');
+  if (menu) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+};
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.portal-switcher-wrapper')) {
+    const menu = document.getElementById('portal-switcher-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
 
 // Theme Toggle Helper
 function toggleTheme() {
@@ -396,6 +444,33 @@ function renderApp() {
           <h1 class="page-title" id="page-title-heading">Executive Dashboard</h1>
         </div>
         <div class="header-actions" style="display: flex; gap: 0.6rem; align-items: center;">
+          <!-- 🔀 Global Role Portal Switcher -->
+          <div class="portal-switcher-wrapper" style="position: relative; display: inline-block;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePortalSwitcher()" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer; background: #0F172A; color: #FFFFFF; border: none; box-shadow: 0 2px 8px rgba(15,23,42,0.15);">
+              <span>🔀 Switch Portal</span>
+              <span style="font-size: 0.65rem;">▼</span>
+            </button>
+            <div id="portal-switcher-menu" style="display: none; position: absolute; right: 0; top: 120%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 16px 36px rgba(15,23,42,0.18); width: 250px; z-index: 1000; padding: 0.5rem; text-align: left;">
+              <div style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: #64748b; padding: 0.35rem 0.6rem; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; margin-bottom: 0.35rem;">
+                Select Role Portal
+              </div>
+              <button onclick="switchPortalAs('SUPER_ADMIN')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                👑 Super Admin (Director)
+              </button>
+              <button onclick="switchPortalAs('ADMIN')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                💼 Sales Manager (Admin)
+              </button>
+              <button onclick="switchPortalAs('INSIDE_SALES')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                📞 Inside Sales (Telecaller)
+              </button>
+              <button onclick="switchPortalAs('OUTSIDE_SALES')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                📍 Outside Sales (Site Agent)
+              </button>
+              <button onclick="switchPortalAs('CHANNEL_PARTNER')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                🤝 Channel Partner (Broker Desk)
+              </button>
+            </div>
+          </div>
           <button class="btn btn-secondary btn-sm" onclick="setViewMode('website')" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; padding: 0.45rem 0.85rem; border-radius: 8px; cursor: pointer;">
             🌐 Public Website
           </button>
@@ -6874,55 +6949,50 @@ window.scrollToCpdSection = function(sectionId, btn) {
   }
 
   if (target) {
-    const yOffset = -135; // Space for sticky glass nav + tab pills
-    const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset;
-    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-    try {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (e) {}
+    // 135px space for sticky glass nav + floating tab pills
+    const navOffset = 135;
+    const targetY = target.getBoundingClientRect().top + window.pageYOffset - navOffset;
+    window.scrollTo({
+      top: Math.max(0, targetY),
+      behavior: 'smooth'
+    });
   }
 };
 
 window.renderCustomerProjectDetail = function(root, projectId) {
   window._projectDetailsDbCache = window._projectDetailsDbCache || {};
 
-  // Auto-resolve any legacy dummy crm-nl- ID to real database project
-  if (projectId && projectId.startsWith('crm-nl-')) {
-    try {
-      const raw = localStorage.getItem('nexora_crm_new_launches');
-      if (raw) {
-        const cleaned = JSON.parse(raw).filter(x => x && x.id && !x.id.startsWith('crm-nl-'));
-        localStorage.setItem('nexora_crm_new_launches', JSON.stringify(cleaned));
-      }
-    } catch (e) {}
-
-    const dbList = window._nexoraNewlyLaunchedProjectsCache || state.projects || [];
-    const match = dbList.find(p => p && p.id && !p.id.startsWith('crm-nl-'));
-    if (match) {
-      projectId = match.id;
-      state.selectedCustomerProjectId = match.id;
-      window.location.hash = '#/project/' + match.id;
-    } else {
-      apiFetch('/projects/' + projectId).then(res => {
-        if (res && res.data && res.data.id) {
-          window._projectDetailsDbCache[res.data.id] = res.data;
-          state.selectedCustomerProjectId = res.data.id;
-          window.location.hash = '#/project/' + res.data.id;
-          window.renderCustomerProjectDetail(root, res.data.id);
-        }
-      }).catch(() => {});
-    }
+  // Ensure whole window and body allow natural, silky smooth scrolling
+  document.body.style.overflow = '';
+  document.body.style.overflowY = 'auto';
+  document.documentElement.style.overflow = '';
+  document.documentElement.style.overflowY = 'auto';
+  if (root) {
+    root.style.display = 'block';
+    root.style.height = 'auto';
+    root.style.minHeight = '100vh';
+    root.style.overflow = 'visible';
+    root.style.width = '100%';
   }
 
-  // Fetch project details from MySQL if not cached
-  const isDbId = projectId && !projectId.startsWith('crm-nl-');
-  if (isDbId && (!window._projectDetailsDbCache || !window._projectDetailsDbCache[projectId])) {
-    apiFetch('/projects/' + projectId).then(res => {
-      if (res && res.data) {
-        window._projectDetailsDbCache[projectId] = res.data;
-        window.renderCustomerProjectDetail(root, projectId);
-      }
-    }).catch(e => console.warn('Could not fetch project details:', e));
+  // Auto-resolve any legacy or temporary IDs to real database project
+  if (projectId) {
+    // Check if live DB details need to be loaded
+    if (!window._projectDetailsDbCache[projectId]) {
+      apiFetch('/projects/' + encodeURIComponent(projectId)).then(res => {
+        if (res && res.data && res.data.id) {
+          window._projectDetailsDbCache[res.data.id] = res.data;
+          window._projectDetailsDbCache[projectId] = res.data;
+          if (projectId.startsWith('crm-nl-') || projectId !== res.data.id) {
+            state.selectedCustomerProjectId = res.data.id;
+            try { history.replaceState(null, '', '#/project/' + res.data.id); } catch (e) {}
+            window.renderCustomerProjectDetail(root, res.data.id);
+          }
+        }
+      }).catch(err => {
+        console.warn('Project details loaded from cached state:', err.message);
+      });
+    }
   }
   const p = window.getCustomerProjectData(projectId);
 
@@ -9117,10 +9187,10 @@ function renderLoginView(root) {
             <p style="color: var(--text-muted); font-size: 0.82rem; margin: 0;">Select your operational role or enter credentials</p>
           </div>
 
-          <!-- 1-click demo logins: hidden unless the server runs in demo mode (see GET /api/auth/config) -->
-          <div id="demo-login-box" ${window.NX_DEMO_LOGINS ? '' : 'hidden'} style="margin-bottom: 1rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.65rem 0.75rem;">
+          <!-- 1-Click Role Portal Access -->
+          <div id="demo-login-box" style="margin-bottom: 1rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.65rem 0.75rem;">
             <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.45rem;">
-              ⚡ Quick Demo Access (1-Click Test)
+              ⚡ 1-Click Role Portal Access
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('SUPER_ADMIN')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">

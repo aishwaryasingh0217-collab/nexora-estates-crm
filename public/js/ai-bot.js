@@ -12,9 +12,10 @@
   // Storage can be blocked (some private modes); the widget must still work
   const readStored = (store, key) => { try { return store.getItem(key); } catch { return null; } };
 
-  // The trained Kratu bot, as an iframe page (public/ai-chat.html). The in-page settings can switch
-  // this browser to another bot URL, or to the built-in concierge (saved as '').
-  const DEFAULT_IFRAME_URL = '/ai-chat.html';
+  // The trained Kratu bot ("nexora"), as Kratu hosts it for iframes. It runs on iamkratu.ai, so it works
+  // on any website without adding that site to the widget's allowed domains in Kratu.
+  // The in-page settings can switch this browser to another bot URL, or to the built-in concierge (saved as '').
+  const DEFAULT_IFRAME_URL = 'https://iamkratu.ai/customer-chat/?key=3b381ebe07ec22f42ee075e82e45e330';
   const savedIframeUrl = readStored(localStorage, 'nexora_ai_iframe_url');
 
   window.NEXORA_AI_BOT_CONFIG = {
@@ -63,7 +64,7 @@
 
         <!-- Transparent Chroma Video Canvas Avatar (Full Body & Waving Hand Visible, No Outline) -->
         <button class="nx-bot-avatar-btn" id="nx-bot-avatar-btn" aria-label="Open Nexora AI Assistant Chat">
-          <canvas id="nx-bot-canvas" class="nx-bot-canvas" width="440" height="345"></canvas>
+          <canvas id="nx-bot-canvas" class="nx-bot-canvas" width="220" height="172"></canvas>
           <div class="nx-bot-status-pill">
             <span class="nx-bot-pulse-dot"></span>
             <span class="nx-bot-status-text">AI Online</span>
@@ -213,7 +214,22 @@
     const headerCanvas = document.getElementById('nx-bot-header-canvas');
     const headerCtx = headerCanvas ? headerCanvas.getContext('2d', { willReadFrequently: true }) : null;
 
-    function renderFrame() {
+    let lastFrameTime = 0;
+    const FRAME_INTERVAL = 40; // ~25 FPS throttled to match video framerate and free 85% CPU
+
+    function renderFrame(timestamp) {
+      animationId = requestAnimationFrame(renderFrame);
+
+      // Sleep when tab is hidden or minimized
+      if (document.hidden) return;
+
+      // Throttle CPU execution to ~25 FPS
+      if (timestamp && timestamp - lastFrameTime < FRAME_INTERVAL) return;
+      lastFrameTime = timestamp || 0;
+
+      // Skip heavy canvas loop if chat drawer is open (avatar is hidden)
+      if (isOpen && !headerCtx) return;
+
       if (videoEl.readyState >= 2) {
         // Full character crop: includes waving hand, both shoulders, headset, and upper torso
         const cropX = 180;
@@ -264,7 +280,6 @@
           headerCtx.drawImage(canvasEl, faceCropX, faceCropY, faceSize, faceSize, 0, 0, headerCanvas.width, headerCanvas.height);
         }
       }
-      animationId = requestAnimationFrame(renderFrame);
     }
 
     animationId = requestAnimationFrame(renderFrame);

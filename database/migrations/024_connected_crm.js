@@ -453,7 +453,7 @@ async function up(c) {
     lead_id VARCHAR(36) NULL,
     customer_id VARCHAR(36) NULL,
     status ENUM('INITIATED','RINGING_AGENT','AGENT_ANSWERED','RINGING_CUSTOMER','CONNECTED','COMPLETED','MISSED','REJECTED','FAILED','BUSY') NOT NULL DEFAULT 'INITIATED',
-    initiated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    initiated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     answered_at DATETIME NULL,
     connected_at DATETIME NULL,
     ended_at DATETIME NULL,
@@ -471,6 +471,7 @@ async function up(c) {
     INDEX idx_calls_lead (lead_id),
     INDEX idx_calls_status (status)
   ) ${T}`);
+  await addPrecision(c, 'call_logs', 'initiated_at');
 
   await c.query(`CREATE TABLE IF NOT EXISTS telephony_events (
     id VARCHAR(36) PRIMARY KEY,

@@ -29,6 +29,7 @@ const marketplaceRoutes = require('./routes/marketplaceRoutes');
 const rentalNewsRoutes = require('./routes/rentalNewsRoutes');
 const workspaceRoutes = require('./routes/workspaceRoutes');
 const suiteRoutes = require('./routes/suiteRoutes');
+const telephonyRoutes = require('./routes/telephonyRoutes');
 const { fieldRoleGate } = require('./middleware/accessGate');
 
 const app = express();
@@ -96,7 +97,9 @@ apiRouter.use(fieldRoleGate);
 
 // API Routes Mounting on apiRouter
 apiRouter.use('/workspace', workspaceRoutes);
+apiRouter.use('/suite/telephony', telephonyRoutes.staff);
 apiRouter.use('/suite', suiteRoutes);
+apiRouter.use('/telephony', telephonyRoutes.hooks); // provider webhooks (secret URL, no sign-in)
 apiRouter.use('/auth', authRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/projects', projectRoutes);

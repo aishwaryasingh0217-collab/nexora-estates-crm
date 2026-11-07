@@ -12,10 +12,10 @@
 
 .nxq-launch {
   position: fixed; z-index: 900;
-  right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 24px; right: auto; bottom: calc(20px + env(safe-area-inset-bottom));
   display: inline-flex; align-items: center; gap: 8px;
-  height: 52px; padding: 0 20px 0 16px; border: none; border-radius: 999px;
-  background: var(--nxq-brand); color: #fff; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+  height: 48px; padding: 0 18px 0 14px; border: none; border-radius: 999px;
+  background: var(--nxq-brand); color: #fff; font-weight: 700; font-size: 0.9rem; cursor: pointer;
   box-shadow: 0 10px 28px rgba(11, 92, 214, 0.35);
 }
 .nxq-launch[hidden] { display: none; }

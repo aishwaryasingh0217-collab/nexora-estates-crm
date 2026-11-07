@@ -11,6 +11,8 @@
  *   partner    / Partner123!         Channel Partner (Square Yards Realty Partners)
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env'), quiet: true });
+// Same business clock as the app (backend/config/db.js): "today" and working hours are local times
+process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const mysql = require('mysql2/promise');
@@ -113,6 +115,11 @@ async function main() {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME || 'realestate_crm'
   });
+  // Hosting databases usually run on UTC. Match this connection's clock to Node's, as the app's pool
+  // does, or times written to TIMESTAMP columns come out shifted (5½ hours for India).
+  const mins = -new Date().getTimezoneOffset();
+  const offset = `${mins >= 0 ? '+' : '-'}${String(Math.floor(Math.abs(mins) / 60)).padStart(2, '0')}:${String(Math.abs(mins) % 60).padStart(2, '0')}`;
+  await conn.query('SET time_zone = ?', [offset]);
 
   const [[roleCheck]] = await conn.query(`SELECT COUNT(*) AS n FROM roles WHERE name IN ('INSIDE_SALES','OUTSIDE_SALES','CHANNEL_PARTNER')`);
   if (Number(roleCheck.n) < 3) throw new Error('Field roles missing — run `npm run migrate` first.');

@@ -12,6 +12,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
 const pool = require('../config/db');
+const demoFingerprint = require('../../database/demoFingerprint');
 
 const ROOT = path.join(__dirname, '../..');
 const CHECK_EVERY_MS = 10 * 60 * 1000;
@@ -50,10 +51,13 @@ async function demoState() {
     return { empty: true }; // tables not created yet
   }
   try {
-    const [[row]] = await pool.query(`SELECT setting_value FROM company_settings WHERE setting_key = 'demo_last_reset'`);
-    return { empty: false, lastReset: row ? row.setting_value : null };
+    const [rows] = await pool.query(
+      `SELECT setting_key, setting_value FROM company_settings WHERE setting_key IN ('demo_last_reset', 'demo_fingerprint')`
+    );
+    const get = (k) => (rows.find((r) => r.setting_key === k) || {}).setting_value || null;
+    return { empty: false, lastReset: get('demo_last_reset'), fingerprint: get('demo_fingerprint') };
   } catch {
-    return { empty: false, lastReset: null };
+    return { empty: false, lastReset: null, fingerprint: null };
   }
 }
 
@@ -62,9 +66,10 @@ async function checkDemo() {
   const state = await demoState();
   const resetHour = Number.parseInt(process.env.DEMO_RESET_HOUR || '3', 10);
   const now = new Date();
-  const due = state.empty || (now.getHours() >= resetHour && state.lastReset !== localDay(now));
-  if (!due) return;
-  console.log(`[boot] ${state.empty ? 'Empty database: building the demo' : 'Daily demo rebuild'}…`);
+  const changed = !state.empty && state.fingerprint !== demoFingerprint();
+  const daily = now.getHours() >= resetHour && state.lastReset !== localDay(now);
+  if (!state.empty && !changed && !daily) return;
+  console.log(`[boot] ${state.empty ? 'Empty database: building the demo' : changed ? 'New demo data deployed: rebuilding the demo' : 'Daily demo rebuild'}…`);
   await runScript('demo_reset.js', ['--yes']);
 }
 

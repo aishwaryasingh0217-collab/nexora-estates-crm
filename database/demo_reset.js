@@ -78,7 +78,11 @@ const KEEP_SETTINGS = ['vapid_public', 'vapid_private'];
     database: process.env.DB_NAME
   });
   try {
-    for (const row of [...kept, { setting_key: 'demo_last_reset', setting_value: today }]) {
+    const marks = [
+      { setting_key: 'demo_last_reset', setting_value: today },
+      { setting_key: 'demo_fingerprint', setting_value: require('./demoFingerprint')() }
+    ];
+    for (const row of [...kept, ...marks]) {
       await db2.query(
         `INSERT INTO company_settings (setting_key, setting_value) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,

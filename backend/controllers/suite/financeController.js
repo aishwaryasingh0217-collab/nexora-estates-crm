@@ -90,6 +90,14 @@ const overdueMilestones = wrap(async (req, res) => {
 const refunds = wrap(async (req, res) => ok(res, await finance.listRefunds({ status: req.query.status || null })));
 const requestRefund = wrap(async (req, res) => {
   const b = req.body || {};
+  // Customer-care executives may request refunds only for customers assigned to them
+  if (req.user.role === 'CUSTOMER_RELATIONS' && req.user.jobLevel !== 'HEAD') {
+    const [[own]] = await pool.query(
+      'SELECT 1 FROM deals d JOIN customers c ON c.id = d.customer_id WHERE d.id = ? AND c.relationship_manager_id = ?',
+      [b.deal_id, req.user.id]
+    );
+    if (!own) throw httpError(404, 'Booking not found.');
+  }
   const r = await finance.requestRefund(req.user, { dealId: b.deal_id, paymentId: b.payment_id || null, amount: b.amount, reason: b.reason }, req);
   ok(res, r, `Refund ${r.refundNumber} sent for approval.`, 201);
 });

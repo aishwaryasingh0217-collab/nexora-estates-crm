@@ -5,6 +5,13 @@
 
 const crypto = require('crypto');
 const pool = require('../config/db');
+const { leadIdScope, isField } = require('../services/recordScope');
+/** Agents see tickets assigned to them or about their clients; partners see their clients' tickets. */
+const ticketScope = (user) => {
+  const s = leadIdScope(user, 't.lead_id');
+  if (!s) return null;
+  return user.role === 'CHANNEL_PARTNER' ? s : { sql: `(t.assigned_to = ? OR ${s.sql})`, params: [user.id, ...s.params] };
+};
 const { resolveCustomerIdentity } = require('../services/whatsappService');
 const {
   sendSupportTicketNotification,
@@ -147,6 +154,12 @@ const getTickets = async (req, res, next) => {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
+    const scope = ticketScope(req.user);
+    if (scope) {
+      query += ` AND ${scope.sql}`;
+      params.push(...scope.params);
+    }
+
     query += ` ORDER BY t.created_at DESC`;
 
     const [tickets] = await pool.query(query, params);
@@ -176,8 +189,8 @@ const getTicketById = async (req, res, next) => {
        LEFT JOIN customers c ON t.customer_id = c.id
        LEFT JOIN leads l ON t.lead_id = l.id
        LEFT JOIN users u ON t.assigned_to = u.id
-       WHERE t.id = ?`,
-      [req.params.id]
+       WHERE t.id = ?${ticketScope(req.user) ? ` AND ${ticketScope(req.user).sql}` : ''}`,
+      [req.params.id, ...(ticketScope(req.user) ? ticketScope(req.user).params : [])]
     );
 
     if (tickets.length === 0) {
@@ -205,6 +218,9 @@ const updateTicket = async (req, res, next) => {
     const { status, priority, assigned_to, resolution_notes } = req.body;
 
     const [existing] = await pool.query('SELECT * FROM support_tickets WHERE id = ?', [req.params.id]);
+    if (existing.length && isField(req.user) && existing[0].assigned_to !== req.user.id) {
+      return res.status(403).json({ status: 'error', message: 'Only the person the request is assigned to can update it.' });
+    }
     if (existing.length === 0) {
       return res.status(404).json({
         status: 'error',

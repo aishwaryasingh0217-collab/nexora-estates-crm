@@ -103,12 +103,12 @@ async function bookRequestedVisit({ lead, project, when, ownerId, clientName, so
   await logActivity({ leadId: lead.id, type: 'VISIT', outcome: 'SCHEDULED', note: `Client booked a site visit online: ${project.name}, ${slot}. Call to confirm.` });
 
   if (agent.id !== ownerId) {
-    await notifyUser(agent.id, { type: 'REMINDER', title: `📍 New site visit: ${clientName}`, message: `${project.name}, ${slot} — booked by the client on the website.`, leadId: lead.id });
+    await notifyUser(agent.id, { type: 'REMINDER', title: `📍 New site visit: ${clientName}`, message: `${project.name}, ${slot} — booked by the client on the website.`, leadId: lead.id, category: 'VISIT_ASSIGNED' });
   }
-  await notifyUser(ownerId, { type: 'REMINDER', title: `📍 ${clientName} booked a visit`, message: `${project.name}, ${slot}${agent.id !== ownerId ? ` with ${agent.first_name}` : ''}. Call now to confirm.`, leadId: lead.id });
-  await notifyManagers({ type: 'INFO', title: `Site visit booked online: ${clientName}`, message: `${project.name}, ${slot} — ${fullName(agent.first_name, agent.last_name)}.`, leadId: lead.id });
+  await notifyUser(ownerId, { type: 'REMINDER', title: `📍 ${clientName} booked a visit`, message: `${project.name}, ${slot}${agent.id !== ownerId ? ` with ${agent.first_name}` : ''}. Call now to confirm.`, leadId: lead.id, category: 'VISIT_UPDATE' });
+  await notifyManagers({ type: 'INFO', title: `Site visit booked online: ${clientName}`, message: `${project.name}, ${slot} — ${fullName(agent.first_name, agent.last_name)}.`, leadId: lead.id, category: 'VISIT_UPDATE' });
   if (lead.channel_partner_id) {
-    await notifyPartner(lead.channel_partner_id, { type: 'REMINDER', title: `Visit booked for ${clientName}`, message: `${project.name}, ${slot}.`, leadId: lead.id });
+    await notifyPartner(lead.channel_partner_id, { type: 'REMINDER', title: `Visit booked for ${clientName}`, message: `${project.name}, ${slot}.`, leadId: lead.id, category: 'VISIT_UPDATE' });
   }
   return { id: visitId, when, agent };
 }
@@ -117,6 +117,23 @@ async function bookRequestedVisit({ lead, project, when, ownerId, clientName, so
  * @returns {Promise<{ status: number, body: object }>}
  * @throws {EnquiryError} for input the client must fix (missing number, etc.)
  */
+/** utm_source / utm_medium / utm_campaign from the enquiry (trimmed, ≤ 100 chars, null when absent). */
+function utmFrom(payload) {
+  const clean = (v) => (v == null || v === '' ? null : String(v).trim().slice(0, 100) || null);
+  return { utm_source: clean(payload.utm_source), utm_medium: clean(payload.utm_medium), utm_campaign: clean(payload.utm_campaign) };
+}
+
+/** The marketing campaign a tracking link belongs to (by its utm_campaign tag or campaign code). */
+async function campaignFromUtm(utmCampaign) {
+  if (!utmCampaign) return null;
+  const [[c]] = await pool.query(
+    `SELECT c.id, ch.lead_source FROM campaigns c LEFT JOIN ad_channels ch ON ch.id = c.channel_id
+      WHERE c.utm_campaign = ? OR c.code = ? ORDER BY c.created_at DESC LIMIT 1`,
+    [utmCampaign, utmCampaign.toUpperCase()]
+  );
+  return c || null;
+}
+
 async function captureEnquiry(payload = {}) {
   const { firstName, lastName } = splitName(payload);
   const clientName = fullName(firstName, lastName);
@@ -154,7 +171,7 @@ async function captureEnquiry(payload = {}) {
       booked = await bookRequestedVisit({ lead: existing, project, when: visit.when, ownerId: owner, clientName: existingName, source });
     }
     if (!booked) {
-      await notifyUser(owner, { type: 'WARNING', title: `🔁 Re-enquiry: ${existingName}`, message: `Enquired again via ${sourceText(source)}${project ? ` about ${project.name}` : ''}. They're warm — call back soon.`, leadId: existing.id });
+      await notifyUser(owner, { type: 'WARNING', title: `🔁 Re-enquiry: ${existingName}`, message: `Enquired again via ${sourceText(source)}${project ? ` about ${project.name}` : ''}. They're warm — call back soon.`, leadId: existing.id, category: 'LEAD_ASSIGNED' });
     }
     const [[ownerRow]] = owner ? await pool.query('SELECT first_name FROM users WHERE id = ?', [owner]) : [[null]];
     return {
@@ -188,12 +205,18 @@ async function captureEnquiry(payload = {}) {
   const leadId = crypto.randomUUID();
   const budgetMin = Number(payload.budget_min) || null;
   const budgetMax = Number(payload.budget_max) || null;
+  // Campaign attribution: UTM tags from the tracking link the visitor arrived with
+  const utm = utmFrom(payload);
+  const campaign = await campaignFromUtm(utm.utm_campaign);
+  const leadSource = campaign && campaign.lead_source && ['WEBSITE', 'OTHER'].includes(source) ? campaign.lead_source : source;
   await pool.query(
     `INSERT INTO leads (id, first_name, last_name, phone, email, source, stage, budget_min, budget_max, preferred_project_id,
-                        assigned_agent_id, sla_due_date, notes, next_follow_up_at, temperature, channel_partner_id, registered_by, cp_protected_until)
-     VALUES (?, ?, ?, ?, ?, ?, 'Fresh Lead', ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)`,
-    [leadId, firstName, lastName, phone, email, source, budgetMin, budgetMax, project ? project.id : null,
-      owner ? owner.id : null, hoursFromNow(2), message, temperature, partnerId, referrer ? referrer.id : null, protectedUntil]
+                        assigned_agent_id, sla_due_date, notes, next_follow_up_at, temperature, channel_partner_id, registered_by, cp_protected_until,
+                        campaign_id, utm_source, utm_medium, utm_campaign)
+     VALUES (?, ?, ?, ?, ?, ?, 'Fresh Lead', ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [leadId, firstName, lastName, phone, email, leadSource, budgetMin, budgetMax, project ? project.id : null,
+      owner ? owner.id : null, hoursFromNow(2), message, temperature, partnerId, referrer ? referrer.id : null, protectedUntil,
+      campaign ? campaign.id : null, utm.utm_source, utm.utm_medium, utm.utm_campaign]
   );
 
   await logActivity({
@@ -230,11 +253,12 @@ async function captureEnquiry(payload = {}) {
       type: owner ? 'INFO' : 'WARNING',
       title: owner ? `New enquiry: ${clientName}` : `Unassigned enquiry: ${clientName}`,
       message: owner ? `Via ${sourceText(source)}${project ? ` · ${project.name}` : ''} → ${fullName(owner.first_name, owner.last_name)}.` : `No agent is available right now. Please assign this enquiry from ${sourceText(source)}.`,
-      leadId
+      leadId,
+      category: 'LEAD_NEW'
     });
   }
   if (partnerId) {
-    await notifyPartner(partnerId, { type: 'SUCCESS', title: `New client from your link: ${clientName}`, message: `Registered under your firm and protected for ${CP_PROTECTION_DAYS} days.`, leadId });
+    await notifyPartner(partnerId, { type: 'SUCCESS', title: `New client from your link: ${clientName}`, message: `Registered under your firm and protected for ${CP_PROTECTION_DAYS} days.`, leadId, category: 'LEAD_NEW' });
   }
 
   return {

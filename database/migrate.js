@@ -48,8 +48,10 @@ async function runMigrations() {
     `);
 
     const migrationsDir = path.join(__dirname, 'migrations');
+    // .sql files run as-is; .js files export `up(connection)` for steps that need checks first
+    // (MySQL has no ADD COLUMN IF NOT EXISTS, and some guards depend on the data already there)
     const files = fs.readdirSync(migrationsDir)
-      .filter(file => file.endsWith('.sql'))
+      .filter(file => file.endsWith('.sql') || file.endsWith('.js'))
       .sort();
 
     const [rows] = await connection.query('SELECT migration_name FROM schema_migrations');
@@ -63,10 +65,13 @@ async function runMigrations() {
 
       console.log(`[Migration] Executing ${file}...`);
       const filePath = path.join(migrationsDir, file);
-      const sql = fs.readFileSync(filePath, 'utf8');
-
-      if (sql.trim().length > 0) {
-        await connection.query(sql);
+      if (file.endsWith('.js')) {
+        await require(filePath).up(connection);
+      } else {
+        const sql = fs.readFileSync(filePath, 'utf8');
+        if (sql.trim().length > 0) {
+          await connection.query(sql);
+        }
       }
 
       await connection.query('INSERT INTO schema_migrations (migration_name) VALUES (?)', [file]);

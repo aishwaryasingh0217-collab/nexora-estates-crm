@@ -8,21 +8,29 @@
 const crypto = require('crypto');
 const pool = require('../config/db');
 const ws = require('../services/salesWorkspace');
-const { executeLeadBooking } = require('./leadController');
 const { visitIcsPath, feedIcsPath } = require('./icsController');
 const push = require('../services/pushService');
 const settings = require('../services/settingsService');
+const visits = require('../services/visitService');
+const bookings = require('../services/bookingService');
+const leadService = require('../services/leadService');
+const audit = require('../services/audit');
 
 const {
   AGENT_ROLES, MANAGER_ROLES, PARTNER_ROLE, STAGE_BUCKETS, CP_PROTECTION_DAYS,
   bucketSql, OPEN_STAGE_SQL, bucketOf, sqlList, phoneKey, findLeadByPhone,
-  tomorrowAt, hoursFromNow, pickLeadOwner, pickVisitAgent, insertVisit, whenText, logActivity,
+  tomorrowAt, hoursFromNow, pickLeadOwner, whenText, logActivity,
   notifyManagers, notifyPartner, notifyUser, fullName
 } = ws;
 
 const BUCKET = bucketSql();
 const OPEN = OPEN_STAGE_SQL();
 const PARTNER_VISIBLE_TYPES = ['STAGE', 'VISIT', 'ASSIGN', 'BOOKING', 'SYSTEM', 'CALL', 'WHATSAPP'];
+// Visits on someone's calendar (assigned through in progress), and every visit that isn't closed yet
+const { VISIT_UPCOMING, VISIT_UPCOMING_SQL, VISIT_OPEN_SQL } = visits;
+const VISIT_SEEN_SQL = sqlList([...VISIT_UPCOMING, 'COMPLETED']);
+// Bookings that count (not waiting for approval, rejected or cancelled)
+const BOOKED_DEAL_SQL = sqlList(['BOOKED', 'AGREEMENT_SIGNED', 'CLOSED_WON']);
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { statusCode: status, extra });
 const fail = (res, status, message, extra = {}) => res.status(status).json({ status: 'error', message, ...extra });
@@ -84,7 +92,7 @@ function leadScope(me) {
   if (me.kind === 'agent') {
     return {
       sql: `(l.assigned_agent_id = ? OR EXISTS (SELECT 1 FROM site_visits svs WHERE svs.lead_id = l.id AND svs.assigned_agent_id = ?
-              AND svs.status IN ('SCHEDULED', 'COMPLETED')))`,
+              AND svs.status IN (${VISIT_SEEN_SQL})))`,
       params: [me.id, me.id]
     };
   }
@@ -114,7 +122,7 @@ const LEAD_LIST_COLUMNS = `
     WHERE a.lead_id = l.id AND a.note IS NOT NULL AND a.type IN ('CALL','WHATSAPP','NOTE','VISIT')
     ORDER BY a.created_at DESC LIMIT 1) AS last_note,
   (SELECT MIN(sv.scheduled_time) FROM site_visits sv
-    WHERE sv.lead_id = l.id AND sv.status = 'SCHEDULED' AND sv.scheduled_time >= CURDATE()) AS next_visit_at`;
+    WHERE sv.lead_id = l.id AND sv.status IN (${VISIT_UPCOMING_SQL}) AND sv.scheduled_time >= CURDATE()) AS next_visit_at`;
 
 const LEAD_LIST_JOINS = `
   FROM leads l
@@ -165,7 +173,8 @@ const setMyAvailability = async (req, res, next) => {
       await notifyManagers({
         type: 'INFO',
         title: `${req.ws.name} is on leave`,
-        message: 'New leads will be routed to available teammates until they are back.'
+        message: 'New leads will be routed to available teammates until they are back.',
+        category: 'SYSTEM'
       });
     }
     res.json({ status: 'success', data: { is_available: !!available } });
@@ -205,7 +214,7 @@ const getToday = async (req, res, next) => {
     }
 
     const [visits] = await pool.query(
-      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.client_feedback,
+      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, sv.client_feedback,
               l.first_name, l.last_name, l.phone, cp.firm_name AS partner_firm,
               p.id AS project_id, p.name AS project_name, p.location, p.city
          FROM site_visits sv
@@ -213,7 +222,7 @@ const getToday = async (req, res, next) => {
          LEFT JOIN leads l ON l.id = sv.lead_id
          LEFT JOIN channel_partners cp ON cp.id = l.channel_partner_id
         WHERE sv.assigned_agent_id = ? AND sv.scheduled_time >= CURDATE() AND sv.scheduled_time < CURDATE() + INTERVAL 1 DAY
-          AND sv.status IN ('SCHEDULED', 'COMPLETED')
+          AND sv.status IN (${VISIT_SEEN_SQL})
         ORDER BY sv.scheduled_time ASC`,
       [me.id]
     );
@@ -224,7 +233,7 @@ const getToday = async (req, res, next) => {
              AND a.type IN ('CALL','WHATSAPP','VISIT','BOOKING')) AS done_today,
          (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id = ? AND ${OPEN}) AS open_leads,
          (SELECT COUNT(*) FROM deals d JOIN leads l ON l.id = d.lead_id
-           WHERE l.assigned_agent_id = ? AND d.status <> 'CANCELLED'
+           WHERE l.assigned_agent_id = ? AND d.status IN (${BOOKED_DEAL_SQL})
              AND d.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS bookings_month,
          (SELECT COUNT(*) FROM site_visits sv WHERE sv.assigned_agent_id = ? AND sv.status = 'COMPLETED'
              AND sv.scheduled_time >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS visits_month`,
@@ -243,7 +252,7 @@ const getToday = async (req, res, next) => {
           openLeads: Number(stats.open_leads),
           bookingsMonth: Number(stats.bookings_month),
           visitsMonth: Number(stats.visits_month),
-          remaining: fresh.length + overdue.length + later.length + visits.filter((v) => v.status === 'SCHEDULED').length
+          remaining: fresh.length + overdue.length + later.length + visits.filter((v) => VISIT_UPCOMING.includes(v.status)).length
         }
       }
     });
@@ -260,21 +269,21 @@ async function partnerToday(me) {
     `SELECT
        (SELECT COUNT(*) FROM leads l WHERE l.channel_partner_id = ? AND ${OPEN}) AS active_clients,
        (SELECT COUNT(*) FROM site_visits sv JOIN leads l ON l.id = sv.lead_id
-         WHERE l.channel_partner_id = ? AND sv.status = 'SCHEDULED' AND sv.scheduled_time >= NOW()) AS upcoming_visits,
-       (SELECT COUNT(*) FROM deals d WHERE d.channel_partner_id = ? AND d.status <> 'CANCELLED') AS bookings,
+         WHERE l.channel_partner_id = ? AND sv.status IN (${VISIT_UPCOMING_SQL}) AND sv.scheduled_time >= NOW()) AS upcoming_visits,
+       (SELECT COUNT(*) FROM deals d WHERE d.channel_partner_id = ? AND d.status IN (${BOOKED_DEAL_SQL})) AS bookings,
        (SELECT COALESCE(SUM(bc.total_commission - bc.paid_amount), 0) FROM broker_commissions bc WHERE bc.partner_id = ?) AS pending_earnings`,
     [me.partnerId, me.partnerId, me.partnerId, me.partnerId]
   );
 
   const [visits] = await pool.query(
-    `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, l.first_name, l.last_name, l.phone,
+    `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, l.first_name, l.last_name, l.phone,
             p.name AS project_name, p.location, p.city,
             ag.first_name AS agent_first_name, ag.last_name AS agent_last_name, ag.phone AS agent_phone
        FROM site_visits sv
        JOIN leads l ON l.id = sv.lead_id
        JOIN projects p ON p.id = sv.project_id
        LEFT JOIN users ag ON ag.id = sv.assigned_agent_id
-      WHERE l.channel_partner_id = ? AND sv.status = 'SCHEDULED' AND sv.scheduled_time >= CURDATE()
+      WHERE l.channel_partner_id = ? AND sv.status IN (${VISIT_UPCOMING_SQL}) AND sv.scheduled_time >= CURDATE()
       ORDER BY sv.scheduled_time ASC
       LIMIT 20`,
     [me.partnerId]
@@ -335,7 +344,7 @@ const listLeads = async (req, res, next) => {
     if (view === 'overdue') where.push(`${OPEN} AND l.next_follow_up_at < NOW()`);
     if (view === 'stale') {
       where.push(`${OPEN} AND l.next_follow_up_at IS NULL AND NOT EXISTS (
-        SELECT 1 FROM site_visits sv WHERE sv.lead_id = l.id AND sv.status = 'SCHEDULED' AND sv.scheduled_time >= NOW())`);
+        SELECT 1 FROM site_visits sv WHERE sv.lead_id = l.id AND sv.status IN (${VISIT_UPCOMING_SQL}) AND sv.scheduled_time >= NOW())`);
     }
 
     const [rows] = await pool.query(
@@ -393,7 +402,7 @@ const getLead = async (req, res, next) => {
     );
 
     const [visits] = await pool.query(
-      `SELECT sv.id, sv.scheduled_time, sv.status, sv.client_feedback, sv.rating,
+      `SELECT sv.id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, sv.client_feedback, sv.rating,
               p.id AS project_id, p.name AS project_name, p.location, p.city,
               ag.first_name AS agent_first_name, ag.last_name AS agent_last_name
          FROM site_visits sv
@@ -446,6 +455,35 @@ const getLead = async (req, res, next) => {
 };
 
 // POST /workspace/leads — agent adds own lead · partner registers a client · manager adds & routes
+const PURPOSES = ['SELF_USE', 'INVESTMENT', 'RENTAL_INCOME'];
+const TIMELINES = ['IMMEDIATE', '3_MONTHS', '6_MONTHS', '12_MONTHS', 'EXPLORING'];
+/** Customer requirements captured with a lead (all optional). */
+function leadRequirements(b) {
+  const pick = (v, list) => (list.includes(String(v || '').toUpperCase()) ? String(v).toUpperCase() : null);
+  const text = (v, max) => (v ? String(v).trim().slice(0, max) || null : null);
+  return {
+    property_type: text(b.property_type, 30),
+    configuration: text(b.configuration, 60),
+    preferred_location: text(b.preferred_location, 150),
+    purpose: pick(b.purpose, PURPOSES),
+    purchase_timeline: pick(b.purchase_timeline, TIMELINES),
+    loan_required: b.loan_required === undefined || b.loan_required === null || b.loan_required === '' ? null : (b.loan_required === true || b.loan_required === 'true' || b.loan_required === 1 || b.loan_required === '1' ? 1 : 0)
+  };
+}
+
+/** Marketing attribution: an explicit campaign id, or the campaign whose UTM code matches. */
+async function campaignFor(campaignId, utmCampaign) {
+  if (campaignId) {
+    const [[c]] = await pool.query('SELECT id FROM campaigns WHERE id = ?', [campaignId]);
+    if (c) return c.id;
+  }
+  if (utmCampaign) {
+    const [[c]] = await pool.query('SELECT id FROM campaigns WHERE utm_campaign = ? OR code = ? ORDER BY created_at DESC LIMIT 1', [utmCampaign, utmCampaign]);
+    if (c) return c.id;
+  }
+  return null;
+}
+
 const createLead = async (req, res, next) => {
   try {
     const me = req.ws;
@@ -480,7 +518,8 @@ const createLead = async (req, res, next) => {
             type: 'WARNING',
             title: 'Duplicate registration attempt',
             message: `${me.firm.name} tried to register ${clientName} (${phone}), who is already an active client.`,
-            leadId: duplicate.id
+            leadId: duplicate.id,
+            category: 'ESCALATION'
           });
           return fail(res, 409, 'This client is already registered with us. If you introduced them first, please raise it with the sales manager — they have been notified.', { code: 'ALREADY_REGISTERED' });
         }
@@ -494,7 +533,7 @@ const createLead = async (req, res, next) => {
         );
         await logActivity({ leadId: duplicate.id, userId: me.id, type: 'SYSTEM', outcome: 'REGISTERED', note: `Re-introduced by ${me.firm.name}${b.note ? ` — ${b.note}` : ''}` });
         await insertPartnerLock(me.partnerId, clientName, phone, projectId, protectedUntil);
-        await notifyUser(agent && agent.id, { type: 'SUCCESS', title: `Partner client: ${clientName}`, message: `${me.firm.name} re-introduced this client. Coordinate with ${me.name} (${me.phone || 'no phone'}).`, leadId: duplicate.id });
+        await notifyUser(agent && agent.id, { type: 'SUCCESS', title: `Partner client: ${clientName}`, message: `${me.firm.name} re-introduced this client. Coordinate with ${me.name} (${me.phone || 'no phone'}).`, leadId: duplicate.id, category: 'LEAD_ASSIGNED' });
         return res.status(201).json({ status: 'success', message: `Client registered and protected for ${CP_PROTECTION_DAYS} days.`, data: { id: duplicate.id, reclaimed: true } });
       }
 
@@ -527,18 +566,35 @@ const createLead = async (req, res, next) => {
     const source = me.kind === 'partner' ? 'CHANNEL_PARTNER' : String(b.source || 'DIRECT_CALL').toUpperCase().slice(0, 100);
     const temperature = ['HOT', 'WARM', 'COLD'].includes(b.temperature) ? b.temperature : null;
     const followUp = parseDate(b.next_follow_up_at) || new Date();
+    const req_ = leadRequirements(b);
+    const campaignId = me.kind === 'partner' ? null : await campaignFor(b.campaign_id, b.utm_campaign);
+    const priority = ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].includes(b.priority) ? b.priority
+      : leadService.scorePriority({ temperature, budget_max: b.budget_max, budget_min: b.budget_min, source, created_at: new Date(), ...req_ });
 
     await pool.query(
       `INSERT INTO leads (id, first_name, last_name, email, phone, source, stage, budget_min, budget_max,
                           preferred_project_id, assigned_agent_id, notes, next_follow_up_at, temperature,
-                          channel_partner_id, registered_by, cp_protected_until)
-       VALUES (?, ?, ?, ?, ?, ?, 'Fresh Lead', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                          channel_partner_id, registered_by, cp_protected_until, priority, campaign_id,
+                          property_type, configuration, preferred_location, purpose, purchase_timeline, loan_required)
+       VALUES (?, ?, ?, ?, ?, ?, 'Fresh Lead', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [leadId, firstName, lastName, b.email || null, phone, source, b.budget_min || null, b.budget_max || null,
         projectId, assignedId, b.note || null, followUp, temperature,
-        me.kind === 'partner' ? me.partnerId : null, me.id, protectedUntil]
+        me.kind === 'partner' ? me.partnerId : null, me.id, protectedUntil, priority, campaignId,
+        req_.property_type, req_.configuration, req_.preferred_location, req_.purpose, req_.purchase_timeline, req_.loan_required]
     );
 
     await logActivity({ leadId, userId: me.id, type: 'SYSTEM', outcome: 'CREATED', note: me.kind === 'partner' ? `Registered by ${me.firm.name}${b.note ? ` — ${b.note}` : ''}` : (b.note || null) });
+    if (assignedId) {
+      await pool.query(
+        `INSERT INTO lead_assignments (id, lead_id, from_user_id, to_user_id, assigned_by, method, reason) VALUES (?, ?, NULL, ?, ?, ?, 'New lead')`,
+        [crypto.randomUUID(), leadId, assignedId, me.id, me.kind === 'manager' && b.assigned_agent_id ? 'MANUAL' : me.kind === 'agent' ? 'MANUAL' : 'AUTO']
+      );
+    }
+    await audit.record({
+      req, action: 'LEAD_CREATED', entityType: 'LEAD', entityId: leadId,
+      summary: `${fullName(firstName, lastName)} (${source})${me.kind === 'partner' ? ` registered by ${me.firm.name}` : ''}`,
+      after: { first_name: firstName, last_name: lastName, phone, source, preferred_project_id: projectId, assigned_agent_id: assignedId, priority, campaign_id: campaignId }
+    });
 
     let assigneeName = null;
     if (assignedId) {
@@ -554,13 +610,14 @@ const createLead = async (req, res, next) => {
           type: 'SUCCESS',
           title: `🤝 Partner client: ${clientName}`,
           message: `${me.firm.name} registered a client. Coordinate with ${me.name}${me.phone ? ` (${me.phone})` : ''} before calling.`,
-          leadId
+          leadId,
+          category: 'LEAD_ASSIGNED'
         });
       } else {
-        await notifyManagers({ type: 'WARNING', title: `Unassigned partner client: ${clientName}`, message: `${me.firm.name} registered a client and no agent is available. Please assign.`, leadId });
+        await notifyManagers({ type: 'WARNING', title: `Unassigned partner client: ${clientName}`, message: `${me.firm.name} registered a client and no agent is available. Please assign.`, leadId, category: 'LEAD_NEW' });
       }
     } else if (assignedId && assignedId !== me.id) {
-      await notifyUser(assignedId, { type: 'SUCCESS', title: `🔥 New lead: ${clientName}`, message: `Assigned by ${me.name}. Call ${phone}.`, leadId });
+      await notifyUser(assignedId, { type: 'SUCCESS', title: `🔥 New lead: ${clientName}`, message: `Assigned by ${me.name}. Call ${phone}.`, leadId, category: 'LEAD_ASSIGNED' });
     }
 
     res.status(201).json({
@@ -604,22 +661,45 @@ const updateLead = async (req, res, next) => {
     if (b.preferred_project_id !== undefined) set('preferred_project_id', b.preferred_project_id || null);
     if (b.temperature !== undefined) set('temperature', ['HOT', 'WARM', 'COLD'].includes(b.temperature) ? b.temperature : null);
     if (b.next_follow_up_at !== undefined) set('next_follow_up_at', parseDate(b.next_follow_up_at));
+    if (me.kind !== 'partner') {
+      // Requirements & qualification (what the client wants, and whether they're a real buyer)
+      const reqs = leadRequirements(b);
+      for (const col of ['property_type', 'configuration', 'preferred_location', 'purpose', 'purchase_timeline', 'loan_required']) {
+        if (b[col] !== undefined) set(col, reqs[col]);
+      }
+      if (b.priority !== undefined) set('priority', ['URGENT', 'HIGH', 'MEDIUM', 'LOW'].includes(b.priority) ? b.priority : null);
+      if (b.qualification_status !== undefined) {
+        if (!['PENDING', 'QUALIFIED', 'NOT_QUALIFIED'].includes(b.qualification_status)) return fail(res, 400, 'Unknown qualification status.');
+        set('qualification_status', b.qualification_status);
+        set('qualified_at', b.qualification_status === 'PENDING' ? null : new Date());
+      }
+    }
 
     let stageNote = null;
     if (b.bucket && STAGE_BUCKETS[b.bucket] && b.bucket !== lead.bucket) {
       if (b.bucket === 'BOOKED') return fail(res, 400, 'Use "Mark booked" so the unit and deal are recorded.');
       if (b.bucket === 'LOST' && !b.lost_reason) return fail(res, 400, 'Please give a reason for losing this lead.');
       set('stage', STAGE_BUCKETS[b.bucket].stage);
-      if (b.bucket === 'LOST') { set('lost_reason', String(b.lost_reason).slice(0, 255)); set('next_follow_up_at', null); }
+      if (b.bucket === 'LOST') { set('lost_reason', String(b.lost_reason).slice(0, 255)); set('next_follow_up_at', null); set('lost_at', new Date()); }
       stageNote = `${STAGE_BUCKETS[lead.bucket].label} → ${STAGE_BUCKETS[b.bucket].label}${b.lost_reason ? ` (${b.lost_reason})` : ''}`;
     }
 
     if (sets.length === 0) return fail(res, 400, 'Nothing to update.');
     await pool.query(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`, [...params, lead.id]);
+    const changedCols = sets.map((x) => x.split(' = ')[0]);
+    const after = Object.fromEntries(changedCols.map((c, i) => [c, params[i]]));
+    const before = Object.fromEntries(changedCols.map((c) => [c, lead[c] === undefined ? null : lead[c]]));
+    const d = audit.diff(before, after);
+    if (b.qualification_status && b.qualification_status !== lead.qualification_status) {
+      await logActivity({ leadId: lead.id, userId: me.id, type: 'QUALIFY', outcome: b.qualification_status, note: b.qualification_status === 'QUALIFIED' ? 'Qualified as a genuine buyer' : b.qualification_status === 'NOT_QUALIFIED' ? 'Marked not qualified' : 'Qualification reset' });
+    }
+    if (Object.keys(d.after).length) {
+      await audit.record({ req, action: stageNote ? 'LEAD_STAGE_CHANGED' : 'LEAD_UPDATED', entityType: 'LEAD', entityId: lead.id, summary: `${fullName(lead.first_name, lead.last_name)}${stageNote ? `: ${stageNote}` : ' updated'}`, before: d.before, after: d.after });
+    }
     if (stageNote) {
       await logActivity({ leadId: lead.id, userId: me.id, type: 'STAGE', outcome: b.bucket, note: stageNote });
       if (b.bucket === 'LOST') {
-        await notifyPartner(lead.channel_partner_id, { type: 'WARNING', title: `Client closed as lost: ${fullName(lead.first_name, lead.last_name)}`, message: `Reason: ${b.lost_reason}`, leadId: lead.id });
+        await notifyPartner(lead.channel_partner_id, { type: 'WARNING', title: `Client closed as lost: ${fullName(lead.first_name, lead.last_name)}`, message: `Reason: ${b.lost_reason}`, leadId: lead.id, category: 'SYSTEM' });
       }
     }
     res.json({ status: 'success', message: 'Lead updated.' });
@@ -658,7 +738,7 @@ const logLeadActivity = async (req, res, next) => {
 
     const sets = [];
     const params = [];
-    if (outcome.type === 'CALL' || outcome.type === 'WHATSAPP') sets.push('last_contacted_at = NOW()');
+    if (outcome.type === 'CALL' || outcome.type === 'WHATSAPP') sets.push('last_contacted_at = NOW()', 'first_contacted_at = COALESCE(first_contacted_at, NOW())');
 
     const explicitNext = parseDate(b.next_follow_up_at);
     if (outcome.next) {
@@ -684,9 +764,9 @@ const logLeadActivity = async (req, res, next) => {
 
     const clientName = fullName(lead.first_name, lead.last_name);
     if (me.kind === 'partner') {
-      await notifyUser(lead.assigned_agent_id, { type: 'INFO', title: `Note from ${me.firm.name} on ${clientName}`, message: note, leadId: lead.id });
+      await notifyUser(lead.assigned_agent_id, { type: 'INFO', title: `Note from ${me.firm.name} on ${clientName}`, message: note, leadId: lead.id, category: 'SYSTEM' });
     } else if (outcomeKey === 'NOT_INTERESTED') {
-      await notifyPartner(lead.channel_partner_id, { type: 'WARNING', title: `Client not interested: ${clientName}`, message: `Reason: ${b.lost_reason || note}`, leadId: lead.id });
+      await notifyPartner(lead.channel_partner_id, { type: 'WARNING', title: `Client not interested: ${clientName}`, message: `Reason: ${b.lost_reason || note}`, leadId: lead.id, category: 'SYSTEM' });
     }
 
     const [[updated]] = await pool.query('SELECT next_follow_up_at, stage FROM leads WHERE id = ?', [lead.id]);
@@ -703,19 +783,7 @@ const logLeadActivity = async (req, res, next) => {
 // ---------------------------------------------------------------------------
 // Site visits
 // ---------------------------------------------------------------------------
-async function assertAgentFree(agentId, when, ignoreVisitId = null) {
-  const [clash] = await pool.query(
-    `SELECT sv.scheduled_time, p.name AS project_name FROM site_visits sv JOIN projects p ON p.id = sv.project_id
-      WHERE sv.assigned_agent_id = ? AND sv.status = 'SCHEDULED' AND sv.id <> ?
-        AND sv.scheduled_time BETWEEN ? - INTERVAL 59 MINUTE AND ? + INTERVAL 59 MINUTE
-      LIMIT 1`,
-    [agentId, ignoreVisitId || '', when, when]
-  );
-  if (clash[0]) {
-    const t = new Date(clash[0].scheduled_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    throw httpError(409, `The agent already has a visit at ${t} (${clash[0].project_name}). Please pick a time at least an hour apart.`);
-  }
-}
+const { assertAgentFree } = visits;
 
 // POST /workspace/leads/:id/visits { project_id, scheduled_time, note, agent_id? }
 // Telecallers and partners fix the visit; a free field agent conducts it. Managers may pick the agent.
@@ -728,58 +796,19 @@ const scheduleVisit = async (req, res, next) => {
     const projectId = b.project_id || lead.preferred_project_id;
 
     if (!when) return fail(res, 400, 'Pick a date and time for the visit.');
-    if (when.getTime() < Date.now() - 5 * 60000) return fail(res, 400, 'Visit time is in the past.');
     if (!projectId) return fail(res, 400, 'Choose the project to visit.');
     if (lead.bucket === 'BOOKED' || lead.bucket === 'LOST') return fail(res, 400, 'This lead is closed.');
 
-    const [[project]] = await pool.query('SELECT id, name FROM projects WHERE id = ?', [projectId]);
-    if (!project) return fail(res, 400, 'Selected project does not exist.');
-
-    let agent;
-    if (me.kind === 'manager' && b.agent_id) {
-      [[agent]] = await pool.query(
-        `SELECT u.id, u.first_name, u.last_name, u.phone FROM users u JOIN roles r ON r.id = u.role_id
-          WHERE u.id = ? AND u.status = 'ACTIVE' AND r.name IN (${sqlList([...AGENT_ROLES, ...MANAGER_ROLES])})`,
-        [b.agent_id]
-      );
-      if (!agent) return fail(res, 400, 'Choose an active team member.');
-    } else if (me.role === 'OUTSIDE_SALES') {
-      agent = { id: me.id, first_name: me.firstName, last_name: null, phone: me.phone };
-    } else {
-      agent = await pickVisitAgent(when, lead.assigned_agent_id || (me.kind === 'partner' ? null : me.id));
-      if (!agent) return fail(res, 409, 'No one is available to take this visit. The sales manager has been notified.');
-    }
-    await assertAgentFree(agent.id, when);
-
-    if (!lead.assigned_agent_id) {
-      const ownerId = me.kind === 'agent' ? me.id : agent.id;
-      await pool.query('UPDATE leads SET assigned_agent_id = ? WHERE id = ?', [ownerId, lead.id]);
-      lead.assigned_agent_id = ownerId;
-    }
-
-    await insertVisit({ leadId: lead.id, projectId: project.id, agentId: agent.id, when, byUserId: me.id, note: b.note || null });
-    await pool.query(
-      `UPDATE leads SET stage = ?, next_follow_up_at = NULL, preferred_project_id = COALESCE(preferred_project_id, ?) WHERE id = ?`,
-      [STAGE_BUCKETS.VISIT.stage, project.id, lead.id]
-    );
-
-    const slot = whenText(when);
-    const clientName = fullName(lead.first_name, lead.last_name);
-    const agentName = fullName(agent.first_name, agent.last_name);
-    const handedOver = agent.id !== me.id;
-    await logActivity({ leadId: lead.id, userId: me.id, type: 'VISIT', outcome: 'SCHEDULED', note: `Visit to ${project.name} on ${slot}${handedOver ? ` with ${agentName}` : ''}${b.note ? ` — ${b.note}` : ''}` });
-
-    const by = me.kind === 'partner' ? me.firm.name : me.name;
-    await notifyUser(agent.id, { type: 'REMINDER', title: `📍 Site visit: ${clientName}`, message: `${project.name}, ${slot} — fixed by ${by}.`, leadId: lead.id }, me.id);
-    if (lead.assigned_agent_id !== agent.id) {
-      await notifyUser(lead.assigned_agent_id, { type: 'REMINDER', title: `Visit fixed for ${clientName}`, message: `${project.name}, ${slot} with ${agentName}.`, leadId: lead.id }, me.id);
-    }
-    if (me.kind !== 'partner') {
-      await notifyPartner(lead.channel_partner_id, { type: 'REMINDER', title: `Visit fixed for ${clientName}`, message: `${project.name}, ${slot}.`, leadId: lead.id });
-    }
-    await notifyManagers({ type: 'INFO', title: `Visit fixed: ${clientName}`, message: `${project.name}, ${slot} — ${agentName} (fixed by ${by}).`, leadId: lead.id }, me.id);
-
-    res.status(201).json({ status: 'success', message: `Visit scheduled for ${slot}${handedOver ? ` with ${agent.first_name}` : ''}.`, data: { agent: agentName } });
+    const result = await visits.createVisit(me, lead, {
+      projectId,
+      when,
+      agentId: me.kind === 'manager' ? b.agent_id || null : null,
+      // Telecallers and partners fix the time with the client on the phone; a request without that is unconfirmed
+      clientConfirmed: b.client_confirmed !== false,
+      note: b.note || null,
+      req
+    });
+    res.status(201).json({ status: 'success', message: result.message, data: { id: result.id, status: result.status, agent: result.agentName } });
   } catch (err) {
     next(err);
   }
@@ -797,11 +826,11 @@ const listVisits = async (req, res, next) => {
 
     const past = req.query.range === 'past';
     where.push(past
-      ? `(sv.scheduled_time < CURDATE() OR sv.status <> 'SCHEDULED') AND sv.scheduled_time >= CURDATE() - INTERVAL 60 DAY`
-      : `sv.status = 'SCHEDULED' AND sv.scheduled_time >= CURDATE()`);
+      ? `(sv.scheduled_time < CURDATE() OR sv.status NOT IN (${VISIT_OPEN_SQL})) AND sv.scheduled_time >= CURDATE() - INTERVAL 60 DAY`
+      : `sv.status IN (${VISIT_OPEN_SQL}) AND sv.scheduled_time >= CURDATE()`);
 
     const [rows] = await pool.query(
-      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.client_feedback, sv.rating,
+      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, sv.client_feedback, sv.rating,
               l.first_name, l.last_name, l.phone, l.temperature, cp.firm_name AS partner_firm,
               p.id AS project_id, p.name AS project_name, p.location, p.city,
               ag.first_name AS agent_first_name, ag.last_name AS agent_last_name, ag.phone AS agent_phone
@@ -833,83 +862,9 @@ const listVisits = async (req, res, next) => {
 // PATCH /workspace/visits/:id { action: complete|no_show|cancel|reschedule, feedback, temperature, scheduled_time, next_follow_up_at }
 const updateVisit = async (req, res, next) => {
   try {
-    const me = req.ws;
     const b = req.body || {};
-    const action = b.action;
-    const [[visit]] = await pool.query(
-      `SELECT sv.*, p.name AS project_name FROM site_visits sv JOIN projects p ON p.id = sv.project_id WHERE sv.id = ?`,
-      [req.params.id]
-    );
-    if (!visit || !visit.lead_id) return fail(res, 404, 'Visit not found.');
-    const lead = await loadLeadInScope(me, visit.lead_id);
-    if (me.kind === 'agent' && visit.assigned_agent_id !== me.id && lead.assigned_agent_id !== me.id) return fail(res, 404, 'Visit not found.');
-    if (me.kind === 'partner' && !['reschedule', 'cancel'].includes(action)) return fail(res, 403, 'Partners can reschedule or cancel a visit.');
-    if (visit.status !== 'SCHEDULED') return fail(res, 400, 'This visit is already closed.');
-
-    const clientName = fullName(lead.first_name, lead.last_name);
-    let newStatus = 'SCHEDULED';
-    let leadStage = null;
-    let followUp;
-    let summary;
-
-    if (action === 'complete') {
-      newStatus = 'COMPLETED';
-      leadStage = STAGE_BUCKETS.VISITED.stage;
-      followUp = parseDate(b.next_follow_up_at) || tomorrowAt(11);
-      const rating = { HOT: 5, WARM: 3, COLD: 1 }[b.temperature] || null;
-      await pool.query('UPDATE site_visits SET status = ?, client_feedback = ?, rating = ? WHERE id = ?', [newStatus, b.feedback || null, rating, visit.id]);
-      summary = `Visit done at ${visit.project_name}${b.temperature ? ` — client is ${b.temperature.toLowerCase()}` : ''}${b.feedback ? `: ${b.feedback}` : ''}`;
-    } else if (action === 'no_show' || action === 'cancel') {
-      newStatus = action === 'no_show' ? 'NO_SHOW' : 'CANCELLED';
-      leadStage = STAGE_BUCKETS.CONTACTED.stage;
-      followUp = hoursFromNow(action === 'no_show' ? 1 : 2);
-      await pool.query('UPDATE site_visits SET status = ?, client_feedback = COALESCE(?, client_feedback) WHERE id = ?', [newStatus, b.feedback || null, visit.id]);
-      summary = `${action === 'no_show' ? 'Client did not show up' : 'Visit cancelled'} (${visit.project_name})${b.feedback ? ` — ${b.feedback}` : ''}`;
-    } else if (action === 'reschedule') {
-      const when = parseDate(b.scheduled_time);
-      if (!when || when.getTime() < Date.now()) return fail(res, 400, 'Pick a new date and time in the future.');
-      await assertAgentFree(visit.assigned_agent_id, when, visit.id);
-      await pool.query('UPDATE site_visits SET scheduled_time = ? WHERE id = ?', [when, visit.id]);
-      summary = `Visit moved to ${when.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
-    } else {
-      return fail(res, 400, 'Unknown visit action.');
-    }
-
-    await pool.query(
-      `INSERT INTO site_visit_history (id, site_visit_id, action, performed_by, previous_status, new_status, notes)
-       VALUES (?, ?, ?, ?, 'SCHEDULED', ?, ?)`,
-      [crypto.randomUUID(), visit.id, action.toUpperCase(), me.id, newStatus, b.feedback || null]
-    );
-
-    const leadSets = [];
-    const leadParams = [];
-    if (leadStage && !['BOOKED', 'LOST', 'NEGOTIATION'].includes(lead.bucket)) { leadSets.push('stage = ?'); leadParams.push(leadStage); }
-    if (followUp !== undefined) { leadSets.push('next_follow_up_at = ?'); leadParams.push(followUp); }
-    if (['HOT', 'WARM', 'COLD'].includes(b.temperature)) { leadSets.push('temperature = ?'); leadParams.push(b.temperature); }
-    if (leadSets.length) await pool.query(`UPDATE leads SET ${leadSets.join(', ')} WHERE id = ?`, [...leadParams, lead.id]);
-
-    await logActivity({ leadId: lead.id, userId: me.id, type: 'VISIT', outcome: action.toUpperCase(), note: summary });
-
-    // Keep everyone on this client informed
-    const outcomeTitle = { complete: 'site visit done', no_show: 'did not show up', cancel: 'visit cancelled', reschedule: 'visit rescheduled' }[action];
-    await notifyUser(lead.assigned_agent_id, { type: action === 'complete' ? 'SUCCESS' : 'WARNING', title: `${clientName}: ${outcomeTitle}`, message: summary, leadId: lead.id }, me.id);
-    if (visit.assigned_agent_id !== lead.assigned_agent_id) {
-      await notifyUser(visit.assigned_agent_id, { type: 'WARNING', title: `${clientName}: ${outcomeTitle}`, message: summary, leadId: lead.id }, me.id);
-    }
-    if (action !== 'reschedule') {
-      await notifyManagers({ type: action === 'complete' ? 'SUCCESS' : 'WARNING', title: `${clientName}: ${outcomeTitle}`, message: `${summary} — by ${me.kind === 'partner' ? me.firm.name : me.name}.`, leadId: lead.id }, me.id);
-    }
-    if (me.kind === 'partner') {
-    } else {
-      await notifyPartner(lead.channel_partner_id, {
-        type: action === 'complete' ? 'SUCCESS' : 'WARNING',
-        title: `${clientName}: ${action === 'complete' ? 'site visit done' : action === 'no_show' ? 'did not show up' : action === 'cancel' ? 'visit cancelled' : 'visit rescheduled'}`,
-        message: action === 'no_show' ? 'Please check in with your client and help us re-fix the visit.' : summary,
-        leadId: lead.id
-      });
-    }
-
-    res.json({ status: 'success', message: summary });
+    const result = await visits.transition(req.ws, req.params.id, b.action, b, req);
+    res.json({ status: 'success', message: result.message, data: result });
   } catch (err) {
     next(err);
   }
@@ -921,27 +876,12 @@ const bookUnit = async (req, res, next) => {
     const me = req.ws;
     const lead = await loadLeadInScope(me, req.params.id);
     const b = req.body || {};
-    if (!b.unit_id) return fail(res, 400, 'Choose the unit being booked.');
-    const [[unit]] = await pool.query('SELECT id, project_id, base_price, plc_charges, status FROM units WHERE id = ?', [b.unit_id]);
-    if (!unit) return fail(res, 404, 'Unit not found.');
-
-    const discount = Math.max(0, Number(b.discount_amount) || 0);
-    const total = Number(unit.base_price) + Number(unit.plc_charges || 0) - discount;
-    const token = Number(b.booking_token_amount) || Math.round(total * 0.1);
-    if (total <= 0) return fail(res, 400, 'This unit has no price set. Ask the admin to update it before booking.');
-
-    const result = await executeLeadBooking({
-      leadId: lead.id,
-      unitId: unit.id,
-      projectId: unit.project_id,
-      basePrice: unit.base_price,
-      plcCharges: unit.plc_charges || 0,
-      discountAmount: discount,
-      agreedTotalAmount: total,
-      bookingTokenAmount: token,
-      userId: me.id
-    });
-    res.status(201).json({ status: 'success', message: `Booked! Deal #${result.dealNumber}.`, data: result });
+    const result = await bookings.initiateBooking(
+      { id: me.id, name: me.name, role: me.role, jobLevel: req.user.jobLevel },
+      { leadId: lead.id, unitId: b.unit_id, discountAmount: b.discount_amount, tokenAmount: b.booking_token_amount, notes: b.note || null, channel: 'WORKSPACE' },
+      req
+    );
+    res.status(201).json({ status: 'success', message: result.message, data: result });
   } catch (err) {
     next(err);
   }
@@ -999,12 +939,12 @@ const getTeam = async (req, res, next) => {
         (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id = u.id AND ${OPEN}) AS open_leads,
         (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id = u.id AND ${OPEN} AND l.next_follow_up_at < NOW()) AS overdue,
         (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id = u.id AND ${BUCKET} = 'NEW' AND l.last_contacted_at IS NULL) AS untouched,
-        (SELECT COUNT(*) FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status IN ('SCHEDULED','COMPLETED')
+        (SELECT COUNT(*) FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status IN (${VISIT_SEEN_SQL})
             AND sv.scheduled_time >= CURDATE() AND sv.scheduled_time < CURDATE() + INTERVAL 1 DAY) AS visits_today,
         (SELECT COUNT(*) FROM lead_activities a WHERE a.user_id = u.id AND a.created_at >= CURDATE()
             AND a.type IN ('CALL','WHATSAPP','VISIT','BOOKING')) AS actions_today,
         (SELECT COUNT(*) FROM deals d JOIN leads l ON l.id = d.lead_id WHERE l.assigned_agent_id = u.id
-            AND d.status <> 'CANCELLED' AND d.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS bookings_month
+            AND d.status IN (${BOOKED_DEAL_SQL}) AND d.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS bookings_month
          FROM users u
          JOIN roles r ON r.id = u.role_id
         WHERE u.status = 'ACTIVE' AND r.name IN (${sqlList(AGENT_ROLES)})
@@ -1016,18 +956,18 @@ const getTeam = async (req, res, next) => {
          (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id IS NULL AND ${OPEN}) AS unassigned,
          (SELECT COUNT(*) FROM leads l WHERE ${OPEN} AND l.next_follow_up_at < NOW()) AS overdue,
          (SELECT COUNT(*) FROM leads l WHERE ${OPEN} AND l.next_follow_up_at IS NULL AND NOT EXISTS (
-             SELECT 1 FROM site_visits sv WHERE sv.lead_id = l.id AND sv.status = 'SCHEDULED' AND sv.scheduled_time >= NOW())) AS stale,
+             SELECT 1 FROM site_visits sv WHERE sv.lead_id = l.id AND sv.status IN (${VISIT_UPCOMING_SQL}) AND sv.scheduled_time >= NOW())) AS stale,
          (SELECT COUNT(*) FROM leads l WHERE l.created_at >= CURDATE()) AS new_today,
-         (SELECT COUNT(*) FROM site_visits sv WHERE sv.status IN ('SCHEDULED','COMPLETED')
+         (SELECT COUNT(*) FROM site_visits sv WHERE sv.status IN (${VISIT_SEEN_SQL})
              AND sv.scheduled_time >= CURDATE() AND sv.scheduled_time < CURDATE() + INTERVAL 1 DAY) AS visits_today,
-         (SELECT COUNT(*) FROM deals d WHERE d.status <> 'CANCELLED' AND d.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS bookings_month`
+         (SELECT COUNT(*) FROM deals d WHERE d.status IN (${BOOKED_DEAL_SQL}) AND d.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS bookings_month`
     );
 
     const [partners] = await pool.query(
       `SELECT cp.id, cp.firm_name, cp.contact_person, cp.phone, cp.tier,
               (SELECT COUNT(*) FROM leads l WHERE l.channel_partner_id = cp.id AND l.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) AS clients_month,
               (SELECT COUNT(*) FROM leads l WHERE l.channel_partner_id = cp.id AND ${OPEN}) AS active_clients,
-              (SELECT COUNT(*) FROM deals d WHERE d.channel_partner_id = cp.id AND d.status <> 'CANCELLED') AS bookings,
+              (SELECT COUNT(*) FROM deals d WHERE d.channel_partner_id = cp.id AND d.status IN (${BOOKED_DEAL_SQL})) AS bookings,
               (SELECT COUNT(*) FROM users u WHERE u.channel_partner_id = cp.id AND u.status = 'ACTIVE') AS logins
          FROM channel_partners cp
         WHERE cp.status = 'ACTIVE'
@@ -1048,13 +988,8 @@ const getTeam = async (req, res, next) => {
   }
 };
 
-async function assignLeadTo(lead, agent, me) {
-  await pool.query('UPDATE leads SET assigned_agent_id = ?, next_follow_up_at = COALESCE(next_follow_up_at, NOW()) WHERE id = ?', [agent.id, lead.id]);
-  const agentName = fullName(agent.first_name, agent.last_name);
-  await logActivity({ leadId: lead.id, userId: me.id, type: 'ASSIGN', note: `Assigned to ${agentName}` });
-  const clientName = fullName(lead.first_name, lead.last_name);
-  await notifyUser(agent.id, { type: 'SUCCESS', title: `New lead: ${clientName}`, message: `Assigned by ${me.name}. Call ${lead.phone}.`, leadId: lead.id }, me.id);
-  await notifyPartner(lead.channel_partner_id, { type: 'INFO', title: `Relationship manager for ${clientName}`, message: `${agentName}${agent.phone ? ` (${agent.phone})` : ''} is now handling your client.`, leadId: lead.id });
+async function assignLeadTo(lead, agent, me, req = null, method = 'MANUAL', reason = null) {
+  return leadService.assignLead(lead.id, agent.id, { by: { id: me.id, name: me.name, role: me.role }, method, reason, req });
 }
 
 // POST /workspace/leads/:id/assign { agent_id }
@@ -1068,7 +1003,7 @@ const assignLead = async (req, res, next) => {
     );
     if (!agent) return fail(res, 400, 'Choose an active team member.');
     if (agent.id === lead.assigned_agent_id) return res.json({ status: 'success', message: 'Already assigned.' });
-    await assignLeadTo(lead, agent, req.ws);
+    await assignLeadTo(lead, agent, req.ws, req, 'MANUAL', req.body.reason || null);
     res.json({ status: 'success', message: `Assigned to ${fullName(agent.first_name, agent.last_name)}.` });
   } catch (err) {
     next(err);
@@ -1088,7 +1023,7 @@ const distributeLeads = async (req, res, next) => {
       const agent = await pickLeadOwner();
       if (!agent) break;
       const [[full]] = await pool.query('SELECT id, first_name, last_name, phone FROM users WHERE id = ?', [agent.id]);
-      await assignLeadTo(lead, full, req.ws);
+      await assignLeadTo(lead, full, req.ws, req, 'AUTO', 'Fair distribution');
       const name = fullName(full.first_name, full.last_name);
       perAgent[name] = (perAgent[name] || 0) + 1;
     }
@@ -1197,7 +1132,7 @@ const getCalendar = async (req, res, next) => {
     if (agentId) { vWhere.push('(sv.assigned_agent_id = ? OR l.assigned_agent_id = ?)'); vParams.push(agentId, agentId); }
 
     const [visits] = await pool.query(
-      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id,
+      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason,
               l.first_name, l.last_name, l.phone, l.temperature, cp.firm_name AS partner_firm,
               p.id AS project_id, p.name AS project_name, p.location, p.city,
               ag.first_name AS agent_first_name, ag.last_name AS agent_last_name, ag.phone AS agent_phone
@@ -1312,8 +1247,8 @@ const getReports = async (req, res, next) => {
          (SELECT COUNT(*) FROM leads l WHERE l.created_at >= ? AND (l.last_contacted_at IS NOT NULL OR ${BUCKET} <> 'NEW')) AS contacted,
          (SELECT COUNT(DISTINCT sv.lead_id) FROM site_visits sv WHERE sv.created_at >= ?) AS visits_fixed,
          (SELECT COUNT(*) FROM site_visits sv WHERE sv.status = 'COMPLETED' AND sv.scheduled_time >= ?) AS visits_done,
-         (SELECT COUNT(*) FROM deals d WHERE d.status <> 'CANCELLED' AND d.created_at >= ?) AS bookings,
-         (SELECT COALESCE(SUM(d.agreed_total_amount), 0) FROM deals d WHERE d.status <> 'CANCELLED' AND d.created_at >= ?) AS booking_value,
+         (SELECT COUNT(*) FROM deals d WHERE d.status IN (${BOOKED_DEAL_SQL}) AND d.created_at >= ?) AS bookings,
+         (SELECT COALESCE(SUM(d.agreed_total_amount), 0) FROM deals d WHERE d.status IN (${BOOKED_DEAL_SQL}) AND d.created_at >= ?) AS booking_value,
          (SELECT ROUND(AVG(TIMESTAMPDIFF(MINUTE, l.created_at, ${FIRST_TOUCH}))) FROM leads l WHERE l.created_at >= ? AND ${FIRST_TOUCH} IS NOT NULL) AS first_call_mins`,
       [since, since, since, since, since, since, since]
     );
@@ -1321,7 +1256,7 @@ const getReports = async (req, res, next) => {
     const [sources] = await pool.query(
       `SELECT l.source, COUNT(*) AS leads,
               SUM(EXISTS (SELECT 1 FROM site_visits sv WHERE sv.lead_id = l.id AND sv.status = 'COMPLETED')) AS visited,
-              SUM(EXISTS (SELECT 1 FROM deals d WHERE d.lead_id = l.id AND d.status <> 'CANCELLED')) AS booked
+              SUM(EXISTS (SELECT 1 FROM deals d WHERE d.lead_id = l.id AND d.status IN (${BOOKED_DEAL_SQL}))) AS booked
          FROM leads l WHERE l.created_at >= ?
         GROUP BY l.source ORDER BY leads DESC LIMIT 12`,
       [since]
@@ -1332,7 +1267,7 @@ const getReports = async (req, res, next) => {
               (SELECT COUNT(*) FROM leads l WHERE l.assigned_agent_id = u.id AND l.created_at >= ?) AS leads,
               (SELECT COUNT(*) FROM lead_activities a WHERE a.user_id = u.id AND a.type IN ('CALL','WHATSAPP') AND a.created_at >= ?) AS calls,
               (SELECT COUNT(*) FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status = 'COMPLETED' AND sv.scheduled_time >= ?) AS visits_done,
-              (SELECT COUNT(*) FROM deals d JOIN leads l ON l.id = d.lead_id WHERE l.assigned_agent_id = u.id AND d.status <> 'CANCELLED' AND d.created_at >= ?) AS bookings,
+              (SELECT COUNT(*) FROM deals d JOIN leads l ON l.id = d.lead_id WHERE l.assigned_agent_id = u.id AND d.status IN (${BOOKED_DEAL_SQL}) AND d.created_at >= ?) AS bookings,
               (SELECT ROUND(AVG(TIMESTAMPDIFF(MINUTE, l.created_at, ${FIRST_TOUCH}))) FROM leads l
                 WHERE l.assigned_agent_id = u.id AND l.created_at >= ? AND ${FIRST_TOUCH} IS NOT NULL) AS first_call_mins
          FROM users u JOIN roles r ON r.id = u.role_id
@@ -1402,6 +1337,8 @@ const importLeads = async (req, res) => {
   if (rows.length > 5000) return fail(res, 400, 'Import up to 5,000 rows at a time — split the file.');
   const fileName = String((req.body && req.body.file_name) || 'a file').slice(0, 80);
   const assignTo = String((req.body && req.body.assign_to) || 'auto');
+  const importCampaign = await campaignFor(req.body && req.body.campaign_id, null);
+  if (req.body && req.body.campaign_id && !importCampaign) return fail(res, 400, 'The chosen campaign no longer exists.');
 
   // Who gets the leads: one chosen person, or fair distribution among available agents (telecallers first)
   let fixed = null;
@@ -1461,17 +1398,30 @@ const importLeads = async (req, res) => {
     const stage = stageFromText(r.stage);
     const source = String(r.source || 'IMPORT').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 100) || 'IMPORT';
     const closed = ['BOOKED', 'LOST'].includes(bucketOf(stage));
+    let email = r.email ? String(r.email).trim().slice(0, 150) : null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { problem(rowNo, `Email "${email}" looks wrong — imported without it`); email = null; }
     const leadId = crypto.randomUUID();
+    const reqs = leadRequirements({ configuration: r.configuration, preferred_location: r.location, property_type: r.property_type });
+    const campaignId = importCampaign || (r.campaign ? await campaignFor(null, String(r.campaign).trim()) : null);
+    const priority = leadService.scorePriority({ source, budget_max: parseBudget(r.budget_max || r.budget), created_at: new Date() });
     await pool.query(
       `INSERT INTO leads (id, first_name, last_name, email, phone, source, stage, budget_min, budget_max, preferred_project_id,
-                          assigned_agent_id, notes, next_follow_up_at, registered_by, lost_reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [leadId, first.slice(0, 100), rest.join(' ').slice(0, 100) || null, r.email ? String(r.email).trim().slice(0, 150) : null, phone, source,
+                          assigned_agent_id, notes, next_follow_up_at, registered_by, lost_reason, campaign_id, priority,
+                          configuration, preferred_location, property_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [leadId, first.slice(0, 100), rest.join(' ').slice(0, 100) || null, email, phone, source,
         stage, parseBudget(r.budget_min || r.budget), parseBudget(r.budget_max), project ? project.id : null,
         owner ? owner.id : null, r.notes ? String(r.notes).slice(0, 2000) : null,
-        closed ? null : new Date(), me.id, bucketOf(stage) === 'LOST' ? 'Imported as lost' : null]
+        closed ? null : new Date(), me.id, bucketOf(stage) === 'LOST' ? 'Imported as lost' : null, campaignId, priority,
+        reqs.configuration, reqs.preferred_location, reqs.property_type]
     );
     await logActivity({ leadId, userId: me.id, type: 'SYSTEM', outcome: 'CREATED', note: `Imported from ${fileName}${r.notes ? ` — ${String(r.notes).slice(0, 200)}` : ''}` });
+    if (owner) {
+      await pool.query(
+        `INSERT INTO lead_assignments (id, lead_id, from_user_id, to_user_id, assigned_by, method, reason) VALUES (?, ?, NULL, ?, ?, 'IMPORT', ?)`,
+        [crypto.randomUUID(), leadId, owner.id, me.id, `Imported from ${fileName}`.slice(0, 255)]
+      );
+    }
     summary.created++;
     if (owner) {
       const name = fullName(owner.first_name, owner.last_name);
@@ -1481,8 +1431,13 @@ const importLeads = async (req, res) => {
   }
 
   for (const [agentId, n] of Object.entries(perAgentIds)) {
-    await notifyUser(agentId, { type: 'INFO', title: `📥 ${n} imported lead${n === 1 ? '' : 's'} assigned to you`, message: `From ${fileName}, added by ${me.name}. They're on your Today list.` }, me.id);
+    await notifyUser(agentId, { type: 'INFO', title: `📥 ${n} imported lead${n === 1 ? '' : 's'} assigned to you`, message: `From ${fileName}, added by ${me.name}. They're on your Today list.`, category: 'LEAD_ASSIGNED' }, me.id);
   }
+  await audit.record({
+    req, action: 'LEADS_IMPORTED', entityType: 'IMPORT', entityId: null,
+    summary: `${summary.created} imported from ${fileName}; ${summary.duplicates} duplicates and ${summary.invalid} invalid rows skipped`,
+    after: { file: fileName, created: summary.created, duplicates: summary.duplicates, invalid: summary.invalid, perAgent: summary.perAgent, campaign_id: importCampaign }
+  });
   res.status(201).json({ status: 'success', message: `${summary.created} lead${summary.created === 1 ? '' : 's'} imported.`, data: summary });
 };
 

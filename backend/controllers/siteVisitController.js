@@ -3,6 +3,18 @@ const pool = require('../config/db');
 const googleCalendar = require('../services/googleCalendarService');
 const { createNotification, broadcastToAdmins } = require('../services/notificationService');
 
+const { leadIdScope } = require('../services/recordScope');
+const visitScopeSql = (user) => {
+  const scope = leadIdScope(user, 'sv.lead_id');
+  if (!scope) return '';
+  return user.role === 'CHANNEL_PARTNER' ? ` AND ${scope.sql}` : ` AND (sv.assigned_agent_id = ? OR ${scope.sql})`;
+};
+const visitScopeParams = (user) => {
+  const scope = leadIdScope(user, 'sv.lead_id');
+  if (!scope) return [];
+  return user.role === 'CHANNEL_PARTNER' ? scope.params : [user.id, ...scope.params];
+};
+
 /**
  * Helper: Log site visit history
  */
@@ -30,7 +42,7 @@ const getSiteVisits = async (req, res, next) => {
              c.first_name AS customer_first_name, c.last_name AS customer_last_name, c.phone AS customer_phone, c.email AS customer_email
       FROM site_visits sv
       JOIN projects p ON sv.project_id = p.id
-      JOIN users u ON sv.assigned_agent_id = u.id
+      LEFT JOIN users u ON sv.assigned_agent_id = u.id
       LEFT JOIN leads l ON sv.lead_id = l.id
       LEFT JOIN customers c ON sv.customer_id = c.id
       WHERE 1=1
@@ -58,6 +70,14 @@ const getSiteVisits = async (req, res, next) => {
       params.push(customer_id);
     }
 
+    // Agents see visits they conduct or that belong to their leads; partners see their clients' visits
+    const scope = leadIdScope(req.user, 'sv.lead_id');
+    if (scope) {
+      query += req.user.role === 'CHANNEL_PARTNER' ? ` AND ${scope.sql}` : ` AND (sv.assigned_agent_id = ? OR ${scope.sql})`;
+      if (req.user.role !== 'CHANNEL_PARTNER') params.push(req.user.id);
+      params.push(...scope.params);
+    }
+
     query += ` ORDER BY sv.scheduled_time DESC`;
 
     const [siteVisits] = await pool.query(query, params);
@@ -83,11 +103,11 @@ const getSiteVisitById = async (req, res, next) => {
               c.phone AS customer_phone, c.email AS customer_email
        FROM site_visits sv
        JOIN projects p ON sv.project_id = p.id
-       JOIN users u ON sv.assigned_agent_id = u.id
+       LEFT JOIN users u ON sv.assigned_agent_id = u.id
        LEFT JOIN leads l ON sv.lead_id = l.id
        LEFT JOIN customers c ON sv.customer_id = c.id
-       WHERE sv.id = ?`,
-      [req.params.id]
+       WHERE sv.id = ?${visitScopeSql(req.user)}`,
+      [req.params.id, ...visitScopeParams(req.user)]
     );
 
     if (siteVisits.length === 0) {

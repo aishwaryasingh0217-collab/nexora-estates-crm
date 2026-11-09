@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const pool = require('../config/db');
+const { stripBankDetails } = require('../services/recordScope');
 
 /**
  * GET /api/channel-partners
@@ -36,6 +37,11 @@ const getChannelPartners = async (req, res, next) => {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
+    if (req.user && req.user.role === 'CHANNEL_PARTNER') {
+      query += ` AND cp.id = ?`;
+      params.push(req.user.channelPartnerId || '__none__');
+    }
+
     query += ` GROUP BY cp.id ORDER BY cp.created_at DESC`;
 
     const [partners] = await pool.query(query, params);
@@ -43,7 +49,7 @@ const getChannelPartners = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       results: partners.length,
-      data: partners
+      data: partners.map((p) => stripBankDetails(req.user, p))
     });
   } catch (error) {
     next(error);
@@ -84,6 +90,9 @@ const getBrokerSummary = async (req, res, next) => {
 const getChannelPartnerById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (req.user && req.user.role === 'CHANNEL_PARTNER' && id !== req.user.channelPartnerId) {
+      return res.status(404).json({ status: 'error', message: 'Channel partner not found.' });
+    }
 
     const [partners] = await pool.query(`
       SELECT * FROM channel_partners WHERE id = ?
@@ -124,7 +133,7 @@ const getChannelPartnerById = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        ...partner,
+        ...stripBankDetails(req.user, partner),
         commissions,
         payouts
       }

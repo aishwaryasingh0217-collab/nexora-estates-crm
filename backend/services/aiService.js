@@ -325,7 +325,7 @@ async function fetchLiveRevenueStats() {
     SELECT COUNT(*) AS total_deals, COALESCE(SUM(agreed_total_amount), 0) AS pipeline_total 
     FROM deals WHERE status IN ('BOOKED', 'AGREEMENT_SIGNED', 'CLOSED_WON')
   `);
-  const [[payRows]] = await pool.query('SELECT COUNT(*) AS total_payments, COALESCE(SUM(amount_received), 0) AS total_realized FROM payments');
+  const [[payRows]] = await pool.query('SELECT COUNT(*) AS total_payments, COALESCE(SUM(amount_received), 0) AS total_realized FROM payments WHERE verification_status = \'VERIFIED\'');
   return {
     total_deals: dealRows.total_deals || 0,
     pipeline_total: dealRows.pipeline_total || 0,

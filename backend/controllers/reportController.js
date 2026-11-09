@@ -207,7 +207,7 @@ const getExecutiveAnalytics = async (req, res, next) => {
        FROM payments py
        JOIN deals d ON py.deal_id = d.id
        JOIN units un ON d.unit_id = un.id
-       ${dealFilter} AND (py.payment_date BETWEEN ? AND ?)`,
+       ${dealFilter} AND (py.payment_date BETWEEN ? AND ?) AND py.verification_status = 'VERIFIED'`,
       [...dealParams, startStr.slice(0, 10), endStr.slice(0, 10)]
     );
 
@@ -217,7 +217,7 @@ const getExecutiveAnalytics = async (req, res, next) => {
        FROM payments py
        JOIN deals d ON py.deal_id = d.id
        JOIN units un ON d.unit_id = un.id
-       ${dealFilter} AND (py.payment_date BETWEEN ? AND ?)`,
+       ${dealFilter} AND (py.payment_date BETWEEN ? AND ?) AND py.verification_status = 'VERIFIED'`,
       [...dealParams, prevStartStr.slice(0, 10), prevEndStr.slice(0, 10)]
     );
 
@@ -231,7 +231,7 @@ const getExecutiveAnalytics = async (req, res, next) => {
       `SELECT 
         COUNT(sv.id) AS total_visits,
         SUM(CASE WHEN sv.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_visits,
-        SUM(CASE WHEN sv.status = 'SCHEDULED' THEN 1 ELSE 0 END) AS scheduled_visits,
+        SUM(CASE WHEN sv.status IN ('ASSIGNED', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'RESCHEDULED') THEN 1 ELSE 0 END) AS scheduled_visits,
         SUM(CASE WHEN sv.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_visits
        FROM site_visits sv
        ${visitFilter} AND (sv.scheduled_time BETWEEN ? AND ?)`,
@@ -456,7 +456,7 @@ const getExecutiveAnalytics = async (req, res, next) => {
         ORDER BY d.created_at DESC LIMIT 4)
        UNION ALL
        (SELECT 'PAYMENT' AS tx_type, py.id, py.payment_number AS ref, py.amount_received AS amount,
-               py.payment_date AS date, py.payment_mode AS status,
+               py.payment_date AS date, CONCAT(py.payment_mode, IF(py.verification_status = 'VERIFIED', '', ' (not verified)')) AS status,
                CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')) AS client_name,
                p.name AS project_name, un.unit_number
         FROM payments py
@@ -690,7 +690,7 @@ const getDealsReport = async (req, res, next) => {
        JOIN customers c ON d.customer_id = c.id
        JOIN units un ON d.unit_id = un.id
        JOIN projects p ON un.project_id = p.id
-       LEFT JOIN payments py ON d.id = py.deal_id
+       LEFT JOIN payments py ON d.id = py.deal_id AND py.verification_status = 'VERIFIED'
        GROUP BY d.id
        ORDER BY d.created_at DESC LIMIT 50`
     );
@@ -701,7 +701,7 @@ const getDealsReport = async (req, res, next) => {
 const getPaymentsReport = async (req, res, next) => {
   try {
     const [records] = await pool.query(
-      `SELECT py.id, py.payment_number, py.amount_received, py.payment_date, py.payment_mode, py.reference_number,
+      `SELECT py.id, py.payment_number, py.amount_received, py.payment_date, py.payment_mode, py.reference_number, py.verification_status, py.receipt_number,
               d.deal_number, CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')) AS customer_name,
               un.unit_number, p.name AS project_name
        FROM payments py

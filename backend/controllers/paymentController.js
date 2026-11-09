@@ -64,7 +64,7 @@ const getDealMilestones = async (req, res, next) => {
     const [milestones] = await pool.query(
       `SELECT pm.*, COALESCE(SUM(py.amount_received), 0) AS total_paid
        FROM payment_milestones pm
-       LEFT JOIN payments py ON pm.id = py.milestone_id
+       LEFT JOIN payments py ON pm.id = py.milestone_id AND py.verification_status = 'VERIFIED'
        WHERE pm.deal_id = ?
        GROUP BY pm.id
        ORDER BY pm.due_date ASC`,
@@ -86,107 +86,17 @@ const getDealMilestones = async (req, res, next) => {
  * SUPER_ADMIN only: Record monetary payment transaction against deal/milestone
  */
 const recordPayment = async (req, res, next) => {
-  const connection = await pool.getConnection();
+  // Recorded payments wait for a finance team member to verify them (services/financeService.js);
+  // until then they don't count as received and the milestone isn't marked paid.
   try {
-    const {
-      deal_id,
-      milestone_id,
-      amount_received,
-      payment_date,
-      payment_mode,
-      reference_number,
-      notes
-    } = req.body;
-
-    if (!deal_id || !amount_received || !payment_mode) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'deal_id, amount_received, and payment_mode are required.'
-      });
-    }
-
-    await connection.beginTransaction();
-
-    // Verify deal exists
-    const [deals] = await connection.query('SELECT id, status FROM deals WHERE id = ? FOR UPDATE', [deal_id]);
-    if (deals.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({
-        status: 'error',
-        message: 'Deal record not found.'
-      });
-    }
-
-    const paymentId = crypto.randomUUID();
-    const paymentNumber = `PAY-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
-    const parsedAmount = parseFloat(amount_received);
-
-    await connection.query(
-      `INSERT INTO payments (
-        id, payment_number, deal_id, milestone_id, amount_received, payment_date,
-        payment_mode, reference_number, received_by, notes
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        paymentId,
-        paymentNumber,
-        deal_id,
-        milestone_id || null,
-        parsedAmount,
-        payment_date || new Date().toISOString().slice(0, 10),
-        payment_mode.toUpperCase(),
-        reference_number || null,
-        req.user.id,
-        notes || null
-      ]
-    );
-
-    // If milestone_id provided, update milestone status (PARTIAL or PAID)
-    if (milestone_id) {
-      const [milestones] = await connection.query('SELECT due_amount FROM payment_milestones WHERE id = ?', [milestone_id]);
-      if (milestones.length > 0) {
-        const dueAmount = parseFloat(milestones[0].due_amount);
-        const [sumResult] = await connection.query(
-          'SELECT SUM(amount_received) AS total FROM payments WHERE milestone_id = ?',
-          [milestone_id]
-        );
-        const totalPaid = parseFloat(sumResult[0].total || 0);
-
-        let newStatus = 'PARTIAL';
-        if (totalPaid >= dueAmount) {
-          newStatus = 'PAID';
-        }
-
-        await connection.query('UPDATE payment_milestones SET status = ? WHERE id = ?', [newStatus, milestone_id]);
-      }
-    }
-
-    await connection.commit();
-
-    // Trigger Notification
-    await broadcastToAdmins({
-      type: 'SUCCESS',
-      title: 'Payment Received',
-      message: `Payment of ₹${parsedAmount.toLocaleString()} received via ${payment_mode.toUpperCase()} (Receipt #${paymentNumber}).`,
-      relatedEntityType: 'PAYMENT',
-      relatedEntityId: paymentId
-    });
-
+    const result = await require('../services/financeService').recordPayment(req.user, req.body || {}, req);
     res.status(201).json({
       status: 'success',
-      message: 'Payment recorded successfully.',
-      data: {
-        id: paymentId,
-        payment_number: paymentNumber,
-        deal_id,
-        amount_received: parsedAmount,
-        payment_mode: payment_mode.toUpperCase()
-      }
+      message: result.message,
+      data: { id: result.id, payment_number: result.paymentNumber, verification_status: 'PENDING' }
     });
   } catch (error) {
-    await connection.rollback();
     next(error);
-  } finally {
-    connection.release();
   }
 };
 
@@ -256,6 +166,7 @@ const getDemandNoticesSummary = async (req, res, next) => {
       LEFT JOIN (
         SELECT milestone_id, SUM(amount_received) AS paid_sum
         FROM payments
+        WHERE verification_status = 'VERIFIED'
         GROUP BY milestone_id
       ) paid_tbl ON pm.id = paid_tbl.milestone_id
       WHERE pm.status IN ('PENDING', 'PARTIAL')
@@ -321,6 +232,7 @@ const getEligibleDemandNotices = async (req, res, next) => {
       LEFT JOIN (
         SELECT milestone_id, SUM(amount_received) AS paid_sum
         FROM payments
+        WHERE verification_status = 'VERIFIED'
         GROUP BY milestone_id
       ) paid_tbl ON pm.id = paid_tbl.milestone_id
       WHERE pm.status IN ('PENDING', 'PARTIAL')

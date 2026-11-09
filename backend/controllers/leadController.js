@@ -3,6 +3,7 @@ const pool = require('../config/db');
 const { createNotification, broadcastToAdmins } = require('../services/notificationService');
 const { captureEnquiry, EnquiryError } = require('../services/enquiryService');
 const { logActivity, notifyPartner } = require('../services/salesWorkspace');
+const { leadScope } = require('../services/recordScope');
 
 /**
  * GET /api/leads
@@ -42,6 +43,13 @@ const getLeads = async (req, res, next) => {
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
+    // Agents and partners only ever see their own leads here
+    const scope = leadScope(req.user, 'l');
+    if (scope) {
+      query += ` AND ${scope.sql}`;
+      params.push(...scope.params);
+    }
+
     query += ` ORDER BY l.created_at DESC`;
 
     const [leads] = await pool.query(query, params);
@@ -61,14 +69,15 @@ const getLeads = async (req, res, next) => {
  */
 const getLeadById = async (req, res, next) => {
   try {
+    const scope = leadScope(req.user, 'l');
     const [leads] = await pool.query(
       `SELECT l.*, p.name AS preferred_project_name,
               u.first_name AS agent_first_name, u.last_name AS agent_last_name
        FROM leads l
        LEFT JOIN projects p ON l.preferred_project_id = p.id
        LEFT JOIN users u ON l.assigned_agent_id = u.id
-       WHERE l.id = ?`,
-      [req.params.id]
+       WHERE l.id = ?${scope ? ` AND ${scope.sql}` : ''}`,
+      [req.params.id, ...(scope ? scope.params : [])]
     );
 
     if (leads.length === 0) {
@@ -82,7 +91,7 @@ const getLeadById = async (req, res, next) => {
       `SELECT sv.*, p.name AS project_name, u.first_name AS agent_first_name
        FROM site_visits sv
        JOIN projects p ON sv.project_id = p.id
-       JOIN users u ON sv.assigned_agent_id = u.id
+       LEFT JOIN users u ON sv.assigned_agent_id = u.id
        WHERE sv.lead_id = ?
        ORDER BY sv.scheduled_time DESC`,
       [req.params.id]
@@ -238,6 +247,11 @@ async function executeLeadBooking({
       err.statusCode = 409;
       throw err;
     }
+    if (unit.status === 'HOLD' && unit.hold_deal_id) {
+      const err = new Error(`Unit ${unit.unit_number} is reserved for a booking that is waiting for approval.`);
+      err.statusCode = 409;
+      throw err;
+    }
 
     // 3. Find or create Customer profile for this Lead
     const [existingCust] = await connection.query('SELECT id FROM customers WHERE lead_id = ? OR email = ? OR phone = ? LIMIT 1', [lead.id, lead.email || '', lead.phone]);
@@ -324,6 +338,13 @@ async function executeLeadBooking({
 
     // 7. Commit Transaction
     await connection.commit();
+
+    // Payment schedule, partner commission check, customer onboarding, finance / care hand-off
+    try {
+      await require('../services/bookingService').afterBooked(dealId, { id: userId, name: null, role: null });
+    } catch (hookErr) {
+      console.error('[booking] post-booking steps failed for', dealId, hookErr.message);
+    }
 
     if (lead.channel_partner_id) {
       await notifyPartner(lead.channel_partner_id, {

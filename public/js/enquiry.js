@@ -16,13 +16,30 @@
   // Visiting hours shown to clients (kept inside the team's 9–20 working hours)
   const SLOTS = [['10:00', '10 am'], ['11:30', '11:30 am'], ['13:00', '1 pm'], ['15:00', '3 pm'], ['16:30', '4:30 pm'], ['18:00', '6 pm']];
 
+  // ---- Campaign tracking ------------------------------------------------------
+  // Keep the UTM tags of the tracking link the visitor arrived with (first touch, this browser tab),
+  // so the enquiry is attributed to the right marketing campaign.
+  const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'];
+  function readUtm() {
+    const found = {};
+    [window.location.search, (window.location.hash.split('?')[1] || '')].forEach((q) => {
+      const p = new URLSearchParams(q);
+      UTM_KEYS.forEach((k) => { if (p.get(k) && !found[k]) found[k] = p.get(k).slice(0, 100); });
+    });
+    try {
+      if (Object.keys(found).length) sessionStorage.setItem('nx_utm', JSON.stringify(found));
+      return JSON.parse(sessionStorage.getItem('nx_utm') || '{}');
+    } catch (e) { return found; }
+  }
+  const utmTags = readUtm();
+
   // ---- Shared sender ----------------------------------------------------------
   async function sendWebsiteEnquiry(payload) {
     const ref = typeof window.getShareReferrer === 'function' ? window.getShareReferrer() : null;
     const res = await fetch(`${apiBase()}/leads/webhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source: 'WEBSITE', ref, ...payload })
+      body: JSON.stringify({ source: 'WEBSITE', ref, ...utmTags, ...payload })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Could not send your request. Please try again.');

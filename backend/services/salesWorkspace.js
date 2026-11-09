@@ -34,6 +34,9 @@ const CLOSED_STAGES = [...STAGE_BUCKETS.BOOKED.aliases, ...STAGE_BUCKETS.LOST.al
 
 const sqlList = (arr) => arr.map((s) => pool.escape(s)).join(', ');
 
+// Visits that occupy a field agent's calendar (see services/visitService.js for the full lifecycle)
+const AGENT_BUSY_VISIT_STATUSES = ['ASSIGNED', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'RESCHEDULED'];
+
 /** SQL CASE expression that maps leads.stage → bucket key. Unknown legacy values count as follow-ups. */
 const bucketSql = (col = 'l.stage') =>
   `CASE ${Object.entries(STAGE_BUCKETS)
@@ -124,11 +127,11 @@ async function pickLeadOwner() {
 async function pickVisitAgent(when, fallbackId = null) {
   const [field] = await pool.query(
     `SELECT u.id, u.first_name, u.last_name, u.phone,
-            (SELECT COUNT(*) FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status = 'SCHEDULED'
+            (SELECT COUNT(*) FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status IN (${sqlList(AGENT_BUSY_VISIT_STATUSES)})
                 AND DATE(sv.scheduled_time) = DATE(?)) AS day_load
        FROM users u JOIN roles r ON r.id = u.role_id
       WHERE u.status = 'ACTIVE' AND u.is_available = 1 AND r.name = 'OUTSIDE_SALES'
-        AND NOT EXISTS (SELECT 1 FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status = 'SCHEDULED'
+        AND NOT EXISTS (SELECT 1 FROM site_visits sv WHERE sv.assigned_agent_id = u.id AND sv.status IN (${sqlList(AGENT_BUSY_VISIT_STATUSES)})
                           AND sv.scheduled_time BETWEEN ? - INTERVAL 59 MINUTE AND ? + INTERVAL 59 MINUTE)
       ORDER BY day_load ASC, u.first_name
       LIMIT 1`,
@@ -147,18 +150,22 @@ async function pickVisitAgent(when, fallbackId = null) {
   return mgr[0] || null;
 }
 
-/** Inserts a scheduled visit + its history row. Returns the new visit id. */
-async function insertVisit({ leadId, projectId, agentId, when, byUserId = null, note = null }) {
+/**
+ * Inserts a visit + its history row. Returns the new visit id. A visit handed to a field agent starts
+ * as ASSIGNED (they accept it); without an agent it is REQUESTED for a manager to allocate.
+ */
+async function insertVisit({ leadId, projectId, agentId, when, byUserId = null, note = null, status = null, clientConfirmed = true }) {
   const visitId = crypto.randomUUID();
+  const initial = status || (agentId ? 'ASSIGNED' : 'REQUESTED');
   await pool.query(
-    `INSERT INTO site_visits (id, lead_id, project_id, assigned_agent_id, scheduled_time, status, client_feedback)
-     VALUES (?, ?, ?, ?, ?, 'SCHEDULED', NULL)`,
-    [visitId, leadId, projectId, agentId, when]
+    `INSERT INTO site_visits (id, lead_id, project_id, assigned_agent_id, scheduled_time, status, client_feedback, requested_by, client_confirmed)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+    [visitId, leadId, projectId, agentId, when, initial, byUserId, clientConfirmed ? 1 : 0]
   );
   await pool.query(
     `INSERT INTO site_visit_history (id, site_visit_id, action, performed_by, previous_status, new_status, notes)
-     VALUES (?, ?, 'SCHEDULED', ?, NULL, 'SCHEDULED', ?)`,
-    [crypto.randomUUID(), visitId, byUserId, note]
+     VALUES (?, ?, 'CREATED', ?, NULL, ?, ?)`,
+    [crypto.randomUUID(), visitId, byUserId, initial, note]
   );
   return visitId;
 }
@@ -177,36 +184,37 @@ async function logActivity({ leadId, userId = null, type, outcome = null, note =
   return id;
 }
 
-async function notifyManagers({ type = 'INFO', title, message, leadId = null }, exceptUserId = null) {
+async function notifyManagers({ type = 'INFO', title, message, leadId = null, category = null }, exceptUserId = null) {
   const [rows] = await pool.query(
     `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
       WHERE u.status = 'ACTIVE' AND r.name IN (${sqlList(MANAGER_ROLES)})`
   );
   await Promise.all(rows.filter((r) => r.id !== exceptUserId).map((r) => createNotification({
-    recipientUserId: r.id, type, title, message, relatedEntityType: 'LEAD', relatedEntityId: leadId
+    recipientUserId: r.id, type, title, message, relatedEntityType: 'LEAD', relatedEntityId: leadId, category
   })));
 }
 
 /** Notifies every login that belongs to a channel-partner firm. */
-async function notifyPartner(channelPartnerId, { type = 'INFO', title, message, leadId = null }, exceptUserId = null) {
+async function notifyPartner(channelPartnerId, { type = 'INFO', title, message, leadId = null, category = null }, exceptUserId = null) {
   if (!channelPartnerId) return;
   const [rows] = await pool.query(
     `SELECT id FROM users WHERE channel_partner_id = ? AND status = 'ACTIVE'`,
     [channelPartnerId]
   );
   await Promise.all(rows.filter((r) => r.id !== exceptUserId).map((r) => createNotification({
-    recipientUserId: r.id, type, title, message, relatedEntityType: 'LEAD', relatedEntityId: leadId
+    recipientUserId: r.id, type, title, message, relatedEntityType: 'LEAD', relatedEntityId: leadId, category
   })));
 }
 
-async function notifyUser(userId, { type = 'INFO', title, message, leadId = null }, exceptUserId = null) {
+async function notifyUser(userId, { type = 'INFO', title, message, leadId = null, category = null }, exceptUserId = null) {
   if (!userId || userId === exceptUserId) return;
-  await createNotification({ recipientUserId: userId, type, title, message, relatedEntityType: 'LEAD', relatedEntityId: leadId });
+  await createNotification({ recipientUserId: userId, type, title, message, relatedEntityType: 'LEAD', relatedEntityId: leadId, category });
 }
 
 const fullName = (first, last) => [first, last].filter(Boolean).join(' ').trim();
 
 module.exports = {
+  AGENT_BUSY_VISIT_STATUSES,
   AGENT_ROLES,
   MANAGER_ROLES,
   PARTNER_ROLE,

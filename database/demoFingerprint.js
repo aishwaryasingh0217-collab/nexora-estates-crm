@@ -8,7 +8,7 @@ const crypto = require('crypto');
 
 module.exports = function demoFingerprint() {
   const files = [
-    ...fs.readdirSync(path.join(__dirname, 'migrations')).filter((f) => f.endsWith('.sql')).map((f) => `migrations/${f}`),
+    ...fs.readdirSync(path.join(__dirname, 'migrations')).filter((f) => /\.(sql|js)$/.test(f)).map((f) => `migrations/${f}`),
     ...fs.readdirSync(__dirname).filter((f) => /^seed_.*\.js$/.test(f) || f === 'demo_reset.js')
   ].sort();
   const hash = crypto.createHash('sha1');

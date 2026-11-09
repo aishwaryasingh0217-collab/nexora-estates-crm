@@ -214,7 +214,7 @@ const getToday = async (req, res, next) => {
     }
 
     const [visits] = await pool.query(
-      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.client_feedback,
+      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, sv.client_feedback,
               l.first_name, l.last_name, l.phone, cp.firm_name AS partner_firm,
               p.id AS project_id, p.name AS project_name, p.location, p.city
          FROM site_visits sv
@@ -276,7 +276,7 @@ async function partnerToday(me) {
   );
 
   const [visits] = await pool.query(
-    `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, l.first_name, l.last_name, l.phone,
+    `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, l.first_name, l.last_name, l.phone,
             p.name AS project_name, p.location, p.city,
             ag.first_name AS agent_first_name, ag.last_name AS agent_last_name, ag.phone AS agent_phone
        FROM site_visits sv
@@ -402,7 +402,7 @@ const getLead = async (req, res, next) => {
     );
 
     const [visits] = await pool.query(
-      `SELECT sv.id, sv.scheduled_time, sv.status, sv.client_feedback, sv.rating,
+      `SELECT sv.id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, sv.client_feedback, sv.rating,
               p.id AS project_id, p.name AS project_name, p.location, p.city,
               ag.first_name AS agent_first_name, ag.last_name AS agent_last_name
          FROM site_visits sv
@@ -830,7 +830,7 @@ const listVisits = async (req, res, next) => {
       : `sv.status IN (${VISIT_OPEN_SQL}) AND sv.scheduled_time >= CURDATE()`);
 
     const [rows] = await pool.query(
-      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.client_feedback, sv.rating,
+      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason, sv.client_feedback, sv.rating,
               l.first_name, l.last_name, l.phone, l.temperature, cp.firm_name AS partner_firm,
               p.id AS project_id, p.name AS project_name, p.location, p.city,
               ag.first_name AS agent_first_name, ag.last_name AS agent_last_name, ag.phone AS agent_phone
@@ -1132,7 +1132,7 @@ const getCalendar = async (req, res, next) => {
     if (agentId) { vWhere.push('(sv.assigned_agent_id = ? OR l.assigned_agent_id = ?)'); vParams.push(agentId, agentId); }
 
     const [visits] = await pool.query(
-      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id,
+      `SELECT sv.id, sv.lead_id, sv.scheduled_time, sv.status, sv.assigned_agent_id, sv.accepted_at, sv.rejection_reason,
               l.first_name, l.last_name, l.phone, l.temperature, cp.firm_name AS partner_firm,
               p.id AS project_id, p.name AS project_name, p.location, p.city,
               ag.first_name AS agent_first_name, ag.last_name AS agent_last_name, ag.phone AS agent_phone

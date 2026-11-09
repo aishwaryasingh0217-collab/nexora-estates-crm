@@ -32,6 +32,14 @@
   ];
   const BUCKET_LABEL = Object.fromEntries(BUCKETS);
   const PIPELINE = ['NEW', 'CONTACTED', 'VISIT', 'VISITED', 'NEGOTIATION', 'BOOKED'];
+  // Site-visit lifecycle (matches backend/services/visitService.js)
+  const VISIT_UPCOMING = ['ASSIGNED', 'ACCEPTED', 'SCHEDULED', 'IN_PROGRESS', 'RESCHEDULED'];
+  const VISIT_OPEN = ['REQUESTED', 'PENDING_APPROVAL', ...VISIT_UPCOMING];
+  const VISIT_CHIP = {
+    REQUESTED: ['is-warn', 'Awaiting field agent'], PENDING_APPROVAL: ['is-warn', 'Awaiting approval'], ASSIGNED: ['is-warn', 'Assigned — not accepted yet'],
+    ACCEPTED: ['', 'Accepted — confirm with client'], SCHEDULED: ['is-ok', 'Confirmed'], IN_PROGRESS: ['is-ok', 'At site now'], RESCHEDULED: ['is-warn', 'Rescheduled'],
+    COMPLETED: ['is-ok', 'Done'], MISSED: ['is-bad', 'Missed'], NO_SHOW: ['is-bad', 'No-show'], CANCELLED: ['', 'Cancelled']
+  };
 
   const SOURCES = [
     ['WALK_IN', 'Walk-in'], ['DIRECT_CALL', 'Direct call'], ['REFERRAL', 'Referral'],
@@ -240,6 +248,18 @@
     try { localStorage.setItem('crm_surface', 'workspace'); } catch (e) { /* ignore */ }
     renderApp();
   };
+  /** The Testing Center link appears only in the testing environment (the server decides). */
+  let testingCenter = null;
+  function revealTestingCenter(menu) {
+    const show = () => { const b = menu.querySelector('.ws-testing-item'); if (b) b.hidden = !testingCenter || typeof window.openSuite !== 'function'; };
+    if (testingCenter !== null) return show();
+    const base = typeof getApiBase === 'function' ? getApiBase() : '/api';
+    fetch(`${base}/suite/me`, { headers: { Authorization: `Bearer ${state.token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { testingCenter = Boolean(j && j.data && j.data.testingCenter); show(); })
+      .catch(() => { testingCenter = false; });
+  }
+
   window.openFullCrm = function () {
     try { localStorage.setItem('crm_surface', 'crm'); } catch (e) { /* ignore */ }
     state.currentView = 'dashboard';
@@ -298,6 +318,21 @@
                 <button onclick="switchPortalAs('CHANNEL_PARTNER')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
                   🤝 Channel Partner (Broker Desk)
                 </button>
+                <button onclick="switchPortalAs('BUSINESS_OWNER')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  🏢 Business Owner (CEO)
+                </button>
+                <button onclick="switchPortalAs('FINANCE')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  💰 Finance &amp; Accounts
+                </button>
+                <button onclick="switchPortalAs('INVENTORY')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  🏗️ Projects &amp; Inventory
+                </button>
+                <button onclick="switchPortalAs('MARKETING')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  📣 Marketing
+                </button>
+                <button onclick="switchPortalAs('CUSTOMER_RELATIONS')" style="width: 100%; text-align: left; padding: 0.45rem 0.6rem; border: none; background: transparent; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                  💬 Customer Relationship
+                </button>
               </div>
             </div>
             <button type="button" class="btn btn-secondary btn-sm" onclick="openFullCrm()" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.7rem; border-radius: 8px; cursor: pointer; background: #0284c7; color: #ffffff; border: none;">
@@ -311,6 +346,8 @@
           <div class="ws-menu" id="ws-menu" hidden>
             <div class="ws-menu-head"><strong>${esc(fullName(state.user.firstName, state.user.lastName) || name)}</strong><span>${esc(roleLabel(state.user.role))}</span></div>
             ${canCrm ? `<button data-action="open-crm">${icon('grid')} Full CRM &amp; reports</button>` : ''}
+            ${['SUPER_ADMIN', 'ADMIN'].includes(state.user.role) && typeof window.openSuite === 'function' ? `<button data-action="open-suite">${icon('grid')} Business Suite (approvals, team, reports)</button>` : ''}
+            <button data-action="open-testing" class="ws-testing-item" hidden>${icon('check')} Testing Center</button>
             <button data-action="install-app" class="ws-install-item" hidden>${icon('install')} Install app on this device</button>
             <button data-action="enable-alerts" class="ws-alerts-item">${icon('bell')} <span>Turn on phone alerts</span></button>
             <button data-action="sync-calendar">${icon('sync')} Sync visits to my calendar</button>
@@ -344,6 +381,8 @@
       if (!W.me) {
         W.meReq = W.meReq || api('/me').finally(() => { W.meReq = null; });
         W.me = (await W.meReq).data;
+        // Cloud calling (when the company has set up telephony) for staff; partners don't call from the CRM
+        if (W.me && W.me.kind !== 'partner' && window.NXS && NXS.loadTelephony) NXS.loadTelephony();
       }
       ensureProjects().catch(() => {});
       paintBrand();
@@ -437,7 +476,7 @@
     const pct = total ? Math.round((done / total) * 100) : 100;
     const hour = new Date().getHours();
     const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    const visitsLeft = t.visits.filter((v) => v.status === 'SCHEDULED');
+    const visitsLeft = t.visits.filter((v) => VISIT_UPCOMING.includes(v.status));
     const allClear = s.remaining === 0;
 
     main(`
@@ -529,29 +568,43 @@
     W.visitIndex[v.id] = v;
     const name = fullName(v.first_name, v.last_name) || 'Client';
     const isPast = new Date(v.scheduled_time).getTime() < Date.now() - 30 * 60000;
-    const done = v.status !== 'SCHEDULED';
+    const done = !VISIT_OPEN.includes(v.status);
     const isPartner = W.me.kind === 'partner';
+    const mine = v.assigned_agent_id === W.me.id;
     const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.project_name, v.location, v.city].filter(Boolean).join(', '))}`;
-    const statusChip = { COMPLETED: '<span class="ws-chip is-ok">Done</span>', NO_SHOW: '<span class="ws-chip is-bad">No-show</span>', CANCELLED: '<span class="ws-chip">Cancelled</span>' }[v.status] || (isPast ? '<span class="ws-chip is-warn">Update status</span>' : '');
-
+    const [tone, text] = VISIT_CHIP[v.status] || ['', v.status];
+    const statusChip = `<span class="ws-chip ${tone}">${esc(text)}</span>${!done && isPast && ['SCHEDULED', 'ACCEPTED', 'IN_PROGRESS'].includes(v.status) ? ' <span class="ws-chip is-warn">Update status</span>' : ''}`;
+    // What this person can do next, by status (the server enforces the same rules)
+    let acts = '';
+    if (!done) {
+      if (isPartner) {
+        acts = `${v.agent_phone ? `<a class="ws-act is-call" href="tel:${esc(digits(v.agent_phone))}">${icon('phone')} Call RM</a>` : ''}
+          <button class="ws-act" data-action="visit-reschedule" data-id="${v.id}" data-lead="${v.lead_id}">${icon('calendar')} Reschedule</button>`;
+      } else if (mine && ['ASSIGNED', 'RESCHEDULED'].includes(v.status) && !v.accepted_at) {
+        acts = `<button class="ws-act is-log" data-action="visit-act" data-act="accept" data-id="${v.id}">${icon('check')} Accept</button>
+          <button class="ws-act" data-action="visit-reject" data-id="${v.id}">${icon('x')} Can't take it</button>
+          <a class="ws-act" href="${maps}" target="_blank" rel="noopener">${icon('nav')} Directions</a>`;
+      } else if (['REQUESTED', 'PENDING_APPROVAL'].includes(v.status)) {
+        acts = `<span class="ws-muted" style="padding:6px 4px;font-size:.82rem">${v.status === 'REQUESTED' ? 'Your manager will allocate a field agent.' : 'Waiting for manager approval.'}</span>
+          <button class="ws-act" data-action="visit-reschedule" data-id="${v.id}" data-lead="${v.lead_id}">${icon('calendar')} Change time</button>`;
+      } else {
+        acts = `<a class="ws-act is-call" href="tel:${esc(digits(v.phone))}" data-action="call" data-id="${v.lead_id}">${icon('phone')} Call</a>
+          ${v.status === 'ACCEPTED' ? `<button class="ws-act" data-action="visit-act" data-act="confirm" data-id="${v.id}">${icon('check')} Client confirmed</button>` : ''}
+          ${mine && ['SCHEDULED', 'ACCEPTED', 'RESCHEDULED'].includes(v.status) ? `<button class="ws-act" data-action="visit-act" data-act="check_in" data-id="${v.id}">${icon('nav')} Check in at site</button>` : `<a class="ws-act" href="${maps}" target="_blank" rel="noopener">${icon('nav')} Directions</a>`}
+          <button class="ws-act is-log" data-action="visit-outcome" data-id="${v.id}" data-lead="${v.lead_id}">${icon('check')} Update</button>`;
+      }
+    }
     return `
       <article class="ws-card ws-visit ${done ? 'is-done' : ''}">
-        <div class="ws-visit-time"><strong>${timeStr(v.scheduled_time)}</strong><span>${dayLabel(v.scheduled_time)}</span>${v.ics && !done ? `<button class="ws-addcal" data-action="add-cal" data-id="${v.id}" aria-label="Add to my calendar">${icon('calendar')}<span>Add</span></button>` : ''}</div>
+        <div class="ws-visit-time"><strong>${timeStr(v.scheduled_time)}</strong><span>${dayLabel(v.scheduled_time)}</span>${v.ics && !done ? `<button class="ws-addcal" data-action="add-cal" data-id="${v.id}" aria-label="Add to my calendar">${icon('calendar')}</button>` : ''}</div>
         <button class="ws-visit-body" data-action="open-lead" data-id="${v.lead_id}">
           <span class="ws-lead-top"><strong>${esc(name)}</strong>${tempChip(v.temperature)}${statusChip}</span>
           <span class="ws-lead-meta">${esc(v.project_name)}${v.city ? ` · ${esc(v.city)}` : ''}</span>
           ${v.partner_firm && !isPartner ? `<span class="ws-lead-tags"><span class="ws-tag is-partner">${icon('shield')} ${esc(v.partner_firm)}</span></span>` : ''}
-          ${v.agent_name && (isPartner || W.me.kind === 'manager' || v.assigned_agent_id !== W.me.id) ? `<span class="ws-lead-meta">${v.assigned_agent_id === W.me.id ? 'You' : `With ${esc(v.agent_name)}`}</span>` : ''}
+          ${v.agent_name && (isPartner || W.me.kind === 'manager' || !mine) ? `<span class="ws-lead-meta">${mine ? 'You' : `With ${esc(v.agent_name)}`}</span>` : (!v.assigned_agent_id && !done ? '<span class="ws-lead-meta">No field agent yet</span>' : '')}
+          ${v.rejection_reason && !done ? `<span class="ws-lead-meta">Declined earlier: ${esc(v.rejection_reason)}</span>` : ''}
         </button>
-        ${done ? '' : `
-        <div class="ws-card-actions">
-          ${isPartner
-            ? `${v.agent_phone ? `<a class="ws-act is-call" href="tel:${esc(digits(v.agent_phone))}">${icon('phone')} Call RM</a>` : ''}
-               <button class="ws-act" data-action="visit-reschedule" data-id="${v.id}" data-lead="${v.lead_id}">${icon('calendar')} Reschedule</button>`
-            : `<a class="ws-act is-call" href="tel:${esc(digits(v.phone))}">${icon('phone')} Call</a>
-               <a class="ws-act" href="${maps}" target="_blank" rel="noopener">${icon('nav')} Directions</a>
-               <button class="ws-act is-log" data-action="visit-outcome" data-id="${v.id}" data-lead="${v.lead_id}">${icon('check')} Update</button>`}
-        </div>`}
+        ${acts ? `<div class="ws-card-actions">${acts}</div>` : ''}
       </article>`;
   }
 
@@ -780,7 +833,7 @@
       return `<div class="ws-wk-col ${key === today ? 'is-today' : ''}">
         <header><small>${d.toLocaleDateString('en-IN', { weekday: 'short' })}</small><strong>${d.getDate()}</strong></header>
         ${list.map((x) => x.kind === 'visit'
-          ? `<button class="ws-wk-item is-visit ${x.v.status !== 'SCHEDULED' ? 'is-closed' : ''}" data-action="open-lead" data-id="${x.v.lead_id}">
+          ? `<button class="ws-wk-item is-visit ${!VISIT_OPEN.includes(x.v.status) ? 'is-closed' : ''}" data-action="open-lead" data-id="${x.v.lead_id}">
               <b>${timeStr(x.at)}</b><span>${esc(fullName(x.v.first_name, x.v.last_name) || 'Client')}</span><small>${esc(x.v.project_name)}${isMgr && x.v.agent_name ? ` · ${esc(x.v.agent_name.split(' ')[0])}` : ''}</small></button>`
           : `<button class="ws-wk-item is-call" data-action="open-lead" data-id="${x.f.id}">
               <b>${timeStr(x.at)}</b><span>${icon('phone')} ${esc(fullName(x.f.first_name, x.f.last_name))}</span>${isMgr && x.f.agent_name ? `<small>${esc(x.f.agent_name.split(' ')[0])}</small>` : ''}</button>`).join('') || '<p class="ws-wk-empty">—</p>'}
@@ -1489,7 +1542,7 @@
     const name = fullName(lead.first_name, lead.last_name);
     const isPartner = W.me.kind === 'partner';
     const closed = ['BOOKED', 'LOST'].includes(lead.bucket);
-    const upcoming = (lead.visits || []).find((v) => v.status === 'SCHEDULED');
+    const upcoming = (lead.visits || []).find((v) => VISIT_OPEN.includes(v.status));
     const protDays = lead.cp_protected_until ? Math.ceil((new Date(lead.cp_protected_until) - Date.now()) / 86400000) : null;
     const stepIdx = PIPELINE.indexOf(lead.bucket);
 
@@ -1740,6 +1793,36 @@
         ${W.me.kind === 'partner' ? '<p class="ws-hint">The relationship manager is notified instantly and will confirm with you.</p>' : ''}
         <button class="ws-btn is-primary is-block" type="submit">${reschedule ? 'Move visit' : W.me.kind === 'partner' ? 'Send request' : 'Schedule visit'}</button>
       </form>`, { key: 'visit', title: 'Site visit' });
+  }
+
+  // ---------------- Visit accept / confirm / check-in / decline ----------------
+  async function visitAction(visitId, action, btn) {
+    const body = { action };
+    if (action === 'check_in') {
+      // Location proves the visit happened at the site; check-in still works if the phone refuses location
+      const pos = await new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition((p) => resolve(p), () => resolve(null), { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+      });
+      if (pos) { body.lat = pos.coords.latitude; body.lng = pos.coords.longitude; }
+    }
+    if (btn) btn.disabled = true;
+    try {
+      const res = await api(`/visits/${visitId}`, { method: 'PATCH', body });
+      toast(action === 'check_in' && !body.lat ? `${res.message} (location was not shared)` : res.message);
+      refreshCurrent();
+    } finally { if (btn) btn.disabled = false; }
+  }
+
+  function openVisitReject(visitId) {
+    openSheet(`
+      ${sheetHead("Can't take this visit?")}
+      <form class="ws-sheet-body ws-form" data-form="visit-reject" data-id="${visitId}">
+        <p class="ws-muted">Your manager is told right away so they can give it to someone else.</p>
+        <label>Reason<textarea name="reason" rows="3" required minlength="3" placeholder="Already at another site at that time…"></textarea></label>
+        <div class="ws-form-error" hidden></div>
+        <button class="ws-btn is-primary is-block" type="submit">Send to manager</button>
+      </form>`, { key: 'visit-reject', title: 'Decline visit' });
   }
 
   // ---------------- Visit outcome ----------------
@@ -2009,7 +2092,9 @@
       case 'tab': return setTab(el.dataset.tab);
       case 'retry': return refreshCurrent();
       case 'theme': stopPolling(); W.renderedAt = 0; return toggleTheme();
-      case 'toggle-menu': { const m = document.getElementById('ws-menu'); m.hidden = !m.hidden; return; }
+      case 'toggle-menu': { const m = document.getElementById('ws-menu'); m.hidden = !m.hidden; if (!m.hidden) revealTestingCenter(m); return; }
+      case 'open-suite': stopPolling(); return window.openSuite();
+      case 'open-testing': stopPolling(); return window.openSuite('test-summary');
       case 'toggle-notifs': return toggleNotifs();
       case 'open-crm': return window.openFullCrm();
       case 'open-website': stopPolling(); return setViewMode('website');
@@ -2025,7 +2110,12 @@
       case 'close-sheet': return closeSheet();
       case 'open-lead': if (id) return run(() => openLead(id)); return;
       case 'call':
-        // Let the tel: link dial, then have the log sheet ready for when they come back
+        // Cloud telephony (company number, recorded status, outcome form) when the company has set it up;
+        // otherwise the tel: link dials from this phone and the log sheet opens for when they come back.
+        if (window.NXS && NXS.telephonyReady && NXS.telephonyReady()) {
+          e.preventDefault();
+          return NXS.startCall({ leadId: id, name: el.dataset.name || '' });
+        }
         setTimeout(() => run(() => openLog(id)), 400);
         return;
       case 'whatsapp': return run(() => openWhatsApp(id));
@@ -2033,6 +2123,8 @@
       case 'add-note': return openNote(id);
       case 'schedule-visit': return run(() => openScheduleVisit(id));
       case 'visit-outcome': return openVisitOutcome(id, el.dataset.lead);
+      case 'visit-act': return run(() => visitAction(id, el.dataset.act, el));
+      case 'visit-reject': return openVisitReject(id);
       case 'visit-reschedule': return run(() => openScheduleVisit(el.dataset.lead, id));
       case 'book': return run(() => openBook(id));
       case 'add-lead':
@@ -2140,6 +2232,14 @@
         notifApi(`/${id}/read`, 'PATCH').then(() => pulse()).catch(() => {});
         document.getElementById('ws-notifs').hidden = true;
         if (el.dataset.entity === 'LEAD' && el.dataset.ref) return run(() => openLead(el.dataset.ref));
+        // A call notification (incoming call / outcome needed): show the outcome form, else open the caller's lead
+        if (el.dataset.entity === 'CALL' && el.dataset.ref && window.NXS && NXS.api) {
+          return run(async () => {
+            const c = (await NXS.api(`/suite/telephony/calls/${el.dataset.ref}`)).data;
+            if (c.needs_outcome || !c.lead_id) return NXS.openCall(c.id);
+            return openLead(c.lead_id);
+          });
+        }
         return;
       }
       default:
@@ -2256,6 +2356,11 @@
         const res = kind === 'visit'
           ? await api(`/leads/${id}/visits`, { method: 'POST', body: { project_id: data.project_id, scheduled_time: when.toISOString(), note: data.note || null } })
           : await api(`/visits/${form.dataset.visit}`, { method: 'PATCH', body: { action: 'reschedule', scheduled_time: when.toISOString() } });
+        closeSheet();
+        toast(res.message);
+        refreshCurrent();
+      } else if (kind === 'visit-reject') {
+        const res = await api(`/visits/${id}`, { method: 'PATCH', body: { action: 'reject', reason: data.reason } });
         closeSheet();
         toast(res.message);
         refreshCurrent();

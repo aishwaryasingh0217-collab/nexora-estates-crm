@@ -36,16 +36,39 @@ async function addIndex(c, table, name, columns, unique = false) {
 }
 
 /** Adds values to an ENUM column, keeping its existing values, nullability and default. */
-async function extendEnum(c, table, column, values) {
+async function extendEnum(c, table, column, values, preferredDefault = null) {
   const info = await columnInfo(c, table, column);
   if (!info) return;
   const current = info.type.replace(/^enum\(/i, '').replace(/\)$/, '').split(',').map((v) => v.trim().replace(/^'|'$/g, ''));
   const merged = [...current, ...values.filter((v) => !current.includes(v))];
   if (merged.length === current.length) return;
-  const def = info.def == null ? (info.nullable === 'YES' ? 'DEFAULT NULL' : '') : `DEFAULT ${c.escape(info.def)}`;
-  await c.query(
-    `ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ENUM(${merged.map((v) => c.escape(v)).join(', ')}) ${info.nullable === 'YES' ? 'NULL' : 'NOT NULL'} ${def}`
-  );
+
+  // Clean default value by stripping any quotes that MySQL 8/9 might return in information_schema
+  let rawDef = info.def != null ? String(info.def).trim().replace(/^'|'$/g, '') : null;
+  if (!rawDef && preferredDefault && merged.includes(preferredDefault)) {
+    rawDef = preferredDefault;
+  }
+  if (!rawDef && merged.length > 0 && info.nullable !== 'YES') {
+    rawDef = merged[0];
+  }
+
+  let defClause = '';
+  if (rawDef != null && merged.includes(rawDef)) {
+    defClause = `DEFAULT ${c.escape(rawDef)}`;
+  } else if (info.nullable === 'YES') {
+    defClause = 'DEFAULT NULL';
+  } else if (merged.length > 0) {
+    defClause = `DEFAULT ${c.escape(merged[0])}`;
+  }
+
+  const nullClause = info.nullable === 'YES' ? 'NULL' : 'NOT NULL';
+  const sql = `ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ENUM(${merged.map((v) => c.escape(v)).join(', ')}) ${nullClause} ${defClause}`;
+  try {
+    await c.query(sql);
+  } catch (err) {
+    console.warn(`[extendEnum ${table}.${column}] fallback: ${err.message}`);
+    await c.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ENUM(${merged.map((v) => c.escape(v)).join(', ')}) NULL DEFAULT NULL`);
+  }
 }
 
 /** Millisecond precision for event times, so things done in the same second keep their order. Type is kept. */
@@ -111,7 +134,7 @@ async function up(c) {
     `UPDATE leads SET first_contacted_at = COALESCE(last_contacted_at, updated_at)
       WHERE first_contacted_at IS NULL AND (last_contacted_at IS NOT NULL OR stage NOT IN ('Fresh Lead', 'New Lead', 'INCOMING', 'NEW'))`
   );
-  await extendEnum(c, 'lead_activities', 'type', ['EMAIL', 'SMS', 'QUALIFY', 'PAYMENT', 'ESCALATION', 'APPROVAL', 'AI']);
+  await extendEnum(c, 'lead_activities', 'type', ['EMAIL', 'SMS', 'QUALIFY', 'PAYMENT', 'ESCALATION', 'APPROVAL', 'AI'], 'NOTE');
   await addPrecision(c, 'lead_activities', 'created_at');
   await addPrecision(c, 'site_visit_history', 'created_at');
 
@@ -132,7 +155,7 @@ async function up(c) {
 
   // ---------------------------------------------------------------- site visits
   await extendEnum(c, 'site_visits', 'status',
-    ['REQUESTED', 'PENDING_APPROVAL', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'RESCHEDULED', 'MISSED']);
+    ['REQUESTED', 'PENDING_APPROVAL', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'RESCHEDULED', 'MISSED'], 'SCHEDULED');
   // A requested visit has no field agent yet (and a rejected one goes back to having none)
   const agentCol = await columnInfo(c, 'site_visits', 'assigned_agent_id');
   if (agentCol && agentCol.nullable === 'NO') {
@@ -182,7 +205,7 @@ async function up(c) {
   ) ${T}`);
 
   // ---------------------------------------------------------------- bookings, approvals, escalations, targets
-  await extendEnum(c, 'deals', 'status', ['PENDING_APPROVAL', 'REJECTED']);
+  await extendEnum(c, 'deals', 'status', ['PENDING_APPROVAL', 'REJECTED'], 'DRAFT');
   await addColumn(c, 'deals', 'approved_by', 'VARCHAR(36) NULL');
   await addColumn(c, 'deals', 'approved_at', 'DATETIME NULL');
   await addColumn(c, 'deals', 'rejection_reason', 'VARCHAR(255) NULL');
@@ -248,7 +271,7 @@ async function up(c) {
   ) ${T}`);
 
   // ---------------------------------------------------------------- finance
-  await extendEnum(c, 'payments', 'payment_mode', ['UPI', 'NEFT', 'RTGS', 'IMPS', 'CASH', 'DEMAND_DRAFT', 'CARD']);
+  await extendEnum(c, 'payments', 'payment_mode', ['UPI', 'NEFT', 'RTGS', 'IMPS', 'CASH', 'DEMAND_DRAFT', 'CARD'], 'UPI');
   const hadVerification = Boolean(await columnInfo(c, 'payments', 'verification_status'));
   await addColumn(c, 'payments', 'verification_status', "ENUM('PENDING','VERIFIED','REJECTED') NOT NULL DEFAULT 'PENDING'");
   await addColumn(c, 'payments', 'verified_by', 'VARCHAR(36) NULL');

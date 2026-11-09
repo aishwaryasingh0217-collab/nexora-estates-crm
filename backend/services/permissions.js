@@ -39,9 +39,9 @@ const ROLE_INFO = {
   [R.OWNER]: { label: 'Business owner', department: 'Management', portal: 'owner' },
   [R.SALES_HEAD]: { label: 'Sales head', department: 'Sales', portal: 'sales-head' },
   [R.SALES_MANAGER]: { label: 'Sales manager', department: 'Sales', portal: 'sales-manager' },
-  [R.INSIDE_SALES]: { label: 'Sales agent (telecaller)', department: 'Sales', portal: 'workspace' },
-  [R.FIELD_SALES]: { label: 'Field sales agent', department: 'Sales', portal: 'workspace' },
-  [R.PARTNER]: { label: 'Channel partner', department: 'Partners', portal: 'workspace' },
+  [R.INSIDE_SALES]: { label: 'Inside sales (Telecaller)', department: 'Sales', portal: 'inside-sales' },
+  [R.FIELD_SALES]: { label: 'Outside sales (Field agent)', department: 'Sales', portal: 'outside-sales' },
+  [R.PARTNER]: { label: 'Channel partner', department: 'Partners', portal: 'channel-partner' },
   [R.FINANCE]: { label: 'Finance', department: 'Finance', portal: 'finance' },
   [R.INVENTORY]: { label: 'Projects & inventory', department: 'Projects', portal: 'inventory' },
   [R.MARKETING]: { label: 'Marketing', department: 'Marketing', portal: 'marketing' },
@@ -54,6 +54,7 @@ const ROLE_INFO = {
 const CAPABILITIES = {
   // Leads & sales team
   'leads.view.all': SALES_LEADERS,
+  'leads.view.own': [R.INSIDE_SALES, R.FIELD_SALES, R.PARTNER, ...SALES_LEADERS],
   'leads.view.attribution': [...SALES_LEADERS, R.MARKETING],
   'leads.assign': SALES_LEADERS,
   'leads.import': [...SALES_LEADERS, R.MARKETING],
@@ -64,6 +65,12 @@ const CAPABILITIES = {
   'targets.set': SALES_LEADERS,
   'visits.allocate': SALES_LEADERS,
   'visits.approve': SALES_LEADERS,
+  'visits.schedule': [...SALES_LEADERS, R.INSIDE_SALES, R.FIELD_SALES, R.PARTNER],
+  'visits.checkin': [...SALES_LEADERS, R.FIELD_SALES],
+  'inside.queue': [R.INSIDE_SALES, ...SALES_LEADERS],
+  'outside.visits': [R.FIELD_SALES, ...SALES_LEADERS],
+  'partner.desk': [R.PARTNER, ...SALES_LEADERS],
+  'partner.register': [...SALES_LEADERS, R.PARTNER],
   'bookings.initiate': [...SALES_LEADERS, R.INSIDE_SALES, R.FIELD_SALES],
   'bookings.approve': SALES_LEADERS,
   'bookings.view.all': [...SALES_LEADERS, R.FINANCE, R.CUSTOMER_RELATIONS],
@@ -155,8 +162,9 @@ function capabilitiesFor(user) {
 function portalsFor(user) {
   const own = ROLE_INFO[user.role] ? ROLE_INFO[user.role].portal : null;
   const portals = new Set(own ? [own] : []);
-  if (user.role === R.OWNER) ['sales-head', 'finance', 'inventory', 'marketing', 'crm'].forEach((p) => portals.add(p));
-  if (user.role === R.SALES_HEAD) ['sales-manager', 'inventory'].forEach((p) => portals.add(p));
+  if (user.role === R.OWNER) ['sales-head', 'sales-manager', 'inside-sales', 'outside-sales', 'channel-partner', 'finance', 'inventory', 'marketing', 'crm'].forEach((p) => portals.add(p));
+  if (user.role === R.SALES_HEAD) ['sales-manager', 'inside-sales', 'outside-sales', 'channel-partner', 'inventory'].forEach((p) => portals.add(p));
+  if (user.role === R.SALES_MANAGER) ['inside-sales', 'outside-sales', 'channel-partner'].forEach((p) => portals.add(p));
   if (STAFF_ROLES.includes(user.role)) portals.add('testing');
   if (user.role === R.PARTNER) portals.add('testing');
   return [...portals];

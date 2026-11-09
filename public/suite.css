@@ -344,3 +344,37 @@ body:has(#app > .sx) #nx-ai-bot-root { display: none !important; }
 
 /* the drawer body scrolls; its children (cards, tab strips, wide tables) keep their full height */
 .sx-drawer-body > * { flex-shrink: 0; }
+
+/* ---------- Field & Partner Portals: Inside Sales, Outside Sales, Channel Partner ---------- */
+.sx-sla-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: var(--sx-red-bg); color: var(--sx-red); }
+.sx-sla-badge.ok { background: var(--sx-green-bg); color: var(--sx-green); }
+
+.sx-dispo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 12px 0; }
+.sx-dispo-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 8px; border: 1.5px solid var(--sx-line); border-radius: 10px; background: var(--sx-card); cursor: pointer; font-size: 0.8rem; font-weight: 600; text-align: center; gap: 4px; transition: all 0.18s ease; }
+.sx-dispo-btn:hover { border-color: var(--sx-blue); background: var(--sx-blue-bg); transform: translateY(-1px); }
+.sx-dispo-btn.active { border-color: var(--sx-blue); background: var(--sx-blue-bg); color: var(--sx-blue); box-shadow: 0 0 0 2px rgba(29, 95, 209, 0.2); }
+
+.sx-unit-matrix { display: grid; gap: 10px; margin-top: 14px; }
+.sx-floor-row { display: flex; align-items: center; gap: 10px; background: var(--sx-soft); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--sx-line); }
+.sx-floor-label { font-weight: 700; font-size: 0.78rem; min-width: 65px; color: var(--sx-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.sx-floor-units { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
+.sx-unit-pill { display: inline-flex; flex-direction: column; padding: 6px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.18s ease; min-width: 80px; text-align: center; }
+.sx-unit-pill .sub { font-size: 0.7rem; font-weight: 500; opacity: 0.85; }
+.sx-unit-pill.avail { background: var(--sx-green-bg); color: var(--sx-green); border-color: rgba(11, 122, 62, 0.25); }
+.sx-unit-pill.avail:hover { background: #d0f0de; transform: scale(1.03); }
+.sx-unit-pill.hold { background: var(--sx-amber-bg); color: var(--sx-amber); border-color: rgba(154, 91, 0, 0.25); }
+.sx-unit-pill.booked, .sx-unit-pill.sold { background: var(--sx-soft); color: var(--sx-muted); border-color: var(--sx-line); opacity: 0.7; }
+
+.sx-lead-lock { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 0.76rem; font-weight: 700; background: rgba(11, 122, 62, 0.12); color: var(--sx-green); border: 1px solid rgba(11, 122, 62, 0.25); }
+.sx-lead-lock.expired { background: var(--sx-red-bg); color: var(--sx-red); border-color: rgba(196, 50, 31, 0.25); }
+
+.sx-tier-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.sx-tier-pill.gold { background: linear-gradient(135deg, #fce9ba, #f5b14c); color: #6e3d00; border: 1px solid #e6a033; }
+.sx-tier-pill.silver { background: linear-gradient(135deg, #f0f0f5, #d0d2db); color: #3a3f4d; border: 1px solid #b5b8c5; }
+.sx-tier-pill.platinum { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; border: 1px solid #7dd3fc; }
+
+.sx-cost-sheet { display: grid; grid-template-columns: 1fr auto; row-gap: 6px; column-gap: 16px; font-size: 0.88rem; padding: 12px 14px; background: var(--sx-soft); border-radius: 10px; margin: 10px 0; }
+.sx-cost-sheet dt { color: var(--sx-muted); }
+.sx-cost-sheet dd { font-weight: 600; text-align: right; }
+.sx-cost-sheet .total-row dt, .sx-cost-sheet .total-row dd { font-size: 1.05rem; font-weight: 800; color: var(--sx-blue); border-top: 1.5px solid var(--sx-line); padding-top: 8px; margin-top: 4px; }
+

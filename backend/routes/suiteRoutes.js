@@ -18,6 +18,7 @@ const crm = require('../controllers/suite/crmController');
 const owner = require('../controllers/suite/ownerController');
 const testing = require('../controllers/suite/testingController');
 const ai = require('../controllers/suite/aiController');
+const fieldPortal = require('../controllers/suite/fieldPortalController');
 
 router.use(authenticateToken);
 
@@ -67,9 +68,9 @@ router.get('/sales/dashboard', need('reports.sales'), sales.dashboard);
 router.get('/sales/leads', need('leads.view.all'), sales.listLeads);
 router.post('/sales/leads/assign', need('leads.assign'), sales.assignLeads);
 router.post('/sales/leads/import', need('leads.import'), sales.importLeads);
-router.get('/sales/leads/:id', need('leads.view.all'), sales.getLead);
-router.post('/sales/leads/:id/book', need('leads.view.all', 'bookings.initiate'), sales.bookLead);
-router.post('/sales/leads/:id/visits', need('visits.allocate'), sales.scheduleVisit);
+router.get('/sales/leads/:id', needAny('leads.view.all', 'leads.view.own'), sales.getLead);
+router.post('/sales/leads/:id/book', needAny('leads.view.all', 'leads.view.own', 'bookings.initiate'), sales.bookLead);
+router.post('/sales/leads/:id/visits', needAny('visits.allocate', 'visits.schedule'), sales.scheduleVisit);
 router.get('/sales/team', need('team.view'), sales.team);
 router.get('/sales/members', need('team.view'), sales.members);
 router.patch('/sales/team/:id/availability', need('team.view'), sales.setAvailability);
@@ -86,6 +87,24 @@ router.post('/sales/bookings/:id/action', need('bookings.approve'), sales.bookin
 router.get('/sales/activity', need('team.view'), sales.activity);
 router.get('/sales/calls', need('calls.monitor'), sales.calls);
 router.get('/sales/followups', need('team.view'), sales.followups);
+
+// ------------------------------------------------------------------ inside sales (telecaller)
+router.get('/inside/queue', needAny('inside.queue', 'reports.sales'), fieldPortal.getInsideQueue);
+router.post('/inside/disposition', needAny('inside.queue', 'reports.sales'), fieldPortal.insideDisposition);
+router.post('/inside/schedule-visit', needAny('visits.schedule', 'visits.allocate'), fieldPortal.insideScheduleVisit);
+router.get('/inside/inventory-match', needAny('inventory.directory', 'inside.queue'), fieldPortal.insideInventoryMatch);
+
+// ------------------------------------------------------------------ outside sales (field / site agent)
+router.get('/outside/visits', needAny('outside.visits', 'reports.sales'), fieldPortal.getOutsideVisits);
+router.post('/outside/visits/:id/checkin', needAny('visits.checkin', 'visits.allocate'), fieldPortal.outsideCheckIn);
+router.get('/outside/project-matrix', needAny('inventory.directory', 'outside.visits'), fieldPortal.getProjectMatrix);
+router.post('/outside/spot-book', needAny('bookings.initiate', 'outside.visits'), fieldPortal.outsideSpotBook);
+
+// ------------------------------------------------------------------ channel partner (broker desk)
+router.get('/partner/dashboard', needAny('partner.desk', 'reports.sales'), fieldPortal.getPartnerDashboard);
+router.post('/partner/register-client', needAny('partner.register', 'leads.create'), fieldPortal.partnerRegisterClient);
+router.get('/partner/commissions', needAny('partner.desk', 'reports.sales'), fieldPortal.getPartnerCommissions);
+router.get('/partner/collaterals', needAny('partner.desk', 'reports.sales'), fieldPortal.getPartnerCollaterals);
 
 // ------------------------------------------------------------------ finance
 router.get('/finance/overview', need('finance.view'), fin.overview);

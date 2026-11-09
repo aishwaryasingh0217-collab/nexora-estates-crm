@@ -29,8 +29,12 @@ const FIELD_ALLOWED = [
   { path: /^\/support(\/|$)/ }
 ];
 
-const isAllowedForField = (method, path) =>
-  FIELD_ALLOWED.some((rule) => rule.path.test(path) && (!rule.methods || rule.methods.includes(method)));
+const isAllowedForField = (role, method, path) => {
+  if (role === 'CHANNEL_PARTNER' && (/^\/(leads|deals|channel-partners)(\/|$)/.test(path))) {
+    return false;
+  }
+  return FIELD_ALLOWED.some((rule) => rule.path.test(path) && (!rule.methods || rule.methods.includes(method)));
+};
 
 /**
  * Finance, inventory, marketing and customer-care logins work in the Business Suite (/suite), which
@@ -68,7 +72,7 @@ const fieldRoleGate = async (req, res, next) => {
       [decoded.id]
     );
     const role = rows[0] && rows[0].role;
-    if (role && FIELD_ROLES.includes(role) && !isAllowedForField(req.method, req.path)) {
+    if (role && FIELD_ROLES.includes(role) && !isAllowedForField(role, req.method, req.path)) {
       return res.status(403).json({
         status: 'error',
         message: 'This section is available to managers only. Use your workspace instead.'

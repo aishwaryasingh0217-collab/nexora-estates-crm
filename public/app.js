@@ -301,6 +301,8 @@ function login(token, user) {
   localStorage.setItem('crm_token', token);
   localStorage.setItem('crm_user', JSON.stringify(user));
   localStorage.setItem('crm_view_mode', 'crm');
+  localStorage.removeItem('crm_surface');
+  sessionStorage.removeItem('sx_view');
   if (window.location.hash === '#/login' || !window.location.hash) {
     window.location.hash = '#/crm';
   }
@@ -6526,30 +6528,26 @@ window.getCustomerProjectData = function(projectId) {
         }
       ],
       amenities: [
-        { icon: '🏊', name: '50m Olympic Swimming Pool' },
-        { icon: '🏋️', name: 'TechnoGym Fitness Center' },
-        { icon: '🏸', name: 'Indoor Badminton Courts' },
-        { icon: '🎾', name: 'Synthetic Tennis Arena' },
-        { icon: '🧘', name: 'Lakeview Yoga Pavilion' },
-        { icon: '🌳', name: '3.5 km Jogging Boulevard' },
-        { icon: '🚗', name: 'Covered Parking with EV Points' },
-        { icon: '🛡️', name: '4-Tier 24/7 Security & CCTV' },
-        { icon: '⚡', name: '100% DG Power Backup' },
-        { icon: '☕', name: 'Clubhouse Organic Café' },
-        { icon: '🎮', name: 'Billiards & Indoor Games' },
-        { icon: '🎠', name: 'Rubberized Kids Play Park' },
-        { icon: '💧', name: 'Zero Discharge STP & Rainwater' },
-        { icon: '🌿', name: 'IGBC Platinum Pre-Certified' },
-        { icon: '🛒', name: 'Daily Convenience Arcade' },
-        { icon: '🏢', name: 'Banquet & Community Hall' }
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0M2 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0M2 7c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/></svg>`, name: '50m Olympic Swimming Pool' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5v14M18 5v14M2 9h4M18 9h4M2 15h4M18 15h4M6 12h12"/></svg>`, name: 'TechnoGym Fitness Center' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg>`, name: 'Indoor Badminton & Squash Arena' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9M3 12a9 9 0 0 1 9-9"/></svg>`, name: 'Synthetic Tennis Arena' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2"/><path d="m9 20 3-6 3 6M6 12l6-3 6 3"/></svg>`, name: 'Lakeview Yoga & Meditation Pavilion' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22V8M12 8a5 5 0 0 0-5-5 5 5 0 0 0 5 5zm0 0a5 5 0 0 1 5-5 5 5 0 0 1-5 5z"/></svg>`, name: '3.5 km Jogging Boulevard' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="15" r="2"/><circle cx="16" cy="15" r="2"/><path d="M7 9h10"/></svg>`, name: 'Covered Parking with Fast EV Points' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`, name: '4-Tier 24/7 Security & Smart CCTV' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`, name: '100% Uninterrupted DG Power Backup' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>`, name: 'Clubhouse Organic Café' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="8" cy="12" r="1.5"/><circle cx="16" cy="12" r="1.5"/></svg>`, name: 'Billiards & Indoor Gaming Lounge' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`, name: 'Zero Discharge STP & Rainwater Harvesting' }
       ],
       locations: [
-        { place: '🚆 Paranur Railway Station', distance: '2.1 km (5 mins)' },
-        { place: '🏫 Mahindra World School', distance: '1.0 km (3 mins)' },
-        { place: '🏥 Apollo Clinic & Health Center', distance: '1.5 km (4 mins)' },
-        { place: '💼 Infosys, Capgemini, BMW Tech Centers', distance: '800 meters (Walk-to-Work)' },
-        { place: '🛣️ 8-Lane GST Road Corridor', distance: 'Direct Arterial Access' },
-        { place: '✈️ Chennai International Airport', distance: '38 km (45 mins)' }
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16M12 3v8M8 19l-2 3M16 19l2 3"/></svg>`, place: 'Paranur Railway Station', distance: '2.1 km (5 mins)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m2 7 10-5 10 5-10 5zM6 12v5c3 3 9 3 12 0v-5"/></svg>`, place: 'Mahindra World School', distance: '1.0 km (3 mins)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`, place: 'Apollo Clinic & Health Center', distance: '1.5 km (4 mins)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`, place: 'Infosys, Capgemini, BMW Tech Centers', distance: '800 meters (Walk-to-Work)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M4 5h16M12 5v14"/></svg>`, place: '8-Lane GST Road Corridor', distance: 'Direct Arterial Access' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4s-2 0-3.5 1.5L12 8 3.8 6.2c-.5-.1-.9.1-1.2.5l-.5.5c-.3.5-.2 1.1.2 1.4L7 12l-2 3H3l-1 1 3 2 2 3 1-1v-2l3-2 3.4 4.7c.3.4.9.5 1.4.2l.5-.5c.4-.3.6-.7.5-1.2z"/></svg>`, place: 'Chennai International Airport', distance: '38 km (45 mins)' }
       ],
       reviews: [
         {
@@ -6574,8 +6572,10 @@ window.getCustomerProjectData = function(projectId) {
     };
   }
 
-  // Look up other upcoming or newly launched projects
+  // Look up other upcoming or newly launched projects (with live DB cache priority)
   let found = null;
+  const dbData = (window._projectDetailsDbCache && (window._projectDetailsDbCache[projectId] || (typeof projectId === 'string' && Object.values(window._projectDetailsDbCache).find(p => p && (p.id === projectId || (p.name && p.name.toLowerCase() === projectId.toLowerCase())))))) || null;
+
   const allKnown = [
     ...(window._nexoraNewlyLaunchedProjectsCache || []),
     ...(window._nexoraUpcomingProjectsCache || []),
@@ -6586,82 +6586,108 @@ window.getCustomerProjectData = function(projectId) {
   ];
   found = allKnown.find(p => p && (p.id === projectId || (p.name && p.name.toLowerCase() === projectId.toLowerCase())));
 
-  if (found) {
+  if (found || dbData) {
+    const pName = (dbData && dbData.name) || (found && found.name) || 'Residential Project';
+    const pDev = (dbData && (dbData.builder_developer || dbData.creator_first_name)) || (found && found.developer) || 'Nexora Verified Partner';
+    const pLoc = (dbData && (dbData.location ? (dbData.location + (dbData.city ? ', ' + dbData.city : '')) : '')) || (found && found.location) || 'Prime Metropolitan Location';
+    const pRera = (dbData && dbData.rera_number) || (found && found.rera) || 'RERA/REG/2026/VERIFIED';
+    const pPrice = (found && found.price) || '₹ 1.25 Cr - 2.85 Cr';
+    const pBrochure = (dbData && dbData.brochure_url) || (found && found.brochureUrl) || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf';
+    const pImg = (dbData && dbData.hero_image_url) || (found && found.img) || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80';
+    const pUnits = (dbData && dbData.total_units) ? `${dbData.total_units} Luxury Residences` : ((found && found.config) || '120 Units Registered');
+    const pPossession = (dbData && dbData.possession_date) ? `Possession in ${dbData.possession_date}` : ((found && found.possession) || 'Possession 2028-2029');
+
     return {
-      id: found.id,
-      name: found.name,
-      tagline: found.benefit || 'Premium Residential Development',
-      developer: found.developer || 'Nexora Verified Partner',
-      developerLogo: '🏢 ' + (found.developer || 'NEXORA PARTNER'),
-      location: found.location || 'Prime Metropolitan Location',
-      city: found.location ? found.location.split(',').pop().trim() : 'Metro City',
-      locality: found.location || 'Metropolitan Hub',
-      price: found.price || 'Price on Request',
+      id: (dbData && dbData.id) || (found && found.id) || projectId,
+      name: pName,
+      tagline: (found && found.benefit) || 'Ultra-Luxury Gated Community',
+      developer: pDev,
+      developerLogo: pDev,
+      location: pLoc,
+      city: pLoc ? pLoc.split(',').pop().trim() : 'Metro City',
+      locality: pLoc || 'Metropolitan Hub',
+      price: pPrice,
       priceSqft: '₹ 8,250 / sq.ft',
       emi: '₹ 48.5 K / month',
-      rera: found.rera || 'RERA/REG/2026/VERIFIED',
-      status: found.launchDate || 'New Launch / Pre-Booking',
-      rating: '4.6',
-      reviewCount: '42',
-      totalUnits: found.config || '240 Luxury Units',
-      landArea: '18.5 Acres Master Development',
-      openSpace: '65% Open Greenery',
-      possession: 'Possession 2028-2029',
-      phone: found.phone || '+91 98409 23145',
-      cleanPhone: (found.phone || '+91 98409 23145').replace(/[^\d]/g, ''),
-      brochureUrl: found.brochureUrl || '/uploads/brochures/Mahindra_AquaVista_Official_Brochure.pdf',
+      rera: pRera,
+      status: (dbData && dbData.status) ? (dbData.status.replace(/_/g, ' ')) : ((found && found.launchDate) || 'New Launch / Pre-Booking'),
+      rating: '4.8',
+      reviewCount: '48',
+      totalUnits: pUnits,
+      landArea: '14.5 Acres Master Layout',
+      openSpace: '72% Landscaped Open Air',
+      possession: pPossession,
+      phone: (found && found.phone) || '+91 98409 23145',
+      cleanPhone: ((found && found.phone) || '+91 98409 23145').replace(/[^\d]/g, ''),
+      brochureUrl: pBrochure,
       photos: [
-        { url: found.img || '/assets/mahindra_aquavista.jpg', label: 'Primary Elevation View' },
-        { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80', label: 'Architectural Panorama' },
-        { url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80', label: 'Clubhouse & Leisure' },
-        { url: 'https://images.unsplash.com/photo-1584738766473-61c083514bf4?auto=format&fit=crop&w=800&q=80', label: 'Landscaped Garden' },
-        { url: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80', label: 'Luxury Living Suite' }
+        { url: pImg, label: 'Primary Elevation View' },
+        { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80', label: 'Panoramic Living Room' },
+        { url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80', label: 'Clubhouse & Horizon Pool' },
+        { url: 'https://images.unsplash.com/photo-1584738766473-61c083514bf4?auto=format&fit=crop&w=800&q=80', label: 'Landscaped Central Park' },
+        { url: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80', label: 'Master Bedroom Suite' }
       ],
-      description: `${found.name} by ${found.developer} offers an exceptional residential experience with state-of-the-art architecture, luxury amenities, and prime connectivity. Available with 0% brokerage directly through Nexora Estates.`,
+      description: `${pName} by ${pDev} represents an extraordinary synthesis of contemporary architecture, expansive green landscapes, and state-of-the-art residential specifications in ${pLoc}. Curated and verified under zero-brokerage covenants exclusively via Nexora Estates.`,
       configs: [
         {
-          type: '3 BHK Luxury Suite',
-          superArea: '1,650 sq.ft',
-          carpetArea: '1,280 sq.ft',
-          price: found.price || '₹ 1.25 Cr+',
-          baths: '3 Baths',
+          type: '2 BHK Luxury Residence',
+          superArea: '1,280 sq.ft',
+          carpetArea: '980 sq.ft',
+          price: '₹ 95 L - 1.15 Cr',
+          baths: '2 Baths',
           balconies: '2 Balconies',
+          facing: 'East Facing Vastu',
+          status: 'Ready for Allotment'
+        },
+        {
+          type: '3 BHK Royal Suite',
+          superArea: '1,720 sq.ft',
+          carpetArea: '1,340 sq.ft',
+          price: pPrice || '₹ 1.45 Cr - 1.85 Cr',
+          baths: '3 Baths',
+          balconies: '3 Balconies',
           facing: 'North-East Vastu Compliant',
           status: 'Available'
         },
         {
-          type: '4 BHK Sky Suite',
-          superArea: '2,350 sq.ft',
-          carpetArea: '1,920 sq.ft',
+          type: '4 BHK Sky Villa',
+          superArea: '2,480 sq.ft',
+          carpetArea: '1,960 sq.ft',
           price: 'Price on Request',
           baths: '4 Baths',
-          balconies: '3 Balconies',
-          facing: 'East Facing',
-          status: 'Pre-Booking'
+          balconies: '4 Balconies',
+          facing: 'North Facing Grand Balcony',
+          status: 'Exclusive Allocation'
         }
       ],
       amenities: [
-        { icon: '🏊', name: 'Swimming Pool & Deck' },
-        { icon: '🏋️', name: 'Hi-Tech Gymnasium' },
-        { icon: '🏸', name: 'Badminton Courts' },
-        { icon: '🧘', name: 'Yoga & Meditation Pavilion' },
-        { icon: '🌳', name: 'Jogging Boulevard' },
-        { icon: '🚗', name: 'Reserved Parking + EV Charging' },
-        { icon: '🛡️', name: 'Multi-Tier Smart Security' },
-        { icon: '⚡', name: '100% Power Backup' }
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0M2 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0M2 7c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/></svg>`, name: 'Infinity Horizon Pool & Sun Deck' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5v14M18 5v14M2 9h4M18 9h4M2 15h4M18 15h4M6 12h12"/></svg>`, name: 'TechnoGym Elite Fitness Pavilion' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg>`, name: 'Synthetic Tennis & Squash Courts' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2"/><path d="m9 20 3-6 3 6M6 12l6-3 6 3"/></svg>`, name: 'Zen Meditation & Yoga Lawns' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22V8M12 8a5 5 0 0 0-5-5 5 5 0 0 0 5 5zm0 0a5 5 0 0 1 5-5 5 5 0 0 1-5 5z"/></svg>`, name: 'Curated 2-Acre Botanical Woods' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="15" r="2"/><circle cx="16" cy="15" r="2"/><path d="M7 9h10"/></svg>`, name: 'Private Reserved Stilt & EV Bays' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`, name: 'Triple-Tier Biometric Security' },
+        { icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`, name: '100% Dual-Grid DG Power Backup' }
       ],
       locations: [
-        { place: '🚆 Metro & Rail Station', distance: '1.5 km (4 mins)' },
-        { place: '🏫 International School', distance: '1.2 km (3 mins)' },
-        { place: '🏥 Multispeciality Hospital', distance: '2.0 km (5 mins)' },
-        { place: '💼 Commercial Tech Hub', distance: '2.5 km (7 mins)' }
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16M12 3v8M8 19l-2 3M16 19l2 3"/></svg>`, place: 'Express Highway & Metro Station', distance: '1.2 km (4 mins)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m2 7 10-5 10 5-10 5zM6 12v5c3 3 9 3 12 0v-5"/></svg>`, place: 'Top-Ranked IB World Academy', distance: '1.0 km (3 mins)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`, place: 'Multi-Specialty Care Hospital', distance: '1.8 km (5 mins)' },
+        { icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`, place: 'Commercial IT & Finance Hub', distance: '2.5 km (7 mins)' }
       ],
       reviews: [
         {
-          name: 'Verified Homeowner',
-          rating: '4.6',
-          time: '3 months ago',
-          text: `Exceptional project quality by ${found.developer}. Premium materials and transparent booking process via Nexora Estates.`
+          name: 'Verified Buyer',
+          rating: '4.9',
+          time: 'Verified Homeowner • 2 months ago',
+          text: `Outstanding project architecture and build quality by ${pDev}. Transparent legal documentation and seamless booking coordination directly through Nexora Estates.`
+        },
+        {
+          name: 'Dr. Ramesh K.',
+          rating: '4.8',
+          time: 'Verified Investor • 5 months ago',
+          text: 'Excellent location with high capital growth potential. The layout planning and natural light in the units are thoughtfully engineered.'
         }
       ]
     };
@@ -6672,19 +6698,50 @@ window.getCustomerProjectData = function(projectId) {
 };
 
 window.navigateToCustomerProject = function(projectId) {
-  if (!projectId) projectId = 'up-mahindra-aquavista';
-  state.selectedCustomerProjectId = projectId;
+  // Clear any modal body locks
+  document.body.classList.remove('ws-no-scroll', 'nxq-lock');
+  document.documentElement.classList.remove('nxq-lock');
+  document.body.classList.add('cpd-active');
+  document.documentElement.classList.add('cpd-active');
+  document.body.style.overflow = '';
+  document.body.style.overflowY = 'auto';
+  document.documentElement.style.overflow = '';
+  document.documentElement.style.overflowY = 'auto';
+
+  // Sanitize legacy crm-nl- IDs
+  let targetId = projectId;
+  if (targetId && typeof targetId === 'string' && targetId.startsWith('crm-nl-')) {
+    const known = (window._nexoraNewlyLaunchedProjectsCache || []).find(item => item && item.id && !item.id.startsWith('crm-nl-'))
+      || (state.projects && state.projects[0]);
+    if (known && known.id) {
+      targetId = known.id;
+    }
+  }
+
+  state.selectedCustomerProjectId = targetId || 'up-mahindra-aquavista';
   state.customerView = null;
   state.viewMode = 'website';
-  window.location.hash = '#/project/' + projectId;
+  window.location.hash = '#/project/' + state.selectedCustomerProjectId;
+  renderApp();
+  window.scrollTo(0, 0);
+};
+
+window.navigateBackToHome = function() {
+  document.body.classList.remove('cpd-active');
+  document.documentElement.classList.remove('cpd-active');
+  state.selectedCustomerProjectId = null;
+  state.customerView = null;
+  window.location.hash = '';
   renderApp();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.navigateBackToHome = function() {
+window.navigateToAllProjects = function() {
+  document.body.classList.remove('cpd-active');
+  document.documentElement.classList.remove('cpd-active');
   state.selectedCustomerProjectId = null;
-  state.customerView = null;
-  window.location.hash = '';
+  state.customerView = 'all-projects';
+  window.location.hash = '#/all-projects';
   renderApp();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -6894,7 +6951,16 @@ window.closeProjectPhotoGalleryModal = function() {
 
 window.switchCpdFloorPlan = function(index) {
   const p = window.getCustomerProjectData(state.selectedCustomerProjectId || 'up-mahindra-aquavista');
-  const cfg = p.configs[index] || p.configs[0];
+  const cfg = (p.configs && p.configs[index]) || (p.configs && p.configs[0]) || {
+    type: '3 BHK Royal Residence',
+    superArea: '1,720 sq.ft',
+    carpetArea: '1,340 sq.ft',
+    baths: '3 Baths',
+    balconies: '3 Balconies',
+    facing: 'North-East Vastu Compliant',
+    status: 'Available',
+    price: p.price || '₹ 1.45 Cr - 1.85 Cr'
+  };
 
   document.querySelectorAll('.cpd-fp-tab-btn').forEach((btn, i) => {
     if (i === index) btn.classList.add('active');
@@ -6905,67 +6971,69 @@ window.switchCpdFloorPlan = function(index) {
   if (detailBox) {
     detailBox.innerHTML = `
       <div>
-        <div style="font-size: 1.25rem; font-weight: 850; color: #091e42; margin-bottom: 0.35rem;">${cfg.type}</div>
-        <div style="font-size: 0.84rem; color: #64748b; margin-bottom: 1.25rem;">${cfg.status} • Vastu Compliant Planning</div>
+        <div style="font-size: 1.25rem; font-weight: 750; color: #0F172A; margin-bottom: 0.35rem; letter-spacing: -0.02em;">${cfg.type}</div>
+        <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 1.25rem;">${cfg.status} • High Efficiency Layout • Vastu Compliant</div>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem;">
-            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">SUPER BUILT-UP</div>
-            <div style="font-size: 1.05rem; font-weight: 850; color: #091e42;">${cfg.superArea}</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem;">
+          <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="font-size: 0.68rem; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">SUPER BUILT-UP</div>
+            <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin-top: 0.2rem;">${cfg.superArea}</div>
           </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem;">
-            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">CARPET AREA</div>
-            <div style="font-size: 1.05rem; font-weight: 850; color: #0078db;">${cfg.carpetArea}</div>
+          <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="font-size: 0.68rem; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">CARPET AREA (RERA)</div>
+            <div style="font-size: 1.05rem; font-weight: 800; color: #0284C7; margin-top: 0.2rem;">${cfg.carpetArea}</div>
           </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem;">
-            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">ACCOMMODATION</div>
-            <div style="font-size: 0.95rem; font-weight: 850; color: #091e42;">${cfg.baths}</div>
+          <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="font-size: 0.68rem; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">ACCOMMODATION</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #0F172A; margin-top: 0.2rem;">${cfg.baths}</div>
           </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem;">
-            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">BALCONIES</div>
-            <div style="font-size: 0.95rem; font-weight: 850; color: #091e42;">${cfg.balconies}</div>
+          <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 12px; padding: 0.85rem 1rem;">
+            <div style="font-size: 0.68rem; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">BALCONIES & FACING</div>
+            <div style="font-size: 1rem; font-weight: 800; color: #0F172A; margin-top: 0.2rem;">${cfg.balconies}</div>
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.6rem;">
-          <button class="btn btn-primary" onclick="openUpcomingViewNumberModal('${p.id}')" style="flex: 1; padding: 0.75rem; font-weight: 800; background: #0078db;">
-            Enquire for this Unit
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button class="btn" onclick="openUpcomingViewNumberModal('${p.id}')" style="flex: 1; min-width: 170px; padding: 0.75rem 1.15rem; font-weight: 700; font-size: 0.84rem; background: #0F172A; color: #FFFFFF; border: none; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span>Enquire for this Residence</span>
           </button>
-          <button class="btn" onclick="downloadProjectBrochure('${p.id}')" style="background: #f1f5f9; color: #091e42; border: 1px solid #cbd5e1; padding: 0.75rem 1rem; font-weight: 750;">
-            📥 Download Floor Plan PDF
+          <button class="btn" onclick="downloadProjectBrochure('${p.id}')" style="background: rgba(241, 245, 249, 0.9); color: #0F172A; border: 1px solid rgba(203, 213, 225, 0.8); border-radius: 12px; padding: 0.75rem 1.15rem; font-weight: 700; font-size: 0.84rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span>Download Blueprint PDF</span>
           </button>
         </div>
       </div>
 
       <!-- Architectural SVG Floor Plan Diagram -->
-      <div style="background: #ffffff; border: 1px dashed #94a3b8; border-radius: 12px; padding: 1.5rem; text-align: center;">
-        <svg viewBox="0 0 320 240" width="100%" height="220" style="display: block; margin: 0 auto;">
-          <rect x="10" y="10" width="300" height="220" fill="#f8fafc" stroke="#0078db" stroke-width="2.5" rx="4"/>
-          <line x1="10" y1="120" x2="310" y2="120" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
-          <line x1="160" y1="10" x2="160" y2="230" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <div style="background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(203, 213, 225, 0.8); border-radius: 16px; padding: 1.5rem; text-align: center;">
+        <svg viewBox="0 0 320 230" width="100%" height="210" style="display: block; margin: 0 auto;">
+          <rect x="8" y="8" width="304" height="214" fill="#F8FAFC" stroke="#0284C7" stroke-width="2" rx="6"/>
+          <line x1="8" y1="115" x2="312" y2="115" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <line x1="160" y1="8" x2="160" y2="222" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="4,4"/>
           
           <!-- Master Bedroom -->
-          <rect x="20" y="20" width="130" height="90" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="85" y="60" font-size="11" font-weight="bold" fill="#0369a1" text-anchor="middle">MASTER BEDROOM</text>
-          <text x="85" y="76" font-size="9" fill="#0284c7" text-anchor="middle">14' x 16' (Balcony attached)</text>
+          <rect x="18" y="18" width="132" height="88" fill="#F0F9FF" stroke="#38BDF8" stroke-width="1.2" rx="4"/>
+          <text x="84" y="56" font-size="10" font-weight="700" fill="#0369A1" text-anchor="middle" font-family="-apple-system, sans-serif">MASTER BEDROOM</text>
+          <text x="84" y="72" font-size="8.5" fill="#0284C7" text-anchor="middle" font-family="-apple-system, sans-serif">14' x 16' • Balcony Deck</text>
 
           <!-- Living & Dining -->
-          <rect x="170" y="20" width="130" height="90" fill="#f0fdf4" stroke="#4ade80" stroke-width="1.5"/>
-          <text x="235" y="60" font-size="11" font-weight="bold" fill="#15803d" text-anchor="middle">GRAND LIVING & DINING</text>
-          <text x="235" y="76" font-size="9" fill="#16a34a" text-anchor="middle">18' x 24' (Double Height)</text>
+          <rect x="170" y="18" width="132" height="88" fill="#F0FDF4" stroke="#4ADE80" stroke-width="1.2" rx="4"/>
+          <text x="236" y="56" font-size="10" font-weight="700" fill="#15803D" text-anchor="middle" font-family="-apple-system, sans-serif">GRAND LIVING & DINING</text>
+          <text x="236" y="72" font-size="8.5" fill="#16A34A" text-anchor="middle" font-family="-apple-system, sans-serif">18' x 24' • Panoramic Foyer</text>
 
           <!-- Kitchen & Utility -->
-          <rect x="20" y="130" width="130" height="90" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
-          <text x="85" y="170" font-size="11" font-weight="bold" fill="#b45309" text-anchor="middle">MODULAR KITCHEN</text>
-          <text x="85" y="186" font-size="9" fill="#d97706" text-anchor="middle">10' x 12' + Utility</text>
+          <rect x="18" y="124" width="132" height="88" fill="#FEF3C7" stroke="#FCD34D" stroke-width="1.2" rx="4"/>
+          <text x="84" y="162" font-size="10" font-weight="700" fill="#B45309" text-anchor="middle" font-family="-apple-system, sans-serif">GOURMET KITCHEN</text>
+          <text x="84" y="178" font-size="8.5" fill="#D97706" text-anchor="middle" font-family="-apple-system, sans-serif">10' x 12' • Utility Terrace</text>
 
-          <!-- Bedroom 2 / Guest -->
-          <rect x="170" y="130" width="130" height="90" fill="#fae8ff" stroke="#e879f9" stroke-width="1.5"/>
-          <text x="235" y="170" font-size="11" font-weight="bold" fill="#7e22ce" text-anchor="middle">BEDROOM 2 & SUITE</text>
-          <text x="235" y="186" font-size="9" fill="#9333ea" text-anchor="middle">12' x 14' (Ensuite Bath)</text>
+          <!-- Bedroom 2 / Guest Suite -->
+          <rect x="170" y="124" width="132" height="88" fill="#FAF5FF" stroke="#C084FC" stroke-width="1.2" rx="4"/>
+          <text x="236" y="162" font-size="10" font-weight="700" fill="#7E22CE" text-anchor="middle" font-family="-apple-system, sans-serif">GUEST SUITE</text>
+          <text x="236" y="178" font-size="8.5" fill="#9333EA" text-anchor="middle" font-family="-apple-system, sans-serif">12' x 14' • Ensuite Bath</text>
         </svg>
-        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; margin-top: 0.5rem;">
-          📐 High-Precision Vastu Architected Schematic (${cfg.type})
+        <div style="font-size: 0.72rem; color: #64748B; font-weight: 600; margin-top: 0.65rem; letter-spacing: 0.02em;">
+          Architectural Schematic Blueprint • ${cfg.type}
         </div>
       </div>
     `;
@@ -6978,31 +7046,50 @@ window.submitCustomerProjectInquiry = function() {};
 // Main Customer Project Detail Renderer
 window.scrollToCpdSection = function(sectionId, btn) {
   const target = document.getElementById(sectionId);
+  if (!target) return;
+
+  // Immediately set active button
+  document.querySelectorAll('.cpd-tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) {
-    document.querySelectorAll('.cpd-tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+  } else {
+    const match = document.querySelector(`.cpd-tab-btn[data-target="${sectionId}"]`);
+    if (match) match.classList.add('active');
   }
 
-  if (target) {
-    // 135px space for sticky glass nav + floating tab pills
-    const navOffset = 135;
-    const targetY = target.getBoundingClientRect().top + window.pageYOffset - navOffset;
-    window.scrollTo({
-      top: Math.max(0, targetY),
-      behavior: 'smooth'
-    });
+  // Auto-scroll active tab into view in the pill bar on mobile
+  const activeTab = btn || document.querySelector(`.cpd-tab-btn[data-target="${sectionId}"]`);
+  if (activeTab && activeTab.scrollIntoView) {
+    activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
+
+  // Prevent scrollspy from fighting smooth scroll
+  window._cpdIsScrolling = true;
+  if (window._cpdScrollTimer) clearTimeout(window._cpdScrollTimer);
+
+  // Smooth scroll using native CSS scroll-margin-top
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  window._cpdScrollTimer = setTimeout(() => {
+    window._cpdIsScrolling = false;
+  }, 1100);
 };
 
 window.renderCustomerProjectDetail = function(root, projectId) {
   window._projectDetailsDbCache = window._projectDetailsDbCache || {};
 
-  // Ensure whole window and body allow natural, silky smooth scrolling
+  // Unlock document and body for natural, silky smooth scrolling
+  document.body.classList.remove('ws-no-scroll', 'nxq-lock');
+  document.documentElement.classList.remove('nxq-lock');
+  document.body.classList.add('cpd-active');
+  document.documentElement.classList.add('cpd-active');
   document.body.style.overflow = '';
   document.body.style.overflowY = 'auto';
   document.documentElement.style.overflow = '';
   document.documentElement.style.overflowY = 'auto';
   if (root) {
+    root.classList.remove('crm-mode');
+    root.classList.add('cpd-active');
     root.style.display = 'block';
     root.style.height = 'auto';
     root.style.minHeight = '100vh';
@@ -7011,25 +7098,36 @@ window.renderCustomerProjectDetail = function(root, projectId) {
   }
 
   // Auto-resolve any legacy or temporary IDs to real database project
-  if (projectId) {
-    // Check if live DB details need to be loaded
-    if (!window._projectDetailsDbCache[projectId]) {
-      apiFetch('/projects/' + encodeURIComponent(projectId)).then(res => {
+  let cleanId = projectId;
+  if (cleanId && typeof cleanId === 'string' && cleanId.startsWith('crm-nl-')) {
+    const known = (window._nexoraNewlyLaunchedProjectsCache || []).find(item => item && item.id && !item.id.startsWith('crm-nl-'))
+      || (state.projects && state.projects[0]);
+    if (known && known.id) {
+      cleanId = known.id;
+      state.selectedCustomerProjectId = cleanId;
+      try { history.replaceState(null, '', '#/project/' + cleanId); } catch (e) {}
+    }
+  }
+
+  if (cleanId) {
+    if (!window._projectDetailsDbCache[cleanId]) {
+      apiFetch('/projects/' + encodeURIComponent(cleanId)).then(res => {
         if (res && res.data && res.data.id) {
           window._projectDetailsDbCache[res.data.id] = res.data;
-          window._projectDetailsDbCache[projectId] = res.data;
-          if (projectId.startsWith('crm-nl-') || projectId !== res.data.id) {
+          window._projectDetailsDbCache[cleanId] = res.data;
+          if (cleanId !== res.data.id) {
             state.selectedCustomerProjectId = res.data.id;
             try { history.replaceState(null, '', '#/project/' + res.data.id); } catch (e) {}
             window.renderCustomerProjectDetail(root, res.data.id);
           }
         }
       }).catch(err => {
-        console.warn('Project details loaded from cached state:', err.message);
+        console.warn('Project details loaded from state:', err.message);
       });
     }
   }
-  const p = window.getCustomerProjectData(projectId);
+
+  const p = window.getCustomerProjectData(cleanId || projectId);
 
   const isMahindra = p.developer && p.developer.toLowerCase().includes('mahindra');
   const devInitials = (p.developer || 'NX').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'NX';
@@ -7046,26 +7144,29 @@ window.renderCustomerProjectDetail = function(root, projectId) {
       <!-- 1. STICKY TOP NAVIGATION BAR -->
       <header class="cpd-top-nav">
         <div style="display: flex; align-items: center; gap: 1.25rem;">
-          <div style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onclick="navigateBackToHome()">
-            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+          <div style="cursor: pointer; display: flex; align-items: center; gap: 0.6rem;" onclick="navigateBackToHome()">
+            <div style="width: 34px; height: 34px; background: #0F172A; color: #FFFFFF; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; letter-spacing: -0.02em; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
               NX
             </div>
-            <span style="font-size: 1.1rem; font-weight: 800; color: #091e42; letter-spacing: -0.02em;">Nexora Estates</span>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 1.05rem; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; line-height: 1.1;">Nexora Estates</span>
+              <span style="font-size: 0.68rem; font-weight: 600; color: #64748B; letter-spacing: 0.04em; text-transform: uppercase;">Private Portfolio</span>
+            </div>
           </div>
 
           <button class="cpd-back-btn" onclick="navigateToAllProjects()">
-            <span>←</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             <span>Back to All Projects</span>
           </button>
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <button class="btn" onclick="downloadProjectBrochure('${p.id}')" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.15rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
-            <span>📥</span>
+          <button class="btn" onclick="downloadProjectBrochure('${p.id}')" style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); color: #0F172A; border: 1px solid rgba(203, 213, 225, 0.8); font-size: 0.82rem; font-weight: 700; padding: 0.55rem 1.15rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem; transition: all 0.2s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             <span>Download Brochure</span>
           </button>
-          <button class="btn" onclick="openUpcomingViewNumberModal('${p.id}')" style="background: #091e42; color: #ffffff; border: none; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.15rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.45rem;">
-            <span>📞</span>
+          <button class="btn" onclick="openUpcomingViewNumberModal('${p.id}')" style="background: #0F172A; color: #FFFFFF; border: none; font-size: 0.82rem; font-weight: 700; padding: 0.55rem 1.25rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             <span>Sales Desk</span>
           </button>
         </div>
@@ -7074,13 +7175,13 @@ window.renderCustomerProjectDetail = function(root, projectId) {
       <main class="cpd-container">
         <!-- 2. BREADCRUMBS -->
         <nav class="cpd-breadcrumb">
-          <a onclick="navigateBackToHome()">Home</a>
-          <span class="sep">›</span>
+          <a onclick="navigateBackToHome()">Portfolio</a>
+          <span class="sep">/</span>
           <a onclick="navigateToAllProjects()">All Projects</a>
-          <span class="sep">›</span>
+          <span class="sep">/</span>
           <a onclick="navigateToAllProjects()">${p.locality}</a>
-          <span class="sep">›</span>
-          <span style="font-weight: 700; color: #091e42;">${p.name}</span>
+          <span class="sep">/</span>
+          <span style="font-weight: 600; color: #0F172A;">${p.name}</span>
         </nav>
 
         <!-- 3. PROJECT TITLE HEADER & PRICING -->
@@ -7088,9 +7189,12 @@ window.renderCustomerProjectDetail = function(root, projectId) {
           <div>
             <h1 class="cpd-title">${p.name}</h1>
             <div class="cpd-subtitle">
-              <span>By <b>${p.developer}</b></span>
+              <span>By <strong style="color: #0F172A; font-weight: 700;">${p.developer}</strong></span>
               <span>•</span>
-              <span>📍 ${p.location}</span>
+              <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${p.location}
+              </span>
             </div>
             <div class="cpd-badges-row">
               <span class="cpd-rera-pill">
@@ -7102,7 +7206,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 <span>${p.rating} / 5 (${p.reviewCount} Ratings)</span>
               </span>
               <span class="cpd-status-pill">
-                <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+                <svg width="6" height="6" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
                 <span>${p.status}</span>
               </span>
               <span class="cpd-brokerage-pill">
@@ -7118,7 +7222,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
           </div>
         </div>
 
-        <!-- 4. NEXORA MASTER 5-PHOTO COLLAGE GALLERY -->
+        <!-- 4. MASTER 5-PHOTO COLLAGE GALLERY -->
         <div class="cpd-gallery-grid">
           <div class="cpd-gallery-item main" onclick="openProjectPhotoGalleryModal('${p.id}')">
             <img class="cpd-gallery-img" src="${p.photos[0].url}" alt="${p.photos[0].label}" />
@@ -7142,12 +7246,12 @@ window.renderCustomerProjectDetail = function(root, projectId) {
           </div>
 
           <button class="cpd-view-all-photos-btn" onclick="openProjectPhotoGalleryModal('${p.id}')">
-            <span>📸</span>
-            <span>View All 24 Photos & Master Plan</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>View All 24 Architectural Perspectives</span>
           </button>
         </div>
 
-        <!-- 5. STICKY IN-PAGE SECTION TABS -->
+        <!-- 5. STICKY IN-PAGE SECTION TABS (iOS Capsule Segmented Style) -->
         <nav class="cpd-sticky-tabs">
           <button class="cpd-tab-btn active" data-target="sec-overview" onclick="scrollToCpdSection('sec-overview', this)">Overview</button>
           <button class="cpd-tab-btn" data-target="sec-plans" onclick="scrollToCpdSection('sec-plans', this)">Price & Floor Plans</button>
@@ -7165,8 +7269,8 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 1: Overview -->
             <section class="cpd-section-card" id="sec-overview">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 21h18M3 7v14M21 7v14M9 3h6v4H9zM9 11h2v2H9zM13 11h2v2h-2zM9 15h2v2H9zM13 15h2v2h-2z"/></svg>
-                <span>Project Overview & Key Highlights</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M9 3h6v4H9zM9 11h2v2H9zM13 11h2v2h-2zM9 15h2v2H9zM13 15h2v2h-2z"/></svg>
+                <span>Project Overview & Master Highlights</span>
               </h2>
 
               <div class="cpd-snapshot-grid">
@@ -7176,7 +7280,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 </div>
                 <div class="cpd-snapshot-item">
                   <div class="cpd-snapshot-label">OPEN GREEN SPACES</div>
-                  <div class="cpd-snapshot-val" style="color: #16a34a;">${p.openSpace}</div>
+                  <div class="cpd-snapshot-val" style="color: #059669;">${p.openSpace}</div>
                 </div>
                 <div class="cpd-snapshot-item">
                   <div class="cpd-snapshot-label">CONFIGURATIONS</div>
@@ -7184,24 +7288,24 @@ window.renderCustomerProjectDetail = function(root, projectId) {
                 </div>
                 <div class="cpd-snapshot-item">
                   <div class="cpd-snapshot-label">POSSESSION TIMELINE</div>
-                  <div class="cpd-snapshot-val" style="color: #0284c7;">${p.possession}</div>
+                  <div class="cpd-snapshot-val" style="color: #0284C7;">${p.possession}</div>
                 </div>
               </div>
 
-              <p style="font-size: 0.95rem; line-height: 1.65; color: #334155; margin-bottom: 1.25rem;">
+              <p style="font-size: 0.95rem; line-height: 1.65; color: #334155; margin-bottom: 1.5rem;">
                 ${p.description}
               </p>
 
-              <div style="background: rgba(240, 253, 244, 0.7); border: 1px solid rgba(187, 247, 208, 0.8); backdrop-filter: blur(12px); border-radius: 14px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <div style="font-size: 0.9rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
+              <div style="background: rgba(240, 253, 244, 0.7); border: 1px solid rgba(187, 247, 208, 0.8); backdrop-filter: blur(12px); border-radius: 16px; padding: 1.35rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                <div style="font-size: 0.88rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span>Why Choose ${p.name}?</span>
+                  <span>Why Invest in ${p.name}?</span>
                 </div>
-                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.86rem; color: #15803d; line-height: 1.65;">
-                  <li>Prime metropolitan location in ${p.locality}, ${p.city || ''} with high rental demand and long-term capital appreciation.</li>
-                  <li>Architecturally engineered ${p.totalUnits || 'residential units'} with optimized natural daylight, cross-ventilation, and high spatial efficiency.</li>
-                  <li>100% verified legal clearances, approved RERA registrations, and escrow-governed construction milestones.</li>
-                  <li>Zero brokerage fee guaranteed direct through Nexora Estates certified developer desk.</li>
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.86rem; color: #15803D; line-height: 1.65;">
+                  <li>Strategic location in ${p.locality}, ${p.city || ''} with proven capital appreciation track record.</li>
+                  <li>Architecturally engineered residences with cross-ventilation, optimized daylight, and zero dead-space layout.</li>
+                  <li>Complete RERA compliance, escrow bank accounts, and certified construction milestones.</li>
+                  <li>Zero brokerage fee guaranteed direct through Nexora Estates official developer partnership.</li>
                 </ul>
               </div>
             </section>
@@ -7209,7 +7313,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 2: Floor Plans & Pricing -->
             <section class="cpd-section-card" id="sec-plans">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                 <span>Floor Plans, Typology & Pricing</span>
               </h2>
 
@@ -7230,7 +7334,7 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 3: Amenities -->
             <section class="cpd-section-card" id="sec-amenities">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 <span>World-Class Amenities & Leisure</span>
               </h2>
 
@@ -7247,36 +7351,36 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 4: Specifications & Master Plan -->
             <section class="cpd-section-card" id="sec-specs">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 <span>Master Plan & Luxury Specifications</span>
               </h2>
 
-              <div style="margin-bottom: 1.5rem; border-radius: 16px; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8);">
+              <div style="margin-bottom: 1.5rem; border-radius: 18px; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8);">
                 <img src="${p.photos[0].url}" alt="Master Plan Aerial Overview" style="width: 100%; height: 320px; object-fit: cover; display: block;" />
-                <div style="background: rgba(248, 250, 252, 0.85); backdrop-filter: blur(10px); padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-size: 0.85rem; font-weight: 700; color: #091e42;">Zoned Master Plan: Residential Enclaves • Private Clubhouse • Landscaped Central Promenade</span>
-                  <button class="btn btn-sm" onclick="downloadProjectBrochure('${p.id}')" style="background: #0284c7; color: #ffffff; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.95rem; border-radius: 8px;">
-                    📥 Download Master Layout
+                <div style="background: rgba(248, 250, 252, 0.85); backdrop-filter: blur(12px); padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                  <span style="font-size: 0.85rem; font-weight: 700; color: #0F172A;">Zoned Master Plan: Residential Enclaves • Private Clubhouse • Central Promenade</span>
+                  <button class="btn btn-sm" onclick="downloadProjectBrochure('${p.id}')" style="background: #0F172A; color: #FFFFFF; font-size: 0.78rem; font-weight: 700; padding: 0.45rem 1rem; border-radius: 9999px;">
+                    Download Master Layout
                   </button>
                 </div>
               </div>
 
               <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
                 <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7); background: rgba(248, 250, 252, 0.6);">
-                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42; width: 25%;">STRUCTURE</td>
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #0F172A; width: 25%;">STRUCTURE</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Seismic Zone III compliant RCC framed structure with concrete solid block masonry.</td>
                 </tr>
                 <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7);">
-                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42;">FLOORING</td>
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #0F172A;">FLOORING</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Italian marble in grand living and dining foyer; engineered wooden flooring in master suite; anti-skid premium vitrified tiles in all bathrooms.</td>
                 </tr>
                 <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7); background: rgba(248, 250, 252, 0.6);">
-                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42;">BATHROOMS</td>
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #0F172A;">BATHROOMS</td>
                   <td style="padding: 0.85rem 1rem; color: #334155;">Wall-hung EWC with concealed cisterns, Kohler / Grohe chrome-plated fittings, and toughened glass shower cubicles.</td>
                 </tr>
                 <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.7);">
-                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #091e42;">ELECTRICAL & EV</td>
-                  <td style="padding: 0.85rem 1rem; color: #334155;">Schneider / Legrand modular switches, 100% DG power backup, dedicated EV charging conduit for each villa stilt bay.</td>
+                  <td style="padding: 0.85rem 1rem; font-weight: 700; color: #0F172A;">ELECTRICAL & EV</td>
+                  <td style="padding: 0.85rem 1rem; color: #334155;">Schneider / Legrand modular switches, 100% DG power backup, dedicated EV charging conduit for each residence.</td>
                 </tr>
               </table>
             </section>
@@ -7284,8 +7388,8 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 5: Location & Connectivity -->
             <section class="cpd-section-card" id="sec-location">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>Location Advantages & Transit Hubs</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Strategic Location & Transit Advantages</span>
               </h2>
 
               <p style="font-size: 0.92rem; color: #475569; margin-bottom: 1.25rem;">
@@ -7295,7 +7399,10 @@ window.renderCustomerProjectDetail = function(root, projectId) {
               <table class="cpd-location-table">
                 ${p.locations.map(loc => `
                   <tr>
-                    <td>${loc.place}</td>
+                    <td>
+                      <span style="color: #0284C7; display: inline-flex; align-items: center;">${loc.icon || '📍'}</span>
+                      <span>${loc.place}</span>
+                    </td>
                     <td>${loc.distance}</td>
                   </tr>
                 `).join('')}
@@ -7305,17 +7412,17 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 6: About Developer -->
             <section class="cpd-section-card" id="sec-developer">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <span>About Developer: ${p.developer}</span>
               </h2>
 
               <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.25rem;">
-                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);">
+                <div style="width: 58px; height: 58px; background: #0F172A; color: #FFFFFF; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);">
                   ${devInitials}
                 </div>
                 <div>
-                  <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #091e42;">${p.developer}</h3>
-                  <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">${devSub}</div>
+                  <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0F172A;">${p.developer}</h3>
+                  <div style="font-size: 0.82rem; color: #64748B; margin-top: 0.2rem;">${devSub}</div>
                 </div>
               </div>
 
@@ -7327,18 +7434,18 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             <!-- Section 7: Customer Reviews -->
             <section class="cpd-section-card" id="sec-reviews">
               <h2 class="cpd-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                <span>Verified Customer Reviews & Ratings (${p.rating} / 5)</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                <span>Verified Customer Reviews (${p.rating} / 5)</span>
               </h2>
 
               <div class="cpd-reviews-list">
                 ${p.reviews.map(r => `
                   <div class="cpd-review-item">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                      <div style="font-weight: 700; font-size: 0.95rem; color: #091e42;">${r.name}</div>
-                      <div style="color: #b45309; font-weight: 700; font-size: 0.85rem;">★ ${r.rating} / 5</div>
+                      <div style="font-weight: 700; font-size: 0.92rem; color: #0F172A;">${r.name}</div>
+                      <div style="color: #B45309; font-weight: 700; font-size: 0.82rem;">★ ${r.rating} / 5</div>
                     </div>
-                    <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 0.5rem;">${r.time}</div>
+                    <div style="font-size: 0.74rem; color: #64748B; margin-bottom: 0.5rem;">${r.time}</div>
                     <p style="font-size: 0.88rem; color: #334155; line-height: 1.5; margin: 0;">"${r.text}"</p>
                   </div>
                 `).join('')}
@@ -7346,63 +7453,65 @@ window.renderCustomerProjectDetail = function(root, projectId) {
             </section>
           </div>
 
-          <!-- RIGHT COLUMN (STICKY ACTION & BOOKING DESK) -->
+          <!-- RIGHT COLUMN (STICKY CONCIERGE & ACTION DESK) -->
           <div class="cpd-right-col">
             <div class="cpd-sticky-action-card">
-              <div style="font-size: 0.76rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
-                ⚡ Direct Developer Sales Desk
+              <div style="font-size: 0.72rem; font-weight: 800; color: #0284C7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem;">
+                Official Developer Sales Concierge
               </div>
-              <div style="font-size: 1.95rem; font-weight: 850; color: #091e42; margin-bottom: 0.2rem; letter-spacing: -0.02em;">
+              <div style="font-size: 2rem; font-weight: 850; color: #0F172A; margin-bottom: 0.2rem; letter-spacing: -0.03em;">
                 ${p.price}
               </div>
-              <div style="font-size: 0.82rem; color: #64748b; margin-bottom: 1.25rem;">
-                EMI starts at ${p.emi} • 0% Brokerage
+              <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 1.35rem;">
+                EMI from ${p.emi} • 0% Brokerage Fee
               </div>
 
               <!-- DOWNLOAD BROCHURE BUTTON -->
               <button class="cpd-btn-brochure-main" onclick="downloadProjectBrochure('${p.id}')">
-                <span style="font-size: 1.15rem;">📥</span>
-                <span>Download Official Brochure</span>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                <span>Download Official Brochure PDF</span>
               </button>
 
               <div class="cpd-call-desk-box">
-                <div style="font-size: 0.72rem; font-weight: 750; color: #64748b; text-transform: uppercase; margin-bottom: 0.2rem; letter-spacing: 0.05em;">
-                  Official Sales Desk Line
+                <div style="font-size: 0.7rem; font-weight: 700; color: #64748B; text-transform: uppercase; margin-bottom: 0.3rem; letter-spacing: 0.05em;">
+                  Verified Direct Sales Desk
                 </div>
-                <div style="font-size: 1.45rem; font-weight: 800; color: #091e42; letter-spacing: 0.01em;">
+                <div style="font-size: 1.35rem; font-weight: 800; color: #0F172A; letter-spacing: 0.02em;">
                   ${p.phone}
                 </div>
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-                  <a href="tel:${p.cleanPhone}" class="btn btn-primary" style="flex: 1; padding: 0.6rem; font-weight: 700; text-decoration: none; justify-content: center; font-size: 0.85rem; background: #0284c7; border-radius: 8px;">
-                    📞 Call Now
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.85rem;">
+                  <a href="tel:${p.cleanPhone}" class="btn" style="flex: 1; padding: 0.6rem; font-weight: 700; text-decoration: none; justify-content: center; font-size: 0.82rem; background: #0F172A; color: #FFFFFF; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <span>Call Now</span>
                   </a>
-                  <a href="https://wa.me/${p.cleanPhone}?text=Hi,%20I%20am%20interested%20in%20${encodeURIComponent(p.name)}%20via%20Nexora." target="_blank" class="btn" style="flex: 1; padding: 0.6rem; font-weight: 700; text-decoration: none; justify-content: center; font-size: 0.85rem; background: #25d366; color: #ffffff; border: none; border-radius: 8px;">
-                    💬 WhatsApp
+                  <a href="https://wa.me/${p.cleanPhone}?text=Hi,%20I%20am%20interested%20in%20${encodeURIComponent(p.name)}%20via%20Nexora." target="_blank" class="btn" style="flex: 1; padding: 0.6rem; font-weight: 700; text-decoration: none; justify-content: center; font-size: 0.82rem; background: #25D366; color: #FFFFFF; border: none; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3.1.8.8-3-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8.9-.3.2-.5.1a6.6 6.6 0 0 1-2-1.3 7.3 7.3 0 0 1-1.4-1.7c-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.3-.4a.4.4 0 0 0 0-.4c-.1-.1-.5-1.3-.7-1.8s-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3 3.1 3.1 0 0 0-1 2.3 5.4 5.4 0 0 0 1.1 2.9 12.4 12.4 0 0 0 4.8 4.2 11 11 0 0 0 1.6.6 3.9 3.9 0 0 0 1.8.1 3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.2-.1-.4-.2-.6-.3z"/></svg>
+                    <span>WhatsApp</span>
                   </a>
                 </div>
               </div>
 
               <!-- Direct Lead / Site Visit Form -->
               <form class="cpd-lead-form" onsubmit="event.preventDefault(); submitCustomerProjectInquiry('${p.name}');">
-                <div style="font-size: 0.85rem; font-weight: 800; color: #091e42; margin-bottom: 0.2rem;">
-                  Schedule Free Site Visit & VIP Allotment
+                <div style="font-size: 0.85rem; font-weight: 800; color: #0F172A; margin-bottom: 0.2rem;">
+                  Schedule VIP Site Visit & Allotment
                 </div>
                 <input type="text" id="cpd-inq-name" required placeholder="Your Full Name" />
                 <input type="tel" id="cpd-inq-phone" required placeholder="Phone Number (for WhatsApp Pass)" />
                 <input type="email" id="cpd-inq-email" placeholder="Email Address (optional)" />
                 <select id="cpd-inq-pref">
-                  <option value="3 BHK Luxury Villa">Interested in: 3 BHK Luxury Villa</option>
-                  <option value="4 BHK Duplex Villa">Interested in: 4 BHK Duplex Villa</option>
-                  <option value="Custom Villa Plot">Interested in: Custom Villa Plot</option>
+                  <option value="2 BHK Residence">Interested in: 2 BHK Residence</option>
+                  <option value="3 BHK Royal Suite" selected>Interested in: 3 BHK Royal Suite</option>
+                  <option value="4 BHK Sky Villa">Interested in: 4 BHK Sky Villa</option>
                 </select>
                 <button type="submit">
                   Request Priority Callback & Pass
                 </button>
               </form>
 
-              <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.74rem; color: #16a34a; font-weight: 700;">
-                <span>✓</span>
-                <span>Zero Brokerage Guaranteed • Directly from ${p.developer}</span>
+              <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.72rem; color: #059669; font-weight: 700;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Zero Brokerage Guaranteed • Direct Developer Desk</span>
               </div>
             </div>
           </div>
@@ -7419,20 +7528,37 @@ window.renderCustomerProjectDetail = function(root, projectId) {
     window.removeEventListener('scroll', window._cpdScrollSpyHandler);
   }
   window._cpdScrollSpyHandler = function() {
+    if (window._cpdIsScrolling) return;
     const sections = ['sec-overview', 'sec-plans', 'sec-amenities', 'sec-specs', 'sec-location', 'sec-developer', 'sec-reviews'];
     let currentSec = sections[0];
-    for (const secId of sections) {
-      const el = document.getElementById(secId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        if (rect.top <= 165) {
-          currentSec = secId;
+
+    const scrollBottom = window.innerHeight + (window.pageYOffset || document.documentElement.scrollTop || 0);
+    const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight || 0);
+    const revEl = document.getElementById('sec-reviews');
+    const revRect = revEl ? revEl.getBoundingClientRect() : null;
+
+    // Check if bottom of document is reached OR reviews section is well in view
+    if (scrollBottom >= (docHeight - 300) || (revRect && revRect.top <= (window.innerHeight * 0.7))) {
+      currentSec = sections[sections.length - 1];
+    } else {
+      const threshold = Math.round(Math.max(260, window.innerHeight * 0.35));
+      for (const secId of sections) {
+        const el = document.getElementById(secId);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= threshold) {
+            currentSec = secId;
+          }
         }
       }
     }
+
     document.querySelectorAll('.cpd-tab-btn').forEach(btn => {
       if (btn.getAttribute('data-target') === currentSec) {
         btn.classList.add('active');
+        if (btn.scrollIntoView && !window._cpdIsScrolling) {
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
       } else {
         btn.classList.remove('active');
       }

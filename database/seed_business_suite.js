@@ -120,11 +120,14 @@ async function main() {
       }
       // One cheque waiting for verification on the most recent booking
       if (d === deals[deals.length - 1]) {
-        await conn.query(
-          `INSERT INTO payments (id, payment_number, deal_id, amount_received, payment_date, payment_mode, reference_number, received_by, notes, verification_status, payer_name)
-           VALUES (?, ?, ?, ?, ?, 'CHEQUE', ?, ?, 'Part payment towards agreement', 'PENDING', ?)`,
-          [crypto.randomUUID(), `PAY-DEMO-${String(++i).padStart(3, '0')}`, d.id, 250000, daysFromNow(-1), `CHQ-${400100 + i}`, PEOPLE[2].id, d.first_name]
-        );
+        const [[{ n: hasPendingPay }]] = await conn.query("SELECT COUNT(*) AS n FROM payments WHERE deal_id = ? AND verification_status = 'PENDING'", [d.id]);
+        if (!Number(hasPendingPay)) {
+          await conn.query(
+            `INSERT INTO payments (id, payment_number, deal_id, amount_received, payment_date, payment_mode, reference_number, received_by, notes, verification_status, payer_name)
+             VALUES (?, ?, ?, ?, ?, 'CHEQUE', ?, ?, 'Part payment towards agreement', 'PENDING', ?)`,
+            [crypto.randomUUID(), `PAY-DEMO-${String(++i).padStart(3, '0')}`, d.id, 250000, daysFromNow(-1), `CHQ-${400100 + i}`, PEOPLE[2].id, d.first_name]
+          );
+        }
       }
     }
     if (d.customer_id) {

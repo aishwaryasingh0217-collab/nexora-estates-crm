@@ -339,6 +339,9 @@
     owner: { label: 'Business owner', home: 'owner-overview' },
     'sales-head': { label: 'Sales head', home: 'sales-dashboard' },
     'sales-manager': { label: 'Sales manager', home: 'sales-dashboard' },
+    'inside-sales': { label: 'Inside sales (Telecaller)', home: 'telecaller-queue' },
+    'outside-sales': { label: 'Outside sales (Field agent)', home: 'siteagent-visits' },
+    'channel-partner': { label: 'Channel partner desk', home: 'partner-desk' },
     finance: { label: 'Finance & accounts', home: 'finance-overview' },
     inventory: { label: 'Projects & inventory', home: 'inv-overview' },
     marketing: { label: 'Marketing', home: 'mkt-overview' },
@@ -414,15 +417,15 @@
   NXS.paintNav = paintNav;
 
   // ------------------------------------------------------------------ shell
-  const SUITE_ROLES = ['BUSINESS_OWNER', 'FINANCE', 'INVENTORY', 'MARKETING', 'CUSTOMER_RELATIONS'];
+  const SUITE_ROLES = ['BUSINESS_OWNER', 'FINANCE', 'INVENTORY', 'MARKETING', 'CUSTOMER_RELATIONS', 'INSIDE_SALES', 'OUTSIDE_SALES', 'CHANNEL_PARTNER'];
   window.shouldRenderSuite = function () {
     const role = state.user && state.user.role;
     if (!state.token || !role) return false;
     let surface = null;
     try { surface = localStorage.getItem('crm_surface'); } catch (e) { /* ignore */ }
-    if (SUITE_ROLES.includes(role)) return true;
-    if (['SUPER_ADMIN', 'ADMIN'].includes(role)) return surface !== 'crm' && surface !== 'workspace';
-    return surface === 'suite'; // agents/partners open the suite only for the Testing Center
+    if (surface === 'crm') return false;
+    if (surface === 'workspace') return false;
+    return true; // Business Suite is default for every management, department, field and partner role
   };
   window.openSuite = function (view) {
     try { localStorage.setItem('crm_surface', 'suite'); if (view) sessionStorage.setItem('sx_view', JSON.stringify({ portal: view === 'test-summary' ? 'testing' : null, view })); } catch (e) { /* ignore */ }
@@ -888,7 +891,7 @@
 
   // ------------------------------------------------------------------ lead drawer (shared)
   async function openLead(leadId) {
-    if (!can('leads.view.all')) { toast('Open this lead from your workspace.', 'err'); return; }
+    if (!can('leads.view.all') && !can('leads.view.own')) { toast('You do not have permission to view this lead.', 'err'); return; }
     const d = drawer('Lead');
     const draw = async () => {
       const r = (await api(`/suite/sales/leads/${leadId}`)).data;

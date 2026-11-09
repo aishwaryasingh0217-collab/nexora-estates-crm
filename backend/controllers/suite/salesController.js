@@ -181,7 +181,14 @@ const getLead = wrap(async (req, res) => {
       WHERE l.id = ?`,
     [req.params.id]
   );
-  if (!lead || (team && lead.assigned_agent_id && !team.includes(lead.assigned_agent_id))) throw httpError(404, 'Lead not found.');
+  if (!lead) throw httpError(404, 'Lead not found.');
+  if (team && lead.assigned_agent_id && !team.includes(lead.assigned_agent_id)) throw httpError(403, 'Lead not found in your team.');
+  if (!can(req.user, 'leads.view.all')) {
+    const isAssigned = lead.assigned_agent_id === req.user.id;
+    const isPartner = req.user.channel_partner_id && lead.channel_partner_id === req.user.channel_partner_id;
+    const [[assignedVisit]] = await pool.query('SELECT 1 FROM site_visits WHERE lead_id = ? AND assigned_agent_id = ? LIMIT 1', [lead.id, req.user.id]);
+    if (!isAssigned && !isPartner && !assignedVisit) throw httpError(403, 'You do not have permission to view this lead.');
+  }
   const [visitRows] = await pool.query(
     `SELECT sv.*, p.name AS project_name, ag.first_name AS agent_first, ag.last_name AS agent_last FROM site_visits sv
        JOIN projects p ON p.id = sv.project_id LEFT JOIN users ag ON ag.id = sv.assigned_agent_id WHERE sv.lead_id = ? ORDER BY sv.scheduled_time DESC`,

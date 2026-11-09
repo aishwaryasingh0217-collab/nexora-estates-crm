@@ -65,7 +65,7 @@ async function updateSettings(values, userId) {
 // Workflow rules (owner / sales head): booking approvals, reservations, visit approvals, alerts
 // ---------------------------------------------------------------------------
 const WORKFLOW_FIELDS = {
-  booking_approval_mode: { values: ['ALWAYS', 'DISCOUNT_ONLY', 'NEVER'], fallback: 'ALWAYS', label: 'When bookings need approval' },
+  booking_approval_mode: { values: ['ALWAYS', 'DISCOUNT_ONLY', 'NEVER'], fallback: 'DISCOUNT_ONLY', label: 'When bookings need approval' },
   booking_discount_threshold_pct: { min: 0, max: 50, fallback: '2', label: 'Discount (%) above which a booking needs approval' },
   reservation_hold_hours: { min: 1, max: 720, fallback: '48', label: 'Hours a unit stays reserved while a booking awaits approval' },
   visit_approval_required: { values: ['0', '1'], fallback: '0', label: 'Visits requested by agents/partners need manager approval' },

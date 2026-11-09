@@ -4618,6 +4618,8 @@ tr:hover td {
 }
 
 /* ── CUSTOMER PROJECT DETAIL PAGE (NEXORA LUXURY GLASSMORPHISM & SMOOTH SCROLL) ── */
+html.cpd-active,
+body.cpd-active,
 html:has(.cpd-page),
 body:has(.cpd-page) {
   height: auto !important;
@@ -4625,9 +4627,11 @@ body:has(.cpd-page) {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   scroll-behavior: smooth !important;
+  background: #F8FAFC !important;
 }
 
-#app:has(.cpd-page) {
+#app:has(.cpd-page),
+#app.cpd-active {
   display: block !important;
   width: 100% !important;
   height: auto !important;
@@ -4640,9 +4644,9 @@ body:has(.cpd-page) {
   min-height: 100vh;
   overflow-x: hidden;
   background: 
-    radial-gradient(ellipse 90% 60% at 50% -15%, rgba(14, 165, 233, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 90% 30%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 50% at 10% 70%, rgba(16, 185, 129, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(14, 165, 233, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 25%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 50% at 5% 60%, rgba(16, 185, 129, 0.04) 0%, transparent 50%),
     #F8FAFC;
   color: #0F172A;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Plus Jakarta Sans", "Inter", sans-serif;
@@ -4655,15 +4659,15 @@ body:has(.cpd-page) {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
   padding: 0.85rem 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 24px -2px rgba(15, 23, 42, 0.03), 0 1px 0 rgba(255, 255, 255, 0.95) inset;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
 }
 
 .cpd-back-btn {
@@ -4671,8 +4675,8 @@ body:has(.cpd-page) {
   align-items: center;
   gap: 0.5rem;
   background: rgba(241, 245, 249, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: #0F172A;
   border: 1px solid rgba(203, 213, 225, 0.75);
   border-radius: 9999px;
@@ -4693,7 +4697,7 @@ body:has(.cpd-page) {
 .cpd-container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 1.5rem 2rem 6rem;
+  padding: 1.5rem 2rem 22rem;
   box-sizing: border-box;
 }
 
@@ -4764,7 +4768,7 @@ body:has(.cpd-page) {
   color: #047857;
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.25);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   border-radius: 9999px;
   padding: 0.28rem 0.85rem;
   display: inline-flex;
@@ -4778,7 +4782,7 @@ body:has(.cpd-page) {
   color: #B45309;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.25);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   border-radius: 9999px;
   padding: 0.28rem 0.85rem;
   display: inline-flex;
@@ -4792,7 +4796,7 @@ body:has(.cpd-page) {
   color: #0284C7;
   background: rgba(2, 132, 199, 0.08);
   border: 1px solid rgba(2, 132, 199, 0.25);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   border-radius: 9999px;
   padding: 0.28rem 0.85rem;
   display: inline-flex;
@@ -4806,7 +4810,7 @@ body:has(.cpd-page) {
   color: #334155;
   background: rgba(241, 245, 249, 0.85);
   border: 1px solid rgba(203, 213, 225, 0.6);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
   border-radius: 9999px;
   padding: 0.28rem 0.85rem;
   display: inline-flex;
@@ -4843,7 +4847,7 @@ body:has(.cpd-page) {
   overflow: hidden;
   margin-bottom: 2rem;
   position: relative;
-  box-shadow: 0 16px 40px -12px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 16px 40px -12px rgba(15, 23, 42, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
@@ -4868,23 +4872,23 @@ body:has(.cpd-page) {
 }
 
 .cpd-gallery-item:hover .cpd-gallery-img {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 .cpd-gallery-label {
   position: absolute;
   bottom: 0.85rem;
   left: 0.85rem;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #FFFFFF;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 0.35rem 0.75rem;
+  letter-spacing: 0.02em;
+  padding: 0.35rem 0.8rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .cpd-view-all-photos-btn {
@@ -4892,16 +4896,16 @@ body:has(.cpd-page) {
   bottom: 1.15rem;
   right: 1.15rem;
   background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: #0F172A;
   border: 1px solid rgba(255, 255, 255, 0.95);
   border-radius: 9999px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   padding: 0.65rem 1.35rem;
   cursor: pointer;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -4916,22 +4920,23 @@ body:has(.cpd-page) {
   transform: translateY(-2px);
 }
 
-/* Floating Glass Sticky Navigation Tabs */
+/* Floating Glass Sticky Navigation Tabs (iOS Capsule Style) */
 .cpd-sticky-tabs {
   position: sticky;
-  top: 62px;
+  top: 64px;
   z-index: 90;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 9999px;
-  padding: 0.35rem 0.5rem;
-  margin-bottom: 2.25rem;
+  padding: 0.35rem;
+  margin-bottom: 2rem;
   display: flex;
   gap: 0.35rem;
   overflow-x: auto;
-  box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 1);
+  box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
+  scrollbar-width: none;
 }
 
 .cpd-sticky-tabs::-webkit-scrollbar {
@@ -4939,29 +4944,29 @@ body:has(.cpd-page) {
 }
 
 .cpd-tab-btn {
-  padding: 0.6rem 1.25rem;
-  font-size: 0.84rem;
-  font-weight: 550;
+  padding: 0.6rem 1.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   font-family: inherit;
   letter-spacing: -0.01em;
-  color: #64748B;
+  color: #475569;
   background: transparent;
   border: none;
   border-radius: 9999px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cpd-tab-btn:hover {
   color: #0F172A;
-  background: rgba(241, 245, 249, 0.85);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .cpd-tab-btn.active {
   color: #FFFFFF !important;
   background: #0F172A !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
 }
 
 /* Two-column layout */
@@ -4979,25 +4984,24 @@ body:has(.cpd-page) {
 }
 
 .cpd-section-card {
-  scroll-margin-top: 140px;
-  background: rgba(255, 255, 255, 0.76);
+  scroll-margin-top: 135px;
+  background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 20px;
   padding: 2.25rem 2.5rem;
-  box-shadow: 0 16px 36px -12px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 32px -6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .cpd-section-card:hover {
-  box-shadow: 0 24px 48px -10px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 1);
   border-color: rgba(2, 132, 199, 0.25);
-  transform: translateY(-2px);
 }
 
 .cpd-card-title {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 750;
   color: #0F172A;
   margin: 0 0 1.5rem;
@@ -5017,8 +5021,8 @@ body:has(.cpd-page) {
 
 .cpd-snapshot-item {
   background: rgba(248, 250, 252, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
   padding: 1.15rem 1.25rem;
@@ -5033,7 +5037,7 @@ body:has(.cpd-page) {
 }
 
 .cpd-snapshot-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #64748B;
   text-transform: uppercase;
@@ -5054,17 +5058,20 @@ body:has(.cpd-page) {
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   padding-bottom: 0.85rem;
   margin-bottom: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .cpd-fp-tab-btn {
   padding: 0.6rem 1.25rem;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #64748B;
   border: 1px solid transparent;
   background: transparent;
   border-radius: 9999px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -5074,9 +5081,9 @@ body:has(.cpd-page) {
 }
 
 .cpd-fp-tab-btn.active {
-  background: #0284C7;
+  background: #0F172A;
   color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
 }
 
 .cpd-floorplan-details-box {
@@ -5085,17 +5092,17 @@ body:has(.cpd-page) {
   gap: 2rem;
   align-items: center;
   background: rgba(248, 250, 252, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 20px;
   padding: 2rem;
 }
 
-/* Amenities Grid */
+/* Amenities Grid (Vector SVG Icons) */
 .cpd-amenities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
 }
 
@@ -5105,11 +5112,11 @@ body:has(.cpd-page) {
   gap: 0.85rem;
   padding: 0.95rem 1.25rem;
   background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.75);
   border-radius: 14px;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: #1E293B;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -5124,7 +5131,21 @@ body:has(.cpd-page) {
 }
 
 .cpd-amenity-icon {
-  font-size: 1.35rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284C7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
+}
+
+.cpd-amenity-card:hover .cpd-amenity-icon {
+  background: #0284C7;
+  color: #FFFFFF;
 }
 
 /* Location Table */
@@ -5139,7 +5160,7 @@ body:has(.cpd-page) {
 
 .cpd-location-table td {
   padding: 1rem 0.75rem;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .cpd-location-table td:first-child {
@@ -5167,8 +5188,8 @@ body:has(.cpd-page) {
 
 .cpd-sticky-action-card {
   background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.95);
   border-radius: 24px;
   padding: 2rem;
@@ -5178,12 +5199,12 @@ body:has(.cpd-page) {
 .cpd-btn-brochure-main {
   background: #0F172A;
   color: #FFFFFF;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
-  padding: 1rem 1.35rem;
+  padding: 0.95rem 1.35rem;
   width: 100%;
   cursor: pointer;
   display: flex;
@@ -5203,8 +5224,8 @@ body:has(.cpd-page) {
 }
 
 .cpd-call-desk-box {
-  background: rgba(248, 250, 252, 0.8);
-  backdrop-filter: blur(10px);
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
   padding: 1.25rem;
@@ -5241,7 +5262,7 @@ body:has(.cpd-page) {
 }
 
 .cpd-lead-form button {
-  background: linear-gradient(135deg, #0284C7, #0369A1);
+  background: #0F172A;
   color: #FFFFFF;
   font-weight: 700;
   border: none;
@@ -5251,13 +5272,13 @@ body:has(.cpd-page) {
   cursor: pointer;
   transition: all 0.25s ease;
   margin-top: 0.35rem;
-  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.2);
 }
 
 .cpd-lead-form button:hover {
-  background: linear-gradient(135deg, #0369A1, #075985);
+  background: #0284C7;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35);
 }
 
 /* Reviews List */
@@ -5269,7 +5290,7 @@ body:has(.cpd-page) {
 
 .cpd-review-item {
   background: rgba(248, 250, 252, 0.75);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
@@ -5289,8 +5310,8 @@ body:has(.cpd-page) {
   right: 0;
   bottom: 0;
   background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   z-index: 1000;
   display: none;
   align-items: center;

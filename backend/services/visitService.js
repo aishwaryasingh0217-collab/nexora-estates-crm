@@ -339,7 +339,7 @@ async function transition(actor, visitId, action, body = {}, req = null) {
     }
     case 'complete': {
       if (!isFieldAgent && !isLeadOwner && !isManager) deny();
-      needFrom('SCHEDULED', 'ACCEPTED', 'IN_PROGRESS', 'RESCHEDULED');
+      needFrom('SCHEDULED', 'ACCEPTED', 'IN_PROGRESS', 'RESCHEDULED', 'ASSIGNED');
       to = 'COMPLETED';
       sets.completed_at = new Date();
       sets.client_feedback = body.feedback || null;

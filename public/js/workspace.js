@@ -1555,14 +1555,16 @@
         ${lead.agent_phone ? `<a class="ws-big-act is-call" href="tel:${esc(digits(lead.agent_phone))}">${icon('phone')}<span>Call RM</span></a>` : ''}
         ${closed ? '' : `<button class="ws-big-act" data-action="schedule-visit" data-id="${lead.id}">${icon('calendar')}<span>${upcoming ? 'New visit' : 'Request visit'}</span></button>`}
         <button class="ws-big-act" data-action="add-note" data-id="${lead.id}">${icon('note')}<span>Note to RM</span></button>
-        <button class="ws-big-act is-wa" data-action="share-project" data-id="${lead.preferred_project_id || ''}" data-lead="${lead.id}">${icon('share')}<span>Send project</span></button>`
+        <button class="ws-big-act is-wa" data-action="share-project" data-id="${lead.preferred_project_id || ''}" data-lead="${lead.id}">${icon('share')}<span>Send project</span></button>
+        <button class="ws-big-act" data-action="match-units" data-id="${lead.id}">${icon('home')}<span>Matching units</span></button>`
       : `
         <a class="ws-big-act is-call" href="tel:${esc(digits(lead.phone))}" data-action="call" data-id="${lead.id}">${icon('phone')}<span>Call</span></a>
         <button class="ws-big-act is-wa" data-action="whatsapp" data-id="${lead.id}">${icon('chat')}<span>WhatsApp</span></button>
         ${closed ? '' : `<button class="ws-big-act is-log" data-action="log" data-id="${lead.id}">${icon('check')}<span>Log call</span></button>
         <button class="ws-big-act" data-action="schedule-visit" data-id="${lead.id}">${icon('calendar')}<span>Fix visit</span></button>
         <button class="ws-big-act" data-action="book" data-id="${lead.id}">${icon('key')}<span>Book unit</span></button>`}
-        <button class="ws-big-act" data-action="share-project" data-id="${lead.preferred_project_id || ''}" data-lead="${lead.id}">${icon('share')}<span>Share</span></button>`;
+        <button class="ws-big-act" data-action="share-project" data-id="${lead.preferred_project_id || ''}" data-lead="${lead.id}">${icon('share')}<span>Share</span></button>
+        <button class="ws-big-act" data-action="match-units" data-id="${lead.id}">${icon('home')}<span>Matching units</span></button>`;
 
     const info = [];
     info.push(['Phone', `<a href="tel:${esc(digits(lead.phone))}">${esc(lead.phone)}</a>`]);
@@ -1908,6 +1910,28 @@
   }
 
   // ---------------- Project units / share ----------------
+  /** Available units that fit the client: budget (±15%), configuration, preferred project and location. */
+  async function openMatchingUnits(leadId) {
+    openSheet(`${sheetHead('Matching units')}<div class="ws-sheet-body"><div class="ws-loading">Loading…</div></div>`, { key: 'match' });
+    try {
+      if (!window.NXS || !NXS.api) throw new Error('Recommendations are not available in this view.');
+      const r = (await NXS.api(`/suite/inventory/recommend/${leadId}`)).data;
+      const canBook = W.me.kind !== 'partner';
+      const body = r.rows.length ? `<div class="ws-table-wrap"><table class="ws-table">
+        <thead><tr><th>Unit</th><th>Type</th><th>Price</th><th>Why</th></tr></thead>
+        <tbody>${r.rows.map((u) => `<tr>
+          <td><strong>${esc(u.unit_number)}</strong><span>${esc(u.project_name)}${u.building_name ? ` · ${esc(u.building_name)}` : ''}</span></td>
+          <td>${esc(u.unit_type)}${u.super_area_sqft || u.carpet_area_sqft ? `<span>${Number(u.super_area_sqft || u.carpet_area_sqft)} sq.ft</span>` : ''}</td>
+          <td><strong>${money(u.price)}</strong></td>
+          <td>${esc(u.reasons.join(', ') || 'close to budget')}</td>
+        </tr>`).join('')}</tbody></table></div>` : '<p class="ws-muted-box">No available unit matches this client’s budget and requirements. Add budget / configuration to the lead for better matches.</p>';
+      openSheet(`${sheetHead('Matching units', r.rows.length ? `${plural(r.rows.length, 'unit')} available now` : '')}<div class="ws-sheet-body">${body}
+        ${canBook && r.rows.length ? `<button class="ws-btn is-primary is-block" data-action="book" data-id="${leadId}">${icon('key')} Book a unit</button>` : ''}</div>`, { key: 'match', wide: true });
+    } catch (e) {
+      openSheet(`${sheetHead('Matching units')}<div class="ws-sheet-body">${errorBox(e)}</div>`);
+    }
+  }
+
   async function openProjectUnits(projectId) {
     const project = (W.projects || []).find((p) => p.id === projectId) || {};
     openSheet(`${sheetHead(esc(project.name || 'Units'), 'Available & on-hold units')}<div class="ws-sheet-body"><div class="ws-loading">Loading…</div></div>`, { key: 'units' });
@@ -2130,6 +2154,7 @@
       case 'add-lead':
       case 'register-client': return run(openAddLead);
       case 'project-units': return run(() => openProjectUnits(id));
+      case 'match-units': return run(() => openMatchingUnits(id));
       case 'share-project': return run(() => openShare(id, el.dataset.lead));
       case 'copy-share': {
         const t = document.getElementById('ws-share-text');

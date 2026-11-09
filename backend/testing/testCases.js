@@ -169,6 +169,11 @@ const CASES = [
     'TL-10.',
     'Not found in Tara’s workspace. (Server enforces this — the lead API returns 404 for other agents’ leads.)',
     '—'),
+  C('IS-08', S.TELE, P.TELE, 'Matching units for a client', 'Telecaller', 'test.tele1', 'Workspace → Leads → Vihaan Chopra (TL-07) → Matching units',
+    ['Open the lead and tap Matching units.'],
+    'TL-07 wants a 3BHK at Aurora, budget ₹1.30–1.42 Cr.',
+    'Only available units are listed, best fit first, each with the reason (within budget, 3BHK, preferred project). Booked or reserved units (e.g. A-403 on hold) are not offered.',
+    'Inventory → Units & pricing status of the listed units.'),
 
   // ===================================================================== field sales
   C('FS-01', S.FIELD, P.FIELD, 'Accept an assigned visit', 'Field agent', 'test.field1', 'Workspace → Calendar / Today',

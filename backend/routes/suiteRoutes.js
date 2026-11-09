@@ -60,7 +60,7 @@ router.post('/users/:id/status', need('users.manage'), gov.setStatus);
 router.post('/users/:id/reset-password', need('users.manage'), gov.resetPassword);
 router.get('/users/:id/sessions', need('users.manage'), gov.userSessions);
 router.post('/users/:id/sessions/revoke', need('users.manage'), gov.revokeUserSessions);
-router.get('/partner-firms', need('users.manage'), gov.partnerFirms);
+router.get('/partner-firms', needAny('users.manage', 'inventory.allocate'), gov.partnerFirms);
 
 // ------------------------------------------------------------------ sales head & sales manager
 router.get('/sales/dashboard', need('reports.sales'), sales.dashboard);

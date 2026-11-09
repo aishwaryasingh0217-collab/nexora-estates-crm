@@ -87,6 +87,8 @@ const listCustomers = wrap(async (req, res) => {
       WHERE ${where.join(' AND ')} ORDER BY c.onboarding_status = 'IN_PROGRESS' DESC, c.created_at DESC LIMIT 500`,
     params
   );
+  // Roles that only log requests get a picker list — no payment or document details
+  if (!can(req.user, 'crm.view')) return ok(res, rows.map((r) => ({ id: r.id, name: fullName(r.first_name, r.last_name), units: r.units, is_test_data: r.is_test_data })));
   ok(res, rows.map((r) => ({ ...r, name: fullName(r.first_name, r.last_name), rm_name: fullName(r.rm_first, r.rm_last) || null, booked_value: num(r.booked_value), paid: num(r.paid), documents_open: num(r.documents_open), tickets_open: num(r.tickets_open) })));
 });
 
@@ -227,6 +229,9 @@ const listTickets = wrap(async (req, res) => {
   const where = ['1 = 1'];
   const params = [];
   if (ownOnly(req.user)) { where.push('(c.relationship_manager_id = ? OR t.assigned_to = ? OR t.created_by = ?)'); params.push(req.user.id, req.user.id, req.user.id); }
+  // Roles that may only log requests (sales, finance executives…) see the ones they logged
+  else if (!can(req.user, 'crm.view')) { where.push('t.created_by = ?'); params.push(req.user.id); }
+  if (q.id) { where.push('t.id = ?'); params.push(q.id); }
   if (q.status) { where.push('t.status IN (?)'); params.push(String(q.status).split(',')); }
   if (q.category) { where.push('t.category = ?'); params.push(q.category); }
   if (q.assigned_to) { where.push('t.assigned_to = ?'); params.push(q.assigned_to); }

@@ -87,8 +87,8 @@ const dashboard = wrap(async (req, res) => {
   if (fin.overdueAmount > 0) alerts.push({ level: 'warning', title: `₹${Math.round(fin.overdueAmount).toLocaleString('en-IN')} of payments overdue (${fin.overdueCount} instalment${fin.overdueCount === 1 ? '' : 's'})`, link: 'finance-overdue' });
   if (fin.pendingVerification) alerts.push({ level: 'info', title: `${fin.pendingVerification} payment(s) waiting for finance verification`, link: 'finance-payments' });
   if (num(dept.pending_approvals)) alerts.push({ level: 'warning', title: `${dept.pending_approvals} approval(s) pending`, link: 'approvals' });
-  if (num(dept.untouched_leads)) alerts.push({ level: 'warning', title: `${dept.untouched_leads} open lead(s) never contacted`, link: 'sales-leads-untouched' });
-  if (num(dept.sla_breached)) alerts.push({ level: 'warning', title: `${dept.sla_breached} customer request(s) past their SLA`, link: 'crm-tickets' });
+  if (num(dept.untouched_leads)) alerts.push({ level: 'warning', title: `${dept.untouched_leads} open lead(s) never contacted`, link: 'sales-leads?view=untouched' });
+  if (num(dept.sla_breached)) alerts.push({ level: 'warning', title: `${dept.sla_breached} customer request(s) past their SLA`, link: 'crm-tickets?overdue=1' });
   if (now.cancellations) alerts.push({ level: 'info', title: `${now.cancellations} booking cancellation(s) in this period`, link: 'sales-bookings' });
 
   ok(res, {

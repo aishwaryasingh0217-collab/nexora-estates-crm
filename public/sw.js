@@ -1,19 +1,30 @@
 /* Nexora service worker — makes the CRM installable and lets the app shell open offline.
    Network-first for everything: users always get the latest release when online.
    API responses are never cached (lead data must be live); the cache only serves the shell offline. */
-const CACHE = 'nexora-shell-v5';
+const CACHE = 'nexora-shell-v6';
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './workspace.css',
   './enquiry.css',
+  './suite.css',
   './app.js',
   './js/apartment-listings.js',
   './js/platform.js',
   './js/workspace.js',
   './js/enquiry.js',
   './js/ai-bot.js',
+  './js/suite/core.js',
+  './js/suite/charts.js',
+  './js/suite/governance.js',
+  './js/suite/sales.js',
+  './js/suite/finance.js',
+  './js/suite/inventory.js',
+  './js/suite/marketing.js',
+  './js/suite/crm.js',
+  './js/suite/owner.js',
+  './js/suite/testing.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'

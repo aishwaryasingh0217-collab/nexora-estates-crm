@@ -129,6 +129,11 @@ async function quickLoginAs(roleName) {
     INSIDE_SALES: { u: 'telecaller', p: 'Telecaller123!', r: 'Inside Sales' },
     OUTSIDE_SALES: { u: 'siteagent', p: 'Siteagent123!', r: 'Outside Sales' },
     CHANNEL_PARTNER: { u: 'partner', p: 'Partner123!', r: 'Channel Partner' },
+    BUSINESS_OWNER: { u: 'owner', p: 'Owner123!', r: 'Business Owner' },
+    FINANCE: { u: 'finance', p: 'Finance123!', r: 'Finance & Accounts' },
+    INVENTORY: { u: 'inventory', p: 'Inventory123!', r: 'Projects & Inventory' },
+    MARKETING: { u: 'marketing', p: 'Marketing123!', r: 'Marketing' },
+    CUSTOMER_RELATIONS: { u: 'care', p: 'Care123!', r: 'Customer Relationship' },
     BUYER: { u: 'customer', p: 'Customer123!', r: 'Buyer' }
   };
   const target = creds[roleName] || creds.SUPER_ADMIN;
@@ -165,7 +170,7 @@ async function quickLoginAs(roleName) {
   } catch (e) {
     const errDiv = document.getElementById('login-error');
     const hint = /invalid credentials/i.test(e.message)
-      ? `Account "${target.u}" is not set up yet. Run: npm run migrate && npm run seed:workspace`
+      ? `Account "${target.u}" is not set up yet. Run: npm run migrate && npm run seed:workspace && npm run seed:suite`
       : e.message;
     if (errDiv) {
       errDiv.innerText = hint;
@@ -187,7 +192,12 @@ window.switchPortalAs = async function(roleName) {
     ADMIN: { u: 'admin_ops', p: 'AdminPassword123!', r: 'Admin' },
     INSIDE_SALES: { u: 'telecaller', p: 'Telecaller123!', r: 'Inside Sales' },
     OUTSIDE_SALES: { u: 'siteagent', p: 'Siteagent123!', r: 'Outside Sales' },
-    CHANNEL_PARTNER: { u: 'partner', p: 'Partner123!', r: 'Channel Partner' }
+    CHANNEL_PARTNER: { u: 'partner', p: 'Partner123!', r: 'Channel Partner' },
+    BUSINESS_OWNER: { u: 'owner', p: 'Owner123!', r: 'Business Owner' },
+    FINANCE: { u: 'finance', p: 'Finance123!', r: 'Finance & Accounts' },
+    INVENTORY: { u: 'inventory', p: 'Inventory123!', r: 'Projects & Inventory' },
+    MARKETING: { u: 'marketing', p: 'Marketing123!', r: 'Marketing' },
+    CUSTOMER_RELATIONS: { u: 'care', p: 'Care123!', r: 'Customer Relationship' }
   };
   const target = creds[roleName] || creds.SUPER_ADMIN;
   try {
@@ -355,7 +365,14 @@ function renderApp() {
     return;
   }
 
-  // 3. Agents, channel partners and sales managers work in the Sales Workspace (js/workspace.js)
+  // 3. Department portals (owner, finance, inventory, marketing, customer relationship), the sales head /
+  //    manager business suite and the Testing Center (js/suite/*)
+  if (typeof window.shouldRenderSuite === 'function' && window.shouldRenderSuite()) {
+    window.renderSuite(root);
+    return;
+  }
+
+  // 4. Agents, channel partners and sales managers work in the Sales Workspace (js/workspace.js)
   if (typeof window.shouldRenderWorkspace === 'function' && window.shouldRenderWorkspace()) {
     window.renderWorkspace(root);
     return;
@@ -374,6 +391,9 @@ function renderApp() {
         <a class="nav-item" onclick="openWorkspace()" style="font-weight: 700;">
           ${getIcon('usersGroup')} Sales Workspace
         </a>
+        ${typeof window.openSuite === 'function' && ['SUPER_ADMIN', 'ADMIN', 'BUSINESS_OWNER'].includes(state.user.role) ? `<a class="nav-item" onclick="openSuite()" style="font-weight: 700;">
+          ${getIcon('dashboard')} Business Suite
+        </a>` : ''}
         <a class="nav-item ${state.currentView === 'dashboard' ? 'active' : ''}" onclick="switchView('dashboard')">
           ${getIcon('dashboard')} Dashboard
         </a>
@@ -468,6 +488,21 @@ function renderApp() {
               </button>
               <button onclick="switchPortalAs('CHANNEL_PARTNER')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
                 🤝 Channel Partner (Broker Desk)
+              </button>
+              <button onclick="switchPortalAs('BUSINESS_OWNER')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                🏢 Business Owner (CEO)
+              </button>
+              <button onclick="switchPortalAs('FINANCE')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                💰 Finance &amp; Accounts
+              </button>
+              <button onclick="switchPortalAs('INVENTORY')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                🏗️ Projects &amp; Inventory
+              </button>
+              <button onclick="switchPortalAs('MARKETING')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                📣 Marketing
+              </button>
+              <button onclick="switchPortalAs('CUSTOMER_RELATIONS')" style="width: 100%; text-align: left; padding: 0.5rem 0.65rem; border: none; background: transparent; border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: #0f172a; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                💬 Customer Relationship
               </button>
             </div>
           </div>
@@ -9205,8 +9240,23 @@ function renderLoginView(root) {
               <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('OUTSIDE_SALES')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
                 📍 Outside Sales (Site)
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('CHANNEL_PARTNER')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px; grid-column: span 2;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('CHANNEL_PARTNER')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
                 🤝 Channel Partner (Broker Desk)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('BUSINESS_OWNER')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                🏢 Business Owner (CEO)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('FINANCE')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                💰 Finance &amp; Accounts
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('INVENTORY')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                🏗️ Projects &amp; Inventory
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('MARKETING')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                📣 Marketing
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="quickLoginAs('CUSTOMER_RELATIONS')" style="font-size: 0.75rem; justify-content: flex-start; padding: 0.35rem 0.55rem; border-radius: 6px;">
+                💬 Customer Relationship
               </button>
             </div>
           </div>

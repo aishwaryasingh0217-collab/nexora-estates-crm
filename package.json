@@ -12,6 +12,7 @@
     "seed": "node database/seed_super_admin.js && node database/seed_demo_data.js",
     "test": "node tests/run.js",
     "seed:workspace": "node database/seed_sales_team.js",
+    "seed:suite": "node database/seed_business_suite.js",
     "test:all": "node tests/run.js --ui",
     "test:ui": "node tests/ui.test.js",
     "test:reset": "node tests/reset-demo.js",

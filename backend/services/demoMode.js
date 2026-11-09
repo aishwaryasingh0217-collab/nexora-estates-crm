@@ -18,13 +18,13 @@ const DEMO_ACCOUNT_IDS = new Set([
   'a1b2c3d4-0000-4000-8000-000000000004', // siteagent
   'a1b2c3d4-0000-4000-8000-000000000005', // partner
   // Business suite (database/seed_business_suite.js)
-  'a3b2c3d4-0000-4000-8000-000000000001', // owner      (Business owner)
-  'a3b2c3d4-0000-4000-8000-000000000002', // finance    (Finance head)
-  'a3b2c3d4-0000-4000-8000-000000000003', // accounts   (Finance executive)
-  'a3b2c3d4-0000-4000-8000-000000000004', // inventory  (Projects & inventory head)
-  'a3b2c3d4-0000-4000-8000-000000000005', // marketing  (Marketing head)
-  'a3b2c3d4-0000-4000-8000-000000000006', // care       (Customer relationship head)
-  'a3b2c3d4-0000-4000-8000-000000000007'  // careexec   (Customer relationship executive)
+  'a3b2c3d4-0000-4000-8000-000000000001', // owner       (Business owner)
+  'a3b2c3d4-0000-4000-8000-000000000002', // finance     (Finance head)
+  'a3b2c3d4-0000-4000-8000-000000000003', // accounts    (Finance executive)
+  'a3b2c3d4-0000-4000-8000-000000000004', // inventory   (Projects & inventory head)
+  'a3b2c3d4-0000-4000-8000-000000000005', // marketing   (Marketing head)
+  'a3b2c3d4-0000-4000-8000-000000000006', // care        (Customer relationship head)
+  'a3b2c3d4-0000-4000-8000-000000000007'  // careexec    (Customer relationship executive)
 ]);
 
 const protectDemoAccounts = (req, res, next) => {

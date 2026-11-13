@@ -1,13 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexora Estates — CRM &amp; Management Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Leads, follow-ups, site visits and bookings for builders, sales teams and channel partners.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Nexora">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Nexora Estates - Real Estate Management Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="./workspace.css">
+  <link rel="stylesheet" href="./enquiry.css">
+  <link rel="stylesheet" href="./suite.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
+    // Global Frontend Error Boundary & Self-Healing Watcher
     window.addEventListener('error', function(e) {
       if (e.message && (e.message.includes('SyntaxError') || e.message.includes('Unexpected end of input') || e.message.includes('is not defined'))) {
         console.error('[Nexora Error Boundary]', e);
@@ -21,14 +38,38 @@
               <button onclick="window.location.reload(true)" style="background: #0078db; color: #ffffff; border: none; padding: 0.85rem 2rem; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 120, 219, 0.3);">Reload Application</button>
             </div>
           `;
-          setTimeout(function() { window.location.reload(true); }, 1200);
+          // Retry once per minute at most — a permanent error must not become an endless reload loop
+          var last = 0;
+          try { last = Number(sessionStorage.getItem('nx_autoreload') || 0); } catch (err) {}
+          if (Date.now() - last > 60000) {
+            try { sessionStorage.setItem('nx_autoreload', String(Date.now())); } catch (err) {}
+            setTimeout(function() { window.location.reload(); }, 1200);
+          }
         }
       }
     });
   </script>
 </head>
+
 <body>
   <div id="app"></div>
+  <script src="./js/apartment-listings.js"></script>
   <script src="./app.js"></script>
+  <script src="./js/platform.js"></script>
+  <script src="./js/workspace.js"></script>
+  <script src="./js/suite/core.js"></script>
+  <script src="./js/suite/charts.js"></script>
+  <script src="./js/suite/governance.js"></script>
+  <script src="./js/suite/sales.js"></script>
+  <script src="./js/suite/field.js"></script>
+  <script src="./js/suite/finance.js"></script>
+  <script src="./js/suite/inventory.js"></script>
+  <script src="./js/suite/marketing.js"></script>
+  <script src="./js/suite/crm.js"></script>
+  <script src="./js/suite/owner.js"></script>
+  <script src="./js/suite/testing.js"></script>
+  <script src="./js/enquiry.js"></script>
+  <script src="./js/ai-bot.js"></script>
 </body>
+
 </html>

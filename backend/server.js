@@ -204,10 +204,27 @@ if (fs.existsSync(websiteDir)) {
   app.use('/website', express.static(websiteDir, staticOptions));
 }
 
+// CRM routes for employees, sales team & partners
+app.get(['/crm', '/crm.html', '/portal', '/dashboard', '/login', '/sales', '/partner'], (req, res) => {
+  const crmFile = path.join(publicDir, 'crm.html');
+  if (fs.existsSync(crmFile)) {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    return res.sendFile(crmFile);
+  }
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
 // Fallback to SPA index.html for non-API requests
 app.use((req, res, next) => {
   if (req.path.includes('/api/')) {
     return next();
+  }
+  if (req.path.startsWith('/nexora-crm') || req.path.startsWith('/crm')) {
+    const crmFile = path.join(publicDir, 'crm.html');
+    if (fs.existsSync(crmFile)) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      return res.sendFile(crmFile);
+    }
   }
   const publicIndex = path.join(__dirname, '../public/index.html');
   const distIndex = path.join(__dirname, '../dist/index.html');
